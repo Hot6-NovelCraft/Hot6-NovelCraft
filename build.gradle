@@ -23,6 +23,8 @@ dependencies {
     implementation 'com.openai:openai-java:2.1.0'
     // Google Gemini SDK
     implementation 'com.google.genai:google-genai:1.0.0'
+    // Actuator + Prometheus
+    implementation 'io.micrometer:micrometer-registry-prometheus'
 
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'

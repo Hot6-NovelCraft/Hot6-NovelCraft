@@ -104,6 +104,7 @@ services:
       - redis-master
     networks:
       - redis-net
+
   # --------------------------
   # Broker 1 (Node ID: 1)
   # --------------------------
@@ -129,6 +130,10 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+      # [추가] JMX - Kafka 메트릭 수집용
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: kafka-1
 
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
@@ -161,6 +166,10 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
 
+      # [추가] JMX - Kafka 메트릭 수집용
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: kafka-2
+
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka2_data:/var/lib/kafka/data
@@ -192,6 +201,10 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
 
+      # [추가] JMX - Kafka 메트릭 수집용
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: kafka-3
+
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka3_data:/var/lib/kafka/data
@@ -219,6 +232,63 @@ services:
       - kafka-net
 
   # --------------------------
+  # [추가] Kafka JMX Exporter - kafka-1 (Port: 5556)
+  # --------------------------
+  kafka-1-jmx-exporter:
+    image: bitnami/jmx-exporter:latest
+    container_name: kafka-1-jmx-exporter
+    ports:
+      - "5556:5556"
+    environment:
+      JMX_HOST: kafka-1
+      JMX_PORT: 9999
+      EXPORTER_PORT: 5556
+    volumes:
+      - ./monitoring/kafka-jmx-config.yml:/opt/bitnami/jmx-exporter/config.yml
+    depends_on:
+      - kafka-1
+    networks:
+      - kafka-net
+
+  # --------------------------
+  # [추가] Kafka JMX Exporter - kafka-2 (Port: 5557)
+  # --------------------------
+  kafka-2-jmx-exporter:
+    image: bitnami/jmx-exporter:latest
+    container_name: kafka-2-jmx-exporter
+    ports:
+      - "5557:5556"
+    environment:
+      JMX_HOST: kafka-2
+      JMX_PORT: 9999
+      EXPORTER_PORT: 5556
+    volumes:
+      - ./monitoring/kafka-jmx-config.yml:/opt/bitnami/jmx-exporter/config.yml
+    depends_on:
+      - kafka-2
+    networks:
+      - kafka-net
+
+  # --------------------------
+  # [추가] Kafka JMX Exporter - kafka-3 (Port: 5558)
+  # --------------------------
+  kafka-3-jmx-exporter:
+    image: bitnami/jmx-exporter:latest
+    container_name: kafka-3-jmx-exporter
+    ports:
+      - "5558:5556"
+    environment:
+      JMX_HOST: kafka-3
+      JMX_PORT: 9999
+      EXPORTER_PORT: 5556
+    volumes:
+      - ./monitoring/kafka-jmx-config.yml:/opt/bitnami/jmx-exporter/config.yml
+    depends_on:
+      - kafka-3
+    networks:
+      - kafka-net
+
+  # --------------------------
   # Prometheus (메트릭 수집)
   # --------------------------
   prometheus:
@@ -229,6 +299,10 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
+    depends_on:
+      - kafka-1-jmx-exporter
+      - kafka-2-jmx-exporter
+      - kafka-3-jmx-exporter
     networks:
       - kafka-net
 
