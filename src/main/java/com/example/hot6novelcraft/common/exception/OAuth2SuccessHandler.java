@@ -56,34 +56,34 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             log.info("[OAuth2 성공] 신규 소셜 유저, 추가정보 입력 필요. email: {}", user.getEmail());
 
             getRedirectStrategy().sendRedirect(request, response, frontendUrl
-                    + "/social/signup?token="
+                    + "/signup.html?socialToken="
                     + URLEncoder.encode(pureToken, StandardCharsets.UTF_8));
             return;
 
         }
 
-        // 기존 유저 : 로그인 AccessToken + RefreshToken 발급
-        String accessToken = jwtUtil.createAccessToken(user);
-        String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
+            // 기존 유저 : 로그인 AccessToken + RefreshToken 발급
+            String accessToken = jwtUtil.createAccessToken(user);
+            String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
 
-        // Redis에 refreshToken 저장
-        long refreshExpiration = jwtUtil.getRefreshExpiration();
-        userCacheService.saveRefreshToken(user.getEmail(), refreshToken, refreshExpiration);
+            // Redis에 refreshToken 저장
+            long refreshExpiration = jwtUtil.getRefreshExpiration();
+            userCacheService.saveRefreshToken(user.getEmail(), refreshToken, refreshExpiration);
 
-        // DB refreshToken 업데이트 (중복 제거, 한 번만)
-        userRepository.findByEmail(user.getEmail())
-                .ifPresent(u -> u.updateRefreshToken(jwtUtil.substringToken(refreshToken)));
+            // DB refreshToken 업데이트 (중복 제거, 한 번만)
+            userRepository.findByEmail(user.getEmail())
+                    .ifPresent(u -> u.updateRefreshToken(jwtUtil.substringToken(refreshToken)));
 
-        log.info("[OAuth2 성공] 기존 소셜 유저 로그인 완료. email: {}", user.getEmail());
+            log.info("[OAuth2 성공] 기존 소셜 유저 로그인 완료. email: {}", user.getEmail());
 
-        redirectUrl = UriComponentsBuilder
-                .fromUriString(frontendUrl + "/home")
+            redirectUrl = UriComponentsBuilder
+                .fromUriString(frontendUrl + "/index.html")
                 .queryParam("accessToken", URLEncoder.encode(accessToken, StandardCharsets.UTF_8))
                 .queryParam("refreshToken", URLEncoder.encode(refreshToken, StandardCharsets.UTF_8))
                 .build().toUriString();
 
-        // 프론트로 리다이렉트
-        getRedirectStrategy().sendRedirect(request, response, redirectUrl);
-    }
+            // 프론트로 리다이렉트
+            getRedirectStrategy().sendRedirect(request, response, redirectUrl);
+        }
 
-}
+    }
