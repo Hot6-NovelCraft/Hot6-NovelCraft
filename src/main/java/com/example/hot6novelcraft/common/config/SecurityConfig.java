@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -97,6 +98,7 @@ public class SecurityConfig {
                                 , "/oauth2/authorize/**"
                                 , "/error"
                                 , "/*.html"
+                                , "/**.html"
                                 , "/static/**"
                                 , "/css/**"
                                 , "/js/**"
@@ -107,6 +109,12 @@ public class SecurityConfig {
                                 , "/ws-chat/**"
                                 , "/actuator/**"
                                 , "/api/ai/recommendation"
+                                , "/api/novels"                // 신작 목록 (type=new)
+                                , "/api/novels/*"              // 소설 상세
+                                , "/api/novels/*/episodes"     // 회차 목록
+                                , "/api/v2/novels"             // 소설 목록 필터
+                                , "/api/v2/episodes/**"        // 무료 회차 본문
+                                , "/api/mentorships/mentors"   // 멘토 목록 (비로그인도 볼 수 있게)
                         ).permitAll()
                                 .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "SUPER_ADMIN")
                                 .requestMatchers("/api/calendars/**").hasAnyAuthority("READER", "AUTHOR")
@@ -119,5 +127,23 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager (AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    // SecurityConfig.java 에 이 Bean 추가
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return web -> web.ignoring()
+                .requestMatchers(
+                        "/*.html",
+                        "/**.html",
+                        "/*.js",
+                        "/**.js",
+                        "/*.css",
+                        "/**.css",
+                        "/static/**",
+                        "/images/**",
+                        "/favicon.ico",
+                        "/.well-known/**"
+                );
     }
 }

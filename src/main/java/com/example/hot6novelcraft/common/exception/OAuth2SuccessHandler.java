@@ -56,7 +56,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             log.info("[OAuth2 성공] 신규 소셜 유저, 추가정보 입력 필요. email: {}", user.getEmail());
 
             getRedirectStrategy().sendRedirect(request, response, frontendUrl
-                    + "/social/signup?token="
+                    + "/signup.html?socialToken="
                     + URLEncoder.encode(pureToken, StandardCharsets.UTF_8));
             return;
 
@@ -77,7 +77,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             log.info("[OAuth2 성공] 기존 소셜 유저 로그인 완료. email: {}", user.getEmail());
 
             redirectUrl = UriComponentsBuilder
-                .fromUriString(frontendUrl + "/home")
+                .fromUriString(frontendUrl + "/index.html")
                 .queryParam("accessToken", URLEncoder.encode(accessToken, StandardCharsets.UTF_8))
                 .queryParam("refreshToken", URLEncoder.encode(refreshToken, StandardCharsets.UTF_8))
                 .build().toUriString();

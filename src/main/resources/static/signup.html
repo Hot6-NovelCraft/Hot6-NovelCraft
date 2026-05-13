@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovelCraft - 회원가입</title>
+  <script src="/common.js"></script>
+  <style>
+    body { display: flex; align-items: flex-start; justify-content: center; min-height: 100vh; background: var(--bg); padding: 40px 20px; }
+    #nc-nav { display: none; }
+
+    .signup-wrap { width: 100%; max-width: 500px; animation: fadeUp 0.4s ease; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+
+    .signup-logo { text-align: center; margin-bottom: 32px; }
+    .signup-logo a {
+      font-family: 'Noto Serif KR', serif; font-size: 1.8rem; font-weight: 900;
+      color: var(--primary-light); text-decoration: none;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    /* 스텝 인디케이터 */
+    .steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; margin-bottom: 32px;
+    }
+    .step {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      position: relative;
+    }
+    .step-circle {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2px solid var(--border); background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700; color: var(--text3);
+      transition: all 0.3s; z-index: 1;
+    }
+    .step.active .step-circle { border-color: var(--primary); background: var(--primary); color: white; }
+    .step.done .step-circle { border-color: var(--success); background: var(--success); color: white; }
+    .step-label { font-size: 0.7rem; color: var(--text3); white-space: nowrap; }
+    .step.active .step-label { color: var(--primary-light); }
+    .step.done .step-label { color: var(--success); }
+    .step-line {
+      width: 60px; height: 2px; background: var(--border);
+      margin: 0 0; margin-bottom: 22px; transition: background 0.3s;
+    }
+    .step-line.done { background: var(--success); }
+
+    .signup-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 18px; padding: 36px;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.4);
+    }
+    .signup-title {
+      font-family: 'Noto Serif KR', serif;
+      font-size: 1.3rem; font-weight: 700; margin-bottom: 8px;
+    }
+    .signup-subtitle { color: var(--text3); font-size: 0.85rem; margin-bottom: 28px; }
+
+    /* 역할 선택 */
+    .role-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .role-card {
+      padding: 20px; border-radius: var(--radius); border: 2px solid var(--border);
+      background: transparent; cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .role-card:hover { border-color: var(--primary); }
+    .role-card.selected { border-color: var(--primary); background: rgba(124,90,240,0.1); }
+    .role-card__icon { font-size: 2rem; margin-bottom: 8px; }
+    .role-card__title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+    .role-card__desc { font-size: 0.75rem; color: var(--text3); }
+
+    /* 장르 체크박스 */
+    .genre-checkboxes { display: flex; flex-wrap: wrap; gap: 8px; }
+    .genre-check {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+      font-family: inherit;
+    }
+    .genre-check.selected { background: var(--primary); border-color: var(--primary); color: white; }
+
+    /* 인증 그룹 */
+    .verify-group { display: flex; gap: 8px; }
+    .verify-group input { flex: 1; }
+    .verify-btn {
+      padding: 10px 16px; border-radius: var(--radius-sm);
+      border: 1px solid var(--primary); background: transparent; color: var(--primary-light);
+      font-size: 0.85rem; cursor: pointer; white-space: nowrap; font-family: inherit;
+      transition: all 0.2s;
+    }
+    .verify-btn:hover { background: var(--primary); color: white; }
+    .verify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .check-result {
+      margin-top: 4px; font-size: 0.75rem;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .check-ok { color: var(--success); }
+    .check-err { color: var(--error); }
+
+    .signup-nav {
+      display: flex; gap: 10px; margin-top: 24px;
+    }
+
+    .terms-box {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; font-size: 0.8rem; color: var(--text3);
+      max-height: 100px; overflow-y: auto; margin-bottom: 12px; line-height: 1.6;
+    }
+    .check-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; cursor: pointer; margin-bottom: 8px;
+    }
+    .check-label input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primary); }
+
+    .step-panel { display: none; }
+    .step-panel.active { display: block; }
+
+    .signup-footer { text-align: center; margin-top: 20px; color: var(--text3); font-size: 0.85rem; }
+    .signup-footer a { color: var(--primary-light); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <nav id="nc-nav"></nav>
+  <div class="signup-wrap">
+    <div class="signup-logo">
+      <a href="/index.html"><span class="logo-icon" style="color:var(--accent)">✦</span> NovelCraft</a>
+    </div>
+
+    <!-- 스텝 인디케이터 -->
+    <div class="steps">
+      <div class="step active" id="step-ind-1">
+        <div class="step-circle" id="step-c1">1</div>
+        <div class="step-label">기본 정보</div>
+      </div>
+      <div class="step-line" id="step-line-1"></div>
+      <div class="step" id="step-ind-2">
+        <div class="step-circle" id="step-c2">2</div>
+        <div class="step-label">역할 선택</div>
+      </div>
+      <div class="step-line" id="step-line-2"></div>
+      <div class="step" id="step-ind-3">
+        <div class="step-circle" id="step-c3">3</div>
+        <div class="step-label">추가 정보</div>
+      </div>
+    </div>
+
+    <div class="signup-card">
+      <!-- STEP 1: 기본 정보 -->
+      <div class="step-panel active" id="panel-1">
+        <div class="signup-title">기본 정보 입력</div>
+        <div class="signup-subtitle">이메일과 비밀번호를 입력하세요</div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">이메일 <span style="color:var(--error)">*</span></label>
+          <div style="display:flex;gap:8px">
+            <input type="email" id="s-email" class="nc-input" placeholder="이메일 입력">
+            <button class="verify-btn" onclick="checkEmail()" id="email-check-btn">중복확인</button>
+          </div>
+          <div class="check-result" id="email-result"></div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">닉네임 <span style="color:var(--error)">*</span></label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="s-nickname" class="nc-input" placeholder="닉네임 입력 (최대 10자)" maxlength="10">
+            <button class="verify-btn" onclick="checkNickname()">중복확인</button>
+          </div>
+          <div class="check-result" id="nickname-result"></div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">비밀번호 <span style="color:var(--error)">*</span></label>
+          <input type="password" id="s-pw" class="nc-input" placeholder="영문+숫자 8자 이상">
+          <div class="nc-input-hint">영문, 숫자, 특수문자 조합 8자 이상</div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">비밀번호 확인 <span style="color:var(--error)">*</span></label>
+          <input type="password" id="s-pw2" class="nc-input" placeholder="비밀번호 재입력">
+          <div class="check-result" id="pw-result"></div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">휴대폰 번호 <span style="color:var(--error)">*</span></label>
+          <div class="verify-group">
+            <input type="tel" id="s-phone" class="nc-input" placeholder="010-0000-0000">
+            <button class="verify-btn" id="sms-btn" onclick="sendSms()">인증번호 발송</button>
+          </div>
+        </div>
+        <div class="nc-form-group" id="verify-code-group" style="display:none">
+          <label class="nc-label">인증번호</label>
+          <div class="verify-group">
+            <input type="text" id="s-code" class="nc-input" placeholder="인증번호 6자리" maxlength="6">
+            <button class="verify-btn" onclick="verifyPhone()">확인</button>
+          </div>
+          <div class="check-result" id="phone-result"></div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="check-label">
+            <input type="checkbox" id="s-adult"> 성인 인증 (만 18세 이상)
+          </label>
+          <label class="check-label">
+            <input type="checkbox" id="s-terms" required>
+            <span>이용약관 및 개인정보처리방침에 동의합니다 <span style="color:var(--error)">*</span></span>
+          </label>
+        </div>
+
+        <div class="signup-nav">
+          <button class="nc-btn nc-btn--primary nc-btn--full" onclick="nextStep1()">다음</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: 역할 선택 -->
+      <div class="step-panel" id="panel-2">
+        <div class="signup-title">역할을 선택하세요</div>
+        <div class="signup-subtitle">독자 또는 작가로 가입할 수 있습니다</div>
+
+        <div class="role-options">
+          <div class="role-card" id="role-reader" onclick="selectRole('reader')">
+            <div class="role-card__icon">📖</div>
+            <div class="role-card__title">독자</div>
+            <div class="role-card__desc">소설을 읽고 리뷰를 남겨요</div>
+          </div>
+          <div class="role-card" id="role-author" onclick="selectRole('author')">
+            <div class="role-card__icon">✍️</div>
+            <div class="role-card__title">작가</div>
+            <div class="role-card__desc">소설을 쓰고 연재해요</div>
+          </div>
+        </div>
+
+        <div class="signup-nav">
+          <button class="nc-btn nc-btn--outline" onclick="prevStep(2)">이전</button>
+          <button class="nc-btn nc-btn--primary nc-btn--full" onclick="nextStep2()">다음</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: 추가 정보 (독자) -->
+      <div class="step-panel" id="panel-3-reader">
+        <div class="signup-title">독자 프로필 설정</div>
+        <div class="signup-subtitle">선호하는 장르와 독서 목표를 설정하세요</div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">선호 장르 (복수 선택 가능)</label>
+          <div class="genre-checkboxes" id="reader-genres">
+            <button class="genre-check" data-genre="판타지">판타지</button>
+            <button class="genre-check" data-genre="로맨스">로맨스</button>
+            <button class="genre-check" data-genre="현대">현대</button>
+            <button class="genre-check" data-genre="무협">무협</button>
+            <button class="genre-check" data-genre="공포">공포</button>
+            <button class="genre-check" data-genre="역사">역사</button>
+            <button class="genre-check" data-genre="SF">SF</button>
+            <button class="genre-check" data-genre="일상">일상</button>
+          </div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">월 독서 목표 (권)</label>
+          <input type="number" id="reading-goal" class="nc-input" placeholder="예: 5" min="1" max="100">
+        </div>
+
+        <div class="signup-nav">
+          <button class="nc-btn nc-btn--outline" onclick="prevStep(3)">이전</button>
+          <button class="nc-btn nc-btn--primary nc-btn--full" onclick="submitReader()" id="reader-submit-btn">가입 완료</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: 추가 정보 (작가) -->
+      <div class="step-panel" id="panel-3-author">
+        <div class="signup-title">작가 프로필 설정</div>
+        <div class="signup-subtitle">작가 활동에 필요한 정보를 입력하세요</div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">작가 소개</label>
+          <textarea id="author-bio" class="nc-textarea" placeholder="간단한 작가 소개를 입력하세요" rows="3" maxlength="300"></textarea>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">주요 장르</label>
+          <div class="genre-checkboxes" id="author-genres">
+            <button class="genre-check" data-genre="판타지">판타지</button>
+            <button class="genre-check" data-genre="로맨스">로맨스</button>
+            <button class="genre-check" data-genre="현대">현대</button>
+            <button class="genre-check" data-genre="무협">무협</button>
+            <button class="genre-check" data-genre="공포">공포</button>
+            <button class="genre-check" data-genre="역사">역사</button>
+            <button class="genre-check" data-genre="SF">SF</button>
+          </div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">필명</label>
+          <input type="text" id="author-penname" class="nc-input" placeholder="필명 (선택사항)">
+        </div>
+
+        <div class="signup-nav">
+          <button class="nc-btn nc-btn--outline" onclick="prevStep(3)">이전</button>
+          <button class="nc-btn nc-btn--primary nc-btn--full" onclick="submitAuthor()" id="author-submit-btn">가입 완료</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="signup-footer">
+      이미 계정이 있으신가요? <a href="/login.html">로그인</a>
+    </div>
+  </div>
+
+  <script>
+
+    let currentStep = 1;
+    let selectedRole = '';
+    let tempToken = null;
+    let phoneVerified = false;
+    let emailOk = false;
+    let nicknameOk = false;
+
+    const urlP = new URLSearchParams(location.search);
+    const socialToken = urlP.get('socialToken');
+    if (socialToken) {
+        // 소셜 토큰으로 임시 인증 → Step 2(역할 선택)부터 시작
+        Auth.setToken(socialToken);
+        tempToken = socialToken;
+        // Step 1 건너뛰고 Step 2로
+        document.addEventListener('DOMContentLoaded', () => setStep(2));
+    }
+
+    if (Auth.isLoggedIn()) window.location.href = '/index.html';
+
+    // 장르 체크박스 토글
+    document.querySelectorAll('.genre-check').forEach(btn => {
+      btn.addEventListener('click', () => btn.classList.toggle('selected'));
+    });
+
+    function setStep(n) {
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById(`step-ind-${i}`)?.classList.remove('active','done');
+        document.getElementById(`step-c${i}`).textContent = i;
+      }
+      document.getElementById('step-line-1')?.classList.remove('done');
+      document.getElementById('step-line-2')?.classList.remove('done');
+
+      for (let i = 1; i < n; i++) {
+        const ind = document.getElementById(`step-ind-${i}`);
+        if (ind) { ind.classList.add('done'); document.getElementById(`step-c${i}`).textContent = '✓'; }
+        if (i === 1) document.getElementById('step-line-1')?.classList.add('done');
+        if (i === 2) document.getElementById('step-line-2')?.classList.add('done');
+      }
+      document.getElementById(`step-ind-${n}`)?.classList.add('active');
+
+      document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+      if (n === 3 && selectedRole) {
+        document.getElementById(`panel-3-${selectedRole}`)?.classList.add('active');
+      } else {
+        document.getElementById(`panel-${n}`)?.classList.add('active');
+      }
+      currentStep = n;
+    }
+
+    function prevStep(current) {
+      setStep(current - 1);
+    }
+
+    async function checkEmail() {
+      const email = document.getElementById('s-email').value.trim();
+      const res = document.getElementById('email-result');
+      if (!email) { res.innerHTML = '<span class="check-err">이메일을 입력하세요</span>'; return; }
+      try {
+        await api.get(`/auth/email/check?email=${encodeURIComponent(email)}`);
+        res.innerHTML = '<span class="check-ok">✓ 사용 가능한 이메일입니다</span>';
+        emailOk = true;
+      } catch (e) {
+        res.innerHTML = `<span class="check-err">✕ ${e.message || '이미 사용 중인 이메일입니다'}</span>`;
+        emailOk = false;
+      }
+    }
+
+    async function checkNickname() {
+      const nick = document.getElementById('s-nickname').value.trim();
+      const res = document.getElementById('nickname-result');
+      if (!nick) { res.innerHTML = '<span class="check-err">닉네임을 입력하세요</span>'; return; }
+      try {
+        await api.get(`/auth/nickname/check?nickname=${encodeURIComponent(nick)}`);
+        res.innerHTML = '<span class="check-ok">✓ 사용 가능한 닉네임입니다</span>';
+        nicknameOk = true;
+      } catch (e) {
+        res.innerHTML = `<span class="check-err">✕ ${e.message || '이미 사용 중인 닉네임입니다'}</span>`;
+        nicknameOk = false;
+      }
+    }
+
+    async function sendSms() {
+      const phone = document.getElementById('s-phone').value.replace(/-/g, '');
+      if (!phone) { Toast.error('휴대폰 번호를 입력하세요'); return; }
+      const btn = document.getElementById('sms-btn');
+      btn.disabled = true; btn.textContent = '발송 중...';
+      try {
+        await api.post('/auth/phone/send', { phoneNo: phone });
+        document.getElementById('verify-code-group').style.display = 'block';
+        Toast.success('인증번호가 발송되었습니다');
+        btn.textContent = '재발송';
+      } catch (e) {
+        Toast.error(e.message || '발송 실패');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function verifyPhone() {
+      const phone = document.getElementById('s-phone').value.replace(/-/g, '');
+      const code = document.getElementById('s-code').value.trim();
+      const res = document.getElementById('phone-result');
+      try {
+        const r = await api.post('/auth/phone/verify', { phoneNo: phone, verificationCode: code });
+        tempToken = r; // tempToken 저장
+        res.innerHTML = '<span class="check-ok">✓ 인증 완료</span>';
+        phoneVerified = true;
+      } catch (e) {
+        res.innerHTML = `<span class="check-err">✕ ${e.message || '인증 실패'}</span>`;
+        phoneVerified = false;
+      }
+    }
+
+    async function nextStep1() {
+      const email = document.getElementById('s-email').value.trim();
+      const nick = document.getElementById('s-nickname').value.trim();
+      const pw = document.getElementById('s-pw').value;
+      const pw2 = document.getElementById('s-pw2').value;
+      const terms = document.getElementById('s-terms').checked;
+
+      if (!email || !nick || !pw) { Toast.error('필수 항목을 모두 입력하세요'); return; }
+      if (!emailOk) { Toast.error('이메일 중복 확인을 해주세요'); return; }
+      if (!nicknameOk) { Toast.error('닉네임 중복 확인을 해주세요'); return; }
+      if (pw !== pw2) {
+        document.getElementById('pw-result').innerHTML = '<span class="check-err">✕ 비밀번호가 일치하지 않습니다</span>';
+        return;
+      }
+      if (pw.length < 8) { Toast.error('비밀번호는 8자 이상이어야 합니다'); return; }
+      if (!phoneVerified) { Toast.error('휴대폰 인증을 완료해주세요'); return; }
+      if (!terms) { Toast.error('이용약관에 동의해주세요'); return; }
+
+      // 공통 회원가입 API 호출
+      try {
+        const phone = document.getElementById('s-phone').value.replace(/-/g, '');
+        const isAdult = document.getElementById('s-adult').checked;
+        const res = await api.post('/auth/signup', {
+          email, nickname: nick, password: pw,
+          phoneNo: phone, isAdultVerified: isAdult,
+          phoneVerifyToken: tempToken,
+        });
+        tempToken = res.tempToken; // 다음 단계용 토큰
+        // 임시 토큰으로 인증헤더 세팅
+        Auth.setToken(tempToken);
+        setStep(2);
+      } catch (e) {
+        Toast.error(e.message || '가입 정보 확인 실패');
+      }
+    }
+
+    function selectRole(role) {
+      selectedRole = role;
+      document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+      document.getElementById(`role-${role}`)?.classList.add('selected');
+    }
+
+    function nextStep2() {
+      if (!selectedRole) { Toast.error('역할을 선택해주세요'); return; }
+      setStep(3);
+    }
+
+    async function submitReader() {
+      const genres = Array.from(document.querySelectorAll('#reader-genres .genre-check.selected')).map(b => b.dataset.genre);
+      const goal = parseInt(document.getElementById('reading-goal').value) || null;
+      const btn = document.getElementById('reader-submit-btn');
+      btn.disabled = true; btn.textContent = '처리 중...';
+      try {
+        const res = await api.post('/auth/signup/reader', {
+          preferredGenres: genres, readingGoal: goal,
+        }, true);
+        Auth.setToken(res.accessToken);
+        Auth.setUser({ id: res.userId, nickname: res.nickname, email: res.email, role: 'READER' });
+        Toast.success('회원가입 완료! 환영합니다 🎉');
+        setTimeout(() => window.location.href = '/index.html', 1000);
+      } catch (e) {
+        Toast.error(e.message || '가입 실패');
+        btn.disabled = false; btn.textContent = '가입 완료';
+      }
+    }
+
+    async function submitAuthor() {
+      const genres = Array.from(document.querySelectorAll('#author-genres .genre-check.selected')).map(b => b.dataset.genre);
+      const bio = document.getElementById('author-bio').value.trim();
+      const penName = document.getElementById('author-penname').value.trim();
+      const btn = document.getElementById('author-submit-btn');
+      btn.disabled = true; btn.textContent = '처리 중...';
+      try {
+        const res = await api.post('/auth/signup/author', {
+          genres, bio, penName,
+        }, true);
+        Auth.setToken(res.accessToken);
+        Auth.setUser({ id: res.userId, nickname: res.nickname, email: res.email, role: 'AUTHOR' });
+        Toast.success('작가 회원가입 완료! 환영합니다 ✍️');
+        setTimeout(() => window.location.href = '/index.html', 1000);
+      } catch (e) {
+        Toast.error(e.message || '가입 실패');
+        btn.disabled = false; btn.textContent = '가입 완료';
+      }
+    }
+  </script>
+</body>
+</html>

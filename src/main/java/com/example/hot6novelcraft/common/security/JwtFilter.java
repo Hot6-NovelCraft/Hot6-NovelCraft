@@ -54,12 +54,6 @@ public class JwtFilter extends OncePerRequestFilter {
                     , "/api/auth/phone/verify"
                     , "/api/auth/users/restore"
                     , "/api/auth/users/abandon-recovery"
-                    , "/payment-test.html"
-                    , "/social-login-test.html"
-                    , "/chat-test.html"
-                    , "/ai-chat.html"
-                    , "/subscription-test.html"
-                    , "/notification-test.html"
                     , "/api/webhooks/portone"
                     , "/favicon.ico"
                     , "/login"          // 구글이 에러 시 여기로 리다이렉트
@@ -68,25 +62,39 @@ public class JwtFilter extends OncePerRequestFilter {
                     , "/api/search/v2/novels"
                     , "/api/search/v2/tags"
                     , "/api/search/v2/authors"
-                    , "/actuator/prometheus");
+                    , "/actuator/prometheus"
+                    , "/api/novels"             // 신작 목록
+                    , "/api/v2/novels"          // 소설 목록
+                    , "/api/ai/recommendation"  // AI 추천
+                    , "/api/search/keywords/popular"   // 인기 검색어
+                    , "/api/search/tags/popular");
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/oauth2/authorize") // 소셜 로그인 시작
+        return path.startsWith("/oauth2/authorize")
                 || path.startsWith("/api/auth/login/oauth2")
                 || path.startsWith("/login/oauth2")
-                || path.equals("/ws-chat") || path.startsWith("/ws-chat/")     // WebSocket (SockJS info 포함) - 인증은 StompChannelInterceptor 처리
-                || path.equals("/login")          // 구글 에러 리다이렉트
+                || path.equals("/ws-chat") || path.startsWith("/ws-chat/")
+                || path.equals("/login")
                 || path.equals("/favicon.ico")
-                || path.equals("/social-login-test.html")
-                || path.equals("/chat-test.html")
-                || path.equals("/ai-chat.html")
-                || path.equals("/subscription-test.html")
-                || path.equals("/notification-test.html")
                 || path.equals("/error")
-                || path.startsWith("/actuator");
-
+                || path.startsWith("/actuator")
+                || path.endsWith(".html")
+                || path.endsWith(".js")
+                || path.endsWith(".css")
+                || path.equals("/common.js")
+                || path.startsWith("/static/")
+                || path.startsWith("/css/")
+                || path.startsWith("/js/")
+                || path.startsWith("/images/")
+                || path.equals("/.well-known/appspecific/com.chrome.devtools.json")
+                || path.startsWith("/api/novels")
+                || path.startsWith("/api/v2/novels")
+                || path.startsWith("/api/v2/episodes")
+                || path.startsWith("/api/search/")
+                || path.startsWith("/api/mentorships/mentors")
+                || path.startsWith("/api/ai/recommendation");
     }
 
     @Override
