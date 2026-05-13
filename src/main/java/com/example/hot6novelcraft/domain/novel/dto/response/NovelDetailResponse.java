@@ -17,6 +17,7 @@ public record NovelDetailResponse(
         Long viewCount,
         int bookmarkCount,
         String authorNickname,
+        Long authorId,
         LocalDateTime createdAt
 
 ) {
@@ -32,6 +33,7 @@ public record NovelDetailResponse(
                 novel.getViewCount(),
                 novel.getBookmarkCount(),
                 authorNickname,
+                novel.getAuthorId(),
                 novel.getCreatedAt()
         );
     }
@@ -41,7 +43,7 @@ public record NovelDetailResponse(
         return new NovelDetailResponse(
                 novelId, title, description, genre, tags,
                 status, coverImageUrl, newViewCount,
-                bookmarkCount, authorNickname, createdAt
+                bookmarkCount, authorNickname, authorId, createdAt
         );
     }
 }

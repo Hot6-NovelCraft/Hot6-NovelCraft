@@ -95,6 +95,7 @@ public class CustomNovelRepositoryImpl implements CustomNovelRepository {
                         novel.viewCount,
                         novel.bookmarkCount,
                         user.nickname,
+                        user.id,
                         novel.createdAt
                 ))
                 .from(novel)
