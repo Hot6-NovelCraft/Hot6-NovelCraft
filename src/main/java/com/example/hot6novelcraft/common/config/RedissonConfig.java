@@ -7,35 +7,29 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 
 @Configuration
 public class RedissonConfig {
 
-//    @Value("${spring.data.redis.host}")
-//    private String host;
-//
-//    @Value("${spring.data.redis.port}")
-//    private int port;
+    /** "standalone" 이면 로컬 단독 Redis, 그 외(기본값)는 Sentinel 모드 */
+    @Value("${redisson.mode:sentinel}")
+    private String redissonMode;
 
-//    싱글 Redis
-//    @Bean
-//    public RedissonClient redissonClient() {
-//        Config config = new Config();
-//        config.useSingleServer()
-//              .setAddress("redis://" + host + ":" + port);
-//        return Redisson.create(config);
-//    }
+    // standalone 용
+    @Value("${spring.data.redis.host:localhost}")
+    private String standaloneHost;
 
-    // 마스터 - 슬레이브
-    @Value("${spring.data.redis.sentinel.master}")
+    @Value("${spring.data.redis.port:6379}")
+    private int standalonePort;
+
+    // sentinel 용
+    @Value("${spring.data.redis.sentinel.master:mymaster}")
     private String masterName;
 
-    @Value("${spring.data.redis.sentinel.nodes}")
+    @Value("${spring.data.redis.sentinel.nodes:}")
     private List<String> sentinelNodes;
 
-    // 값 없으면 빈 문자열 주입
     @Value("${app.redis.nat-mapping-ip:}")
     private String natMappingIp;
 
@@ -43,25 +37,36 @@ public class RedissonConfig {
     public RedissonClient redissonClient() {
         Config config = new Config();
 
-        // yml 에서 가져온 노드 주소들 "redis://" 붙여서 배열로 변환
-        String[] nodesArray = sentinelNodes.stream()
-                .map(node -> "redis://" + node)
-                .toArray(String[]::new);
+        if ("standalone".equalsIgnoreCase(redissonMode)) {
+            // 로컬 개발 환경: 단독 Redis
+            config.useSingleServer()
+                  .setAddress("redis://" + standaloneHost + ":" + standalonePort)
+                  .setConnectTimeout(1000)
+                  .setRetryAttempts(3)
+                  .setRetryInterval(1500);
+        } else {
+            // 배포 환경: Redis Sentinel
+            String[] nodesArray = sentinelNodes.stream()
+                    .filter(n -> n != null && !n.isBlank())
+                    .map(node -> "redis://" + node.trim())
+                    .toArray(String[]::new);
 
-        org.redisson.config.SentinelServersConfig sentinelConfig = config.useSentinelServers()                .setMasterName(masterName)
-                .addSentinelAddress(nodesArray)
-                .setCheckSentinelsList(false)  // sentinel 인식 확인
-                .setReadMode(org.redisson.config.ReadMode.SLAVE)
-                .setConnectTimeout(1000)
-                .setRetryAttempts(3)
-                .setRetryInterval(1500);
+            org.redisson.config.SentinelServersConfig sentinelConfig = config.useSentinelServers()
+                    .setMasterName(masterName)
+                    .addSentinelAddress(nodesArray)
+                    .setCheckSentinelsList(false)
+                    .setReadMode(org.redisson.config.ReadMode.SLAVE)
+                    .setConnectTimeout(1000)
+                    .setRetryAttempts(3)
+                    .setRetryInterval(1500);
 
-        // 배포 시 같은 네트워크 써서 번역기가 필요 없다면 작동하지 않음
-        if(natMappingIp != null && !natMappingIp.isBlank()) {
-            sentinelConfig.setNatMapper(uri -> new org.redisson.misc.RedisURI(
-                    uri.getScheme() + "://" + natMappingIp + ":" + uri.getPort()
-            ));
+            if (natMappingIp != null && !natMappingIp.isBlank()) {
+                sentinelConfig.setNatMapper(uri -> new org.redisson.misc.RedisURI(
+                        uri.getScheme() + "://" + natMappingIp + ":" + uri.getPort()
+                ));
+            }
         }
+
         return Redisson.create(config);
     }
 }
