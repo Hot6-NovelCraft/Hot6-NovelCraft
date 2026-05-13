@@ -69,15 +69,20 @@ public class JwtFilter extends OncePerRequestFilter {
                     , "/login"          // 구글이 에러 시 여기로 리다이렉트
                     , "/login?error"
                     , "/api/novels/ranking"
-                    , "/api/search/v2/novels"
-                    , "/api/search/v2/tags"
-                    , "/api/search/v2/authors"
                     , "/actuator/prometheus"
                     , "/api/novels/new"             // 신작 목록
                     , "/api/ai/recommendation"  // AI 추천
                     , "/api/search/keywords/popular"   // 인기 검색어
                     , "/api/search/tags/popular"
                     , "/api/v2/novels");
+
+    // 토큰이 있으면 인증하고, 없어도 통과가능한 URL (선택적 인증)
+    private static final List<String> OPTIONAL_AUTH_URLS = List.of(
+            "/api/search/v2/novels"
+            ,"/api/search/v2/tags"
+            ,"/api/search/v2/authors"
+    );
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
