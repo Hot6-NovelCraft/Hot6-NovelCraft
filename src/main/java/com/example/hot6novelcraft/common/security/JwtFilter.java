@@ -42,6 +42,16 @@ public class JwtFilter extends OncePerRequestFilter {
     private static final List<String> SOCIAL_TOKEN_ALLOWED_URLS
             = List.of("/api/auth/social/signup/**");
 
+    // 비로그인 GET 허용 패턴 (소설 상세, 에피소드 목록 등)
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+    private static final List<String> PUBLIC_GET_PATTERNS = List.of(
+            "/api/novels/*",
+            "/api/novels/*/episodes",
+            "/api/novels/*/episodes/*",
+            "/api/episodes/*/comments",
+            "/api/novels/ranking/**"
+    );
+
     // 토큰 없이 통과 가능한 URL
     private static final List<String> PUBLIC_URLS
             = List.of(
@@ -63,12 +73,11 @@ public class JwtFilter extends OncePerRequestFilter {
                     , "/api/search/v2/tags"
                     , "/api/search/v2/authors"
                     , "/actuator/prometheus"
-                    , "/api/novels"             // 신작 목록
-                    , "/api/v2/novels"          // 소설 목록
+                    , "/api/novels/new"             // 신작 목록
                     , "/api/ai/recommendation"  // AI 추천
                     , "/api/search/keywords/popular"   // 인기 검색어
-                    , "/api/search/tags/popular");
-
+                    , "/api/search/tags/popular"
+                    , "/api/v2/novels");
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
@@ -78,8 +87,10 @@ public class JwtFilter extends OncePerRequestFilter {
                 || path.equals("/ws-chat") || path.startsWith("/ws-chat/")
                 || path.equals("/login")
                 || path.equals("/favicon.ico")
+                || path.equals("/login.html")
+                || path.equals("/index.html")
+                || path.equals("/signup.html")
                 || path.equals("/error")
-                || path.startsWith("/actuator")
                 || path.endsWith(".html")
                 || path.endsWith(".js")
                 || path.endsWith(".css")
@@ -89,12 +100,9 @@ public class JwtFilter extends OncePerRequestFilter {
                 || path.startsWith("/js/")
                 || path.startsWith("/images/")
                 || path.equals("/.well-known/appspecific/com.chrome.devtools.json")
-                || path.startsWith("/api/novels")
-                || path.startsWith("/api/v2/novels")
-                || path.startsWith("/api/v2/episodes")
                 || (path.startsWith("/api/search/") && !path.equals("/api/search/keywords/recent"))
-                || path.startsWith("/api/mentorships/mentors")
-                || path.startsWith("/api/ai/recommendation");
+                || path.startsWith("/api/ai/recommendation")
+                || path.startsWith("/actuator");
     }
 
     @Override
@@ -124,7 +132,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
 
                 if (!setAuthentication(response, token, requestURL)) {
-                return;
+                    return;
                 }
             }
 
@@ -137,6 +145,13 @@ public class JwtFilter extends OncePerRequestFilter {
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader == null || !authorizationHeader.startsWith(JwtUtil.BEARER_PREFIX)) {
+
+            // 비로그인 허용 GET 패턴이면 통과
+            if ("GET".equalsIgnoreCase(request.getMethod()) &&
+                    PUBLIC_GET_PATTERNS.stream().anyMatch(p -> PATH_MATCHER.match(p, requestURL))) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             log.warn("JWT 토큰이 없거나 형식이 잘못되었습니다. URL : {}", requestURL);
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT 토큰이 없거나 형식이 잘못되었습니다.");

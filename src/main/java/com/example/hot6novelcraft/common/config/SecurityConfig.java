@@ -108,6 +108,13 @@ public class SecurityConfig {
                                 , "/actuator/**"
                                 , "/api/ai/recommendation"
                         ).permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET
+                                , "/api/v2/novels"
+                                , "/api/novels/*"
+                                , "/api/novels/*/episodes"
+                                , "/api/novels/*/episodes/*"
+                                , "/api/episodes/*/comments"
+                        ).permitAll()
                         .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/calendars/**").hasAnyAuthority("READER", "AUTHOR")
                         .requestMatchers("/api/ai-support/**").authenticated()
