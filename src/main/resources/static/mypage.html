@@ -275,7 +275,7 @@
         <button class="sidebar-nav-item active" data-tab="profile">
           <span class="nav-icon">👤</span> 프로필 수정
         </button>
-        <button class="sidebar-nav-item" data-tab="library">
+        <button class="sidebar-nav-item" onclick="window.location.href='/library.html'">
           <span class="nav-icon">📚</span> 내 서재
         </button>
         <button class="sidebar-nav-item" data-tab="notification">
@@ -284,7 +284,7 @@
         <button class="sidebar-nav-item" data-tab="payment">
           <span class="nav-icon">💎</span> 포인트 내역
         </button>
-        <button class="sidebar-nav-item" data-tab="subscription">
+        <button class="sidebar-nav-item" onclick="window.location.href='/subscription.html'">
           <span class="nav-icon">🌟</span> 구독/결제
         </button>
         <button class="sidebar-nav-item" id="leave-btn" style="margin-top:auto">
@@ -332,8 +332,8 @@
             </div>
             <!-- 생년월일 -->
             <div class="form-group">
-              <label class="form-label">생년월일</label>
-              <input type="date" class="form-input" id="input-birthday" required>
+              <label class="form-label">생년월일 <span class="readonly">변경 불가</span></label>
+              <input type="date" class="form-input" id="input-birthday" disabled>
             </div>
           </div>
 
@@ -609,7 +609,6 @@
           <div class="nc-nav__right">
             ${isLoggedIn ? `
               <button class="nc-point-btn" id="nav-point" onclick="openChargeModal()">···P</button>
-              <button class="nc-nav__btn" onclick="window.location.href='/mypage.html?tab=library'">내 서재</button>
               <div class="nc-user-menu" id="user-menu">
                 <div class="nc-nav__avatar" onclick="toggleUserMenu()" style="cursor:pointer;user-select:none">
                   ${user?.nickname?.charAt(0)?.toUpperCase() || 'U'}
@@ -738,15 +737,13 @@
     /* ── 프로필 저장 ── */
     async function saveProfile() {
       const nickname = document.getElementById('input-nickname').value.trim();
-      const birthday = document.getElementById('input-birthday').value || null;
       const genderBtn = document.querySelector('.gender-btn.active');
       const gender = genderBtn?.dataset.gender || null;
 
       if (!nickname) { Toast.error('닉네임을 입력해주세요'); return; }
-      if (!birthday) { Toast.error('생년월일을 입력해주세요'); return; }
 
       try {
-        await api.patch('/auth/users/me', { nickname, birthday, gender }, true);
+        await api.patch('/auth/users/me', { nickname, gender }, true);
         Toast.success('프로필이 저장되었습니다');
         /* localStorage user 업데이트 */
         const stored = Auth.getUser();
