@@ -308,14 +308,12 @@
 
         try {
             const res = await api.post('/auth/login', {email, password});
-            Auth.setToken(res.accessToken.replace('Bearer ', ''));          // Bearer 제거 후 저장
-            localStorage.setItem('refreshToken', res.refreshToken);         // refreshToken은 그대로
+            Auth.setToken(res.accessToken.replace('Bearer ', ''));
+            localStorage.setItem('refreshToken', res.refreshToken.replace('Bearer ', ''));
             Auth.setUser({
-                id: res.userId,
                 nickname: res.nickname,
                 email: res.email,
                 role: res.role,
-                point: res.point,
             });
             Toast.success('로그인 성공!');
             const redirect = params.get('redirect') || '/index.html';

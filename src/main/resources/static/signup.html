@@ -9,7 +9,7 @@
     body { display: flex; align-items: flex-start; justify-content: center; min-height: 100vh; background: var(--bg); padding: 40px 20px; }
     #nc-nav { display: none; }
 
-    .signup-wrap { width: 100%; max-width: 500px; animation: fadeUp 0.4s ease; }
+    .signup-wrap { width: 100%; max-width: 520px; animation: fadeUp 0.4s ease; }
     @keyframes fadeUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
 
     .signup-logo { text-align: center; margin-bottom: 32px; }
@@ -42,7 +42,7 @@
     .step.done .step-label { color: var(--success); }
     .step-line {
       width: 60px; height: 2px; background: var(--border);
-      margin: 0 0; margin-bottom: 22px; transition: background 0.3s;
+      margin: 0; margin-bottom: 22px; transition: background 0.3s;
     }
     .step-line.done { background: var(--success); }
 
@@ -102,11 +102,6 @@
       display: flex; gap: 10px; margin-top: 24px;
     }
 
-    .terms-box {
-      background: var(--bg3); border: 1px solid var(--border);
-      border-radius: 8px; padding: 14px; font-size: 0.8rem; color: var(--text3);
-      max-height: 100px; overflow-y: auto; margin-bottom: 12px; line-height: 1.6;
-    }
     .check-label {
       display: flex; align-items: center; gap: 8px;
       font-size: 0.85rem; cursor: pointer; margin-bottom: 8px;
@@ -118,6 +113,42 @@
 
     .signup-footer { text-align: center; margin-top: 20px; color: var(--text3); font-size: 0.85rem; }
     .signup-footer a { color: var(--primary-light); text-decoration: none; }
+
+    /* 경력 선택 */
+    .career-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+    .career-card {
+      padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      background: transparent; cursor: pointer; transition: all 0.2s; text-align: center;
+      font-family: inherit;
+    }
+    .career-card:hover { border-color: var(--primary); }
+    .career-card.selected { border-color: var(--primary); background: rgba(124,90,240,0.1); color: var(--primary-light); }
+    .career-card__title { font-weight: 700; font-size: 0.9rem; }
+    .career-card__desc { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
+    .career-card.selected .career-card__desc { color: var(--primary-light); opacity: 0.8; }
+
+    /* 독서 목표 */
+    .goal-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .goal-card {
+      padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      background: transparent; cursor: pointer; transition: all 0.2s; text-align: center;
+      font-family: inherit;
+    }
+    .goal-card:hover { border-color: var(--primary); }
+    .goal-card.selected { border-color: var(--primary); background: rgba(124,90,240,0.1); color: var(--primary-light); }
+    .goal-card__title { font-weight: 700; font-size: 0.85rem; }
+    .goal-card__desc { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
+    .goal-card.selected .goal-card__desc { color: var(--primary-light); opacity: 0.8; }
+
+    /* SNS 링크 */
+    .sns-group { display: flex; flex-direction: column; gap: 8px; }
+    .sns-input-wrap { display: flex; align-items: center; gap: 8px; }
+    .sns-label { font-size: 0.8rem; color: var(--text3); min-width: 70px; }
+
+    input[type="date"].nc-input::-webkit-calendar-picker-indicator {
+      filter: invert(0.6);
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -149,12 +180,12 @@
       <!-- STEP 1: 기본 정보 -->
       <div class="step-panel active" id="panel-1">
         <div class="signup-title">기본 정보 입력</div>
-        <div class="signup-subtitle">이메일과 비밀번호를 입력하세요</div>
+        <div class="signup-subtitle">계정 정보와 연락처를 입력하세요</div>
 
         <div class="nc-form-group">
           <label class="nc-label">이메일 <span style="color:var(--error)">*</span></label>
           <div style="display:flex;gap:8px">
-            <input type="email" id="s-email" class="nc-input" placeholder="이메일 입력">
+            <input type="email" id="s-email" class="nc-input" placeholder="이메일 입력" autocomplete="email">
             <button class="verify-btn" onclick="checkEmail()" id="email-check-btn">중복확인</button>
           </div>
           <div class="check-result" id="email-result"></div>
@@ -170,14 +201,21 @@
         </div>
 
         <div class="nc-form-group">
+          <label class="nc-label">생년월일 <span style="color:var(--error)">*</span></label>
+          <input type="date" id="s-birthday" class="nc-input"
+                 max="" placeholder="생년월일 선택">
+          <div class="nc-input-hint">본인 확인 및 성인 인증에 사용됩니다</div>
+        </div>
+
+        <div class="nc-form-group">
           <label class="nc-label">비밀번호 <span style="color:var(--error)">*</span></label>
-          <input type="password" id="s-pw" class="nc-input" placeholder="영문+숫자 8자 이상">
-          <div class="nc-input-hint">영문, 숫자, 특수문자 조합 8자 이상</div>
+          <input type="password" id="s-pw" class="nc-input" placeholder="영문+숫자 8자 이상" autocomplete="new-password">
+          <div class="nc-input-hint">영문, 숫자 조합 8자 이상</div>
         </div>
 
         <div class="nc-form-group">
           <label class="nc-label">비밀번호 확인 <span style="color:var(--error)">*</span></label>
-          <input type="password" id="s-pw2" class="nc-input" placeholder="비밀번호 재입력">
+          <input type="password" id="s-pw2" class="nc-input" placeholder="비밀번호 재입력" autocomplete="new-password">
           <div class="check-result" id="pw-result"></div>
         </div>
 
@@ -198,9 +236,6 @@
         </div>
 
         <div class="nc-form-group">
-          <label class="check-label">
-            <input type="checkbox" id="s-adult"> 성인 인증 (만 18세 이상)
-          </label>
           <label class="check-label">
             <input type="checkbox" id="s-terms" required>
             <span>이용약관 및 개인정보처리방침에 동의합니다 <span style="color:var(--error)">*</span></span>
@@ -242,22 +277,51 @@
         <div class="signup-subtitle">선호하는 장르와 독서 목표를 설정하세요</div>
 
         <div class="nc-form-group">
-          <label class="nc-label">선호 장르 (복수 선택 가능)</label>
+          <label class="nc-label">선호 장르 <span style="color:var(--error)">*</span> (1개 이상 선택)</label>
           <div class="genre-checkboxes" id="reader-genres">
-            <button class="genre-check" data-genre="판타지">판타지</button>
-            <button class="genre-check" data-genre="로맨스">로맨스</button>
-            <button class="genre-check" data-genre="현대">현대</button>
-            <button class="genre-check" data-genre="무협">무협</button>
-            <button class="genre-check" data-genre="공포">공포</button>
-            <button class="genre-check" data-genre="역사">역사</button>
+            <button class="genre-check" data-genre="FANTASY">판타지</button>
+            <button class="genre-check" data-genre="ROMANCE_FANTASY">로판</button>
+            <button class="genre-check" data-genre="MODERN">현대</button>
+            <button class="genre-check" data-genre="CHIVALROUS">무협</button>
+            <button class="genre-check" data-genre="BL">BL</button>
             <button class="genre-check" data-genre="SF">SF</button>
-            <button class="genre-check" data-genre="일상">일상</button>
+            <button class="genre-check" data-genre="HORROR">공포</button>
+            <button class="genre-check" data-genre="CLASSIC">고전</button>
+            <button class="genre-check" data-genre="DAILY_LIFE">일상물</button>
           </div>
         </div>
 
         <div class="nc-form-group">
-          <label class="nc-label">월 독서 목표 (권)</label>
-          <input type="number" id="reading-goal" class="nc-input" placeholder="예: 5" min="1" max="100">
+          <label class="nc-label">독서 목표</label>
+          <div class="goal-options" id="reader-goal">
+            <button class="goal-card" data-goal="LIGHT">
+              <div class="goal-card__title">가볍게 즐기기</div>
+              <div class="goal-card__desc">주 1~2편</div>
+            </button>
+            <button class="goal-card" data-goal="STEADY">
+              <div class="goal-card__title">꾸준히 시작하기</div>
+              <div class="goal-card__desc">주 3~4편</div>
+            </button>
+            <button class="goal-card" data-goal="PASSIONATE">
+              <div class="goal-card__title">열독가</div>
+              <div class="goal-card__desc">매일 읽기</div>
+            </button>
+            <button class="goal-card" data-goal="CUSTOM">
+              <div class="goal-card__title">직접 설정</div>
+              <div class="goal-card__desc">나중에 설정</div>
+            </button>
+          </div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="check-label">
+            <input type="checkbox" id="reader-notify-novel">
+            <span>새 소설 알림 수신</span>
+          </label>
+          <label class="check-label">
+            <input type="checkbox" id="reader-notify-event">
+            <span>이벤트 알림 수신</span>
+          </label>
         </div>
 
         <div class="signup-nav">
@@ -272,26 +336,71 @@
         <div class="signup-subtitle">작가 활동에 필요한 정보를 입력하세요</div>
 
         <div class="nc-form-group">
-          <label class="nc-label">작가 소개</label>
-          <textarea id="author-bio" class="nc-textarea" placeholder="간단한 작가 소개를 입력하세요" rows="3" maxlength="300"></textarea>
-        </div>
-
-        <div class="nc-form-group">
-          <label class="nc-label">주요 장르</label>
+          <label class="nc-label">주력 장르 <span style="color:var(--error)">*</span> (1개 이상 선택)</label>
           <div class="genre-checkboxes" id="author-genres">
-            <button class="genre-check" data-genre="판타지">판타지</button>
-            <button class="genre-check" data-genre="로맨스">로맨스</button>
-            <button class="genre-check" data-genre="현대">현대</button>
-            <button class="genre-check" data-genre="무협">무협</button>
-            <button class="genre-check" data-genre="공포">공포</button>
-            <button class="genre-check" data-genre="역사">역사</button>
+            <button class="genre-check" data-genre="FANTASY">판타지</button>
+            <button class="genre-check" data-genre="ROMANCE_FANTASY">로판</button>
+            <button class="genre-check" data-genre="MODERN">현대</button>
+            <button class="genre-check" data-genre="CHIVALROUS">무협</button>
+            <button class="genre-check" data-genre="BL">BL</button>
             <button class="genre-check" data-genre="SF">SF</button>
+            <button class="genre-check" data-genre="HORROR">공포</button>
+            <button class="genre-check" data-genre="CLASSIC">고전</button>
+            <button class="genre-check" data-genre="DAILY_LIFE">일상물</button>
           </div>
         </div>
 
         <div class="nc-form-group">
-          <label class="nc-label">필명</label>
-          <input type="text" id="author-penname" class="nc-input" placeholder="필명 (선택사항)">
+          <label class="nc-label">작가 소개 <span style="color:var(--error)">*</span></label>
+          <textarea id="author-bio" class="nc-textarea" placeholder="작가 소개를 입력하세요 (10자 이상 500자 이하)" rows="3" maxlength="500"></textarea>
+          <div class="nc-input-hint" id="author-bio-count">0/500자 (최소 10자)</div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">경력 수준 <span style="color:var(--error)">*</span></label>
+          <div class="career-options" id="author-career">
+            <button class="career-card" data-career="INTRODUCTION">
+              <div class="career-card__title">입문</div>
+              <div class="career-card__desc">막 글을 시작했어요</div>
+            </button>
+            <button class="career-card" data-career="ELEMENTARY">
+              <div class="career-card__title">초보</div>
+              <div class="career-card__desc">어느 정도 경험이 있어요</div>
+            </button>
+            <button class="career-card" data-career="INTERMEDIATE">
+              <div class="career-card__title">중급</div>
+              <div class="career-card__desc">꽤 많이 써봤어요</div>
+            </button>
+            <button class="career-card" data-career="PROFICIENT">
+              <div class="career-card__title">숙련</div>
+              <div class="career-card__desc">프로 수준이에요</div>
+            </button>
+          </div>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="check-label">
+            <input type="checkbox" id="author-allow-mentee">
+            <span>멘티 신청 허용 (독자에게 멘토링 요청 수락 가능)</span>
+          </label>
+        </div>
+
+        <div class="nc-form-group">
+          <label class="nc-label">SNS 링크 (선택)</label>
+          <div class="sns-group">
+            <div class="sns-input-wrap">
+              <span class="sns-label">📸 Instagram</span>
+              <input type="url" id="author-instagram" class="nc-input" placeholder="https://instagram.com/...">
+            </div>
+            <div class="sns-input-wrap">
+              <span class="sns-label">✕ X(Twitter)</span>
+              <input type="url" id="author-x" class="nc-input" placeholder="https://x.com/...">
+            </div>
+            <div class="sns-input-wrap">
+              <span class="sns-label">📝 블로그</span>
+              <input type="url" id="author-blog" class="nc-input" placeholder="https://blog.naver.com/...">
+            </div>
+          </div>
         </div>
 
         <div class="signup-nav">
@@ -307,22 +416,26 @@
   </div>
 
   <script>
-
     let currentStep = 1;
     let selectedRole = '';
-    let tempToken = null;
+    let tempToken = null;      // 휴대폰 인증 후 발급되는 SMS tempToken (UUID)
+    let signupToken = null;    // 공통 가입 후 발급되는 JWT tempToken
     let phoneVerified = false;
     let emailOk = false;
     let nicknameOk = false;
+    let selectedGoal = null;
+    let selectedCareer = null;
 
+    // 생년월일 max 설정 (오늘 날짜)
+    document.getElementById('s-birthday').max = new Date().toISOString().split('T')[0];
+
+    // 소셜 로그인 후 회원가입 플로우
     const urlP = new URLSearchParams(location.search);
     const socialToken = urlP.get('socialToken');
     if (socialToken) {
-        // 소셜 토큰으로 임시 인증 → Step 2(역할 선택)부터 시작
-        Auth.setToken(socialToken);
-        tempToken = socialToken;
-        // Step 1 건너뛰고 Step 2로
-        document.addEventListener('DOMContentLoaded', () => setStep(2));
+      Auth.setToken(socialToken.replace('Bearer ', ''));
+      signupToken = socialToken;
+      document.addEventListener('DOMContentLoaded', () => setStep(2));
     }
 
     if (Auth.isLoggedIn()) window.location.href = '/index.html';
@@ -332,9 +445,35 @@
       btn.addEventListener('click', () => btn.classList.toggle('selected'));
     });
 
+    // 독서 목표 단일 선택
+    document.querySelectorAll('.goal-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedGoal = card.dataset.goal;
+      });
+    });
+
+    // 경력 단일 선택
+    document.querySelectorAll('.career-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.career-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedCareer = card.dataset.career;
+      });
+    });
+
+    // 작가 소개 글자 수 카운터
+    document.getElementById('author-bio').addEventListener('input', function() {
+      const len = this.value.length;
+      const hint = document.getElementById('author-bio-count');
+      hint.textContent = `${len}/500자 (최소 10자)`;
+      hint.style.color = len < 10 ? 'var(--error)' : 'var(--text3)';
+    });
+
     function setStep(n) {
       for (let i = 1; i <= 3; i++) {
-        document.getElementById(`step-ind-${i}`)?.classList.remove('active','done');
+        document.getElementById(`step-ind-${i}`)?.classList.remove('active', 'done');
         document.getElementById(`step-c${i}`).textContent = i;
       }
       document.getElementById('step-line-1')?.classList.remove('done');
@@ -401,6 +540,7 @@
         btn.textContent = '재발송';
       } catch (e) {
         Toast.error(e.message || '발송 실패');
+        btn.textContent = '인증번호 발송';
       } finally {
         btn.disabled = false;
       }
@@ -410,9 +550,13 @@
       const phone = document.getElementById('s-phone').value.replace(/-/g, '');
       const code = document.getElementById('s-code').value.trim();
       const res = document.getElementById('phone-result');
+      if (!code || code.length !== 6) {
+        res.innerHTML = '<span class="check-err">6자리 인증번호를 입력하세요</span>';
+        return;
+      }
       try {
         const r = await api.post('/auth/phone/verify', { phoneNo: phone, verificationCode: code });
-        tempToken = r; // tempToken 저장
+        tempToken = r; // UUID 형태의 SMS tempToken
         res.innerHTML = '<span class="check-ok">✓ 인증 완료</span>';
         phoneVerified = true;
       } catch (e) {
@@ -424,11 +568,15 @@
     async function nextStep1() {
       const email = document.getElementById('s-email').value.trim();
       const nick = document.getElementById('s-nickname').value.trim();
+      const birthday = document.getElementById('s-birthday').value;
       const pw = document.getElementById('s-pw').value;
       const pw2 = document.getElementById('s-pw2').value;
       const terms = document.getElementById('s-terms').checked;
 
-      if (!email || !nick || !pw) { Toast.error('필수 항목을 모두 입력하세요'); return; }
+      if (!email || !nick || !birthday || !pw) {
+        Toast.error('필수 항목을 모두 입력하세요');
+        return;
+      }
       if (!emailOk) { Toast.error('이메일 중복 확인을 해주세요'); return; }
       if (!nicknameOk) { Toast.error('닉네임 중복 확인을 해주세요'); return; }
       if (pw !== pw2) {
@@ -436,21 +584,27 @@
         return;
       }
       if (pw.length < 8) { Toast.error('비밀번호는 8자 이상이어야 합니다'); return; }
+      if (!/(?=.*[A-Za-z])(?=.*\d)/.test(pw)) {
+        Toast.error('비밀번호는 영문자와 숫자를 포함해야 합니다');
+        return;
+      }
       if (!phoneVerified) { Toast.error('휴대폰 인증을 완료해주세요'); return; }
       if (!terms) { Toast.error('이용약관에 동의해주세요'); return; }
 
       // 공통 회원가입 API 호출
       try {
         const phone = document.getElementById('s-phone').value.replace(/-/g, '');
-        const isAdult = document.getElementById('s-adult').checked;
         const res = await api.post('/auth/signup', {
-          email, nickname: nick, password: pw,
-          phoneNo: phone, isAdultVerified: isAdult,
-          phoneVerifyToken: tempToken,
+          email,
+          nickname: nick,
+          password: pw,
+          birthDay: birthday,     // yyyy-MM-dd 형식
+          phoneNo: phone,
+          tempToken: tempToken,   // SMS 인증 UUID 토큰
         });
-        tempToken = res.tempToken; // 다음 단계용 토큰
-        // 임시 토큰으로 인증헤더 세팅
-        Auth.setToken(tempToken);
+        // res = CommonSignupResponse { tempToken: "Bearer eyJ..." }
+        signupToken = res.tempToken;
+        Auth.setToken(signupToken.replace('Bearer ', ''));
         setStep(2);
       } catch (e) {
         Toast.error(e.message || '가입 정보 확인 실패');
@@ -469,18 +623,28 @@
     }
 
     async function submitReader() {
-      const genres = Array.from(document.querySelectorAll('#reader-genres .genre-check.selected')).map(b => b.dataset.genre);
-      const goal = parseInt(document.getElementById('reading-goal').value) || null;
+      const genres = Array.from(document.querySelectorAll('#reader-genres .genre-check.selected'))
+                          .map(b => b.dataset.genre);
+      if (genres.length === 0) {
+        Toast.error('선호 장르를 1개 이상 선택해주세요');
+        return;
+      }
+      const notifyNovel = document.getElementById('reader-notify-novel').checked;
+      const notifyEvent = document.getElementById('reader-notify-event').checked;
+
       const btn = document.getElementById('reader-submit-btn');
       btn.disabled = true; btn.textContent = '처리 중...';
       try {
-        const res = await api.post('/auth/signup/reader', {
-          preferredGenres: genres, readingGoal: goal,
+        await api.post('/auth/signup/reader', {
+          preferredGenres: genres,
+          readingGoal: selectedGoal || null,
+          notifyNewNovel: notifyNovel,
+          notifyEvent: notifyEvent,
         }, true);
-        Auth.setToken(res.accessToken);
-        Auth.setUser({ id: res.userId, nickname: res.nickname, email: res.email, role: 'READER' });
-        Toast.success('회원가입 완료! 환영합니다 🎉');
-        setTimeout(() => window.location.href = '/index.html', 1000);
+        Toast.success('회원가입 완료! 로그인해주세요 🎉');
+        Auth.removeToken();
+        Auth.removeUser();
+        setTimeout(() => window.location.href = '/login.html', 1200);
       } catch (e) {
         Toast.error(e.message || '가입 실패');
         btn.disabled = false; btn.textContent = '가입 완료';
@@ -488,19 +652,44 @@
     }
 
     async function submitAuthor() {
-      const genres = Array.from(document.querySelectorAll('#author-genres .genre-check.selected')).map(b => b.dataset.genre);
+      const genres = Array.from(document.querySelectorAll('#author-genres .genre-check.selected'))
+                          .map(b => b.dataset.genre);
       const bio = document.getElementById('author-bio').value.trim();
-      const penName = document.getElementById('author-penname').value.trim();
+
+      if (genres.length === 0) {
+        Toast.error('주력 장르를 1개 이상 선택해주세요');
+        return;
+      }
+      if (!bio || bio.length < 10) {
+        Toast.error('작가 소개를 10자 이상 입력해주세요');
+        return;
+      }
+      if (!selectedCareer) {
+        Toast.error('경력 수준을 선택해주세요');
+        return;
+      }
+
+      const allowMentee = document.getElementById('author-allow-mentee').checked;
+      const instagram = document.getElementById('author-instagram').value.trim() || null;
+      const xLink = document.getElementById('author-x').value.trim() || null;
+      const blog = document.getElementById('author-blog').value.trim() || null;
+
       const btn = document.getElementById('author-submit-btn');
       btn.disabled = true; btn.textContent = '처리 중...';
       try {
-        const res = await api.post('/auth/signup/author', {
-          genres, bio, penName,
+        await api.post('/auth/signup/author', {
+          genres: genres,
+          bio: bio,
+          careerLevel: selectedCareer,
+          allowMenteeRequest: allowMentee,
+          instagramLinks: instagram,
+          xLinks: xLink,
+          blogLinks: blog,
         }, true);
-        Auth.setToken(res.accessToken);
-        Auth.setUser({ id: res.userId, nickname: res.nickname, email: res.email, role: 'AUTHOR' });
-        Toast.success('작가 회원가입 완료! 환영합니다 ✍️');
-        setTimeout(() => window.location.href = '/index.html', 1000);
+        Toast.success('작가 회원가입 완료! 로그인해주세요 ✍️');
+        Auth.removeToken();
+        Auth.removeUser();
+        setTimeout(() => window.location.href = '/login.html', 1200);
       } catch (e) {
         Toast.error(e.message || '가입 실패');
         btn.disabled = false; btn.textContent = '가입 완료';
