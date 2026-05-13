@@ -111,4 +111,9 @@ public class Novel extends BaseEntity {
     public void changeStatus(NovelStatus status) {
         this.status = status;
     }
+
+    // 커버 이미지 URL 업데이트
+    public void updateCoverImage(String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
+    }
 }

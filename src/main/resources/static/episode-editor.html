@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>에피소드 에디터 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        body { overflow: hidden; }
+        /* common.js nav 숨김 - 에디터 전용 탑바 사용 */
+        #nc-nav { display: none !important; }
+
+        /* ── 탑바 ── */
+        .ed-topbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            height: 52px; background: var(--bg2); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px; padding: 0 16px;
+        }
+        .ed-topbar__back {
+            padding: 6px 13px; border-radius: 8px; font-size: 0.8rem;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2); cursor: pointer; font-family: inherit;
+            transition: all 0.15s; white-space: nowrap;
+        }
+        .ed-topbar__back:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .ed-topbar__breadcrumb {
+            font-size: 0.88rem; color: var(--text2); flex: 1;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ed-topbar__breadcrumb strong { color: var(--text); }
+        .ed-topbar__save-status { font-size: 0.72rem; color: var(--text3); white-space: nowrap; }
+        .ed-btn {
+            padding: 6px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 700;
+            cursor: pointer; font-family: inherit; transition: all 0.15s; white-space: nowrap;
+        }
+        .ed-btn--outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+        .ed-btn--outline:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .ed-btn--publish {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white;
+        }
+        .ed-btn--publish:hover { opacity: 0.88; }
+        .ed-btn--publish:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ── 레이아웃 ── */
+        .editor-body {
+            position: fixed; top: 52px; left: 0; right: 0; bottom: 0;
+            display: flex;
+        }
+
+        /* ── 왼쪽 사이드바 ── */
+        .ep-sidebar {
+            width: 216px; flex-shrink: 0;
+            background: var(--bg2); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .ep-sidebar__head {
+            padding: 10px 14px; font-size: 0.72rem; font-weight: 700;
+            color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase;
+            border-bottom: 1px solid var(--border); flex-shrink: 0;
+        }
+        .btn-new-ep {
+            margin: 10px 12px 6px; padding: 8px 10px;
+            width: calc(100% - 24px);
+            border: 1.5px dashed var(--border); border-radius: 9px;
+            background: transparent; color: var(--text3); font-size: 0.8rem;
+            cursor: pointer; font-family: inherit; transition: all 0.15s;
+        }
+        .btn-new-ep:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .ep-list { flex: 1; overflow-y: auto; padding: 2px 0; }
+        .ep-list::-webkit-scrollbar { width: 3px; }
+        .ep-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .ep-item {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 12px; cursor: pointer; transition: background 0.12s;
+            border-left: 3px solid transparent;
+        }
+        .ep-item:hover { background: rgba(255,255,255,0.03); }
+        .ep-item.active {
+            background: rgba(124,90,240,0.1); border-left-color: var(--primary);
+        }
+        .ep-item__info { flex: 1; min-width: 0; }
+        .ep-item__num { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+        .ep-item__title {
+            font-size: 0.7rem; color: var(--text3); margin-top: 1px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ep-item__status { font-size: 0.63rem; margin-top: 2px; }
+        .ep-item__status--draft { color: #f59e0b; }
+        .ep-item__status--pub { color: #10b981; }
+        .ep-item__del {
+            width: 20px; height: 20px; border-radius: 4px; border: none;
+            background: transparent; color: var(--text3); font-size: 0.75rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: all 0.12s;
+        }
+        .ep-item__del:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+
+        .manage-section {
+            border-top: 1px solid var(--border); padding: 8px 12px 4px;
+            font-size: 0.65rem; font-weight: 700; color: var(--text3);
+            letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0;
+        }
+        .btn-manage {
+            display: flex; align-items: center; gap: 7px;
+            width: calc(100% - 24px); margin: 3px 12px;
+            padding: 7px 10px; border-radius: 8px; font-size: 0.78rem;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2); cursor: pointer; font-family: inherit;
+            transition: all 0.15s;
+        }
+        .btn-manage:hover { border-color: var(--primary-light); color: var(--primary-light); background: rgba(124,90,240,0.05); }
+        .sidebar-foot { padding-bottom: 10px; flex-shrink: 0; }
+
+        /* ── 메인 에디터 ── */
+        .editor-main {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+            background: var(--bg);
+        }
+        .toolbar {
+            position: sticky; top: 0; z-index: 10;
+            background: rgba(15,15,19,0.95); backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 7px 24px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+        }
+        .tb-btn {
+            padding: 5px 11px; border-radius: 7px; font-size: 0.8rem;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2); cursor: pointer; font-family: inherit;
+            transition: all 0.12s; line-height: 1.4;
+        }
+        .tb-btn:hover { background: var(--surface); color: var(--text); }
+        .tb-btn--active { background: var(--surface); border-color: var(--primary); color: var(--primary-light); }
+        .tb-sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; margin: 0 3px; }
+        .tb-btn--review {
+            margin-left: auto; background: rgba(124,90,240,0.1);
+            border-color: rgba(124,90,240,0.3); color: var(--primary-light);
+        }
+        .tb-btn--review:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        .tb-btn--review:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .ep-title-wrap { padding: 28px 36px 0; }
+        .ep-title-input {
+            width: 100%; font-size: 1.3rem; font-weight: 700;
+            background: transparent; border: none; outline: none;
+            color: var(--text); font-family: 'Noto Serif KR', serif;
+            border-bottom: 1px solid var(--border); padding-bottom: 12px;
+        }
+        .ep-title-input::placeholder { color: var(--text3); }
+        .ep-title-hint { font-size: 0.7rem; color: var(--text3); margin-top: 4px; text-align: right; }
+
+        .ep-content-wrap { padding: 22px 36px 0; flex: 1; }
+        .ep-content {
+            width: 100%; min-height: 460px; height: auto;
+            background: transparent; border: none; outline: none; resize: none;
+            color: var(--text); font-size: 1rem; line-height: 1.95;
+            font-family: 'Noto Serif KR', serif;
+        }
+        .ep-content::placeholder { color: var(--text3); }
+
+        .char-count-bar {
+            padding: 10px 36px 20px; text-align: right; font-size: 0.74rem; color: var(--text3);
+        }
+        .char-count-bar.warn { color: #f59e0b; }
+        .char-count-bar.danger { color: #f87171; }
+
+        /* ── 모달 공통 ── */
+        .ed-modal {
+            position: fixed; inset: 0; z-index: 500;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.22s;
+        }
+        .ed-modal.show { opacity: 1; pointer-events: all; }
+        .ed-modal__backdrop {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+        }
+        .ed-modal__box {
+            position: relative; background: var(--surface2);
+            border: 1px solid var(--border); border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.96) translateY(10px); transition: transform 0.22s;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .ed-modal.show .ed-modal__box { transform: scale(1) translateY(0); }
+        .ed-modal__hd {
+            padding: 16px 20px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+        }
+        .ed-modal__hd-title { font-size: 1rem; font-weight: 700; flex: 1; }
+        .ed-modal__close {
+            background: none; border: none; color: var(--text3); font-size: 1.1rem;
+            cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.15s;
+        }
+        .ed-modal__close:hover { background: var(--surface); color: var(--text); }
+
+        /* ── 위키 모달 ── */
+        #modal-wiki .ed-modal__box { width: min(820px, 94vw); height: min(640px, 90vh); }
+        .wiki-layout { display: flex; flex: 1; min-height: 0; }
+        .wiki-cats {
+            width: 150px; flex-shrink: 0; border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; padding: 10px 0;
+        }
+        .wiki-cat-btn {
+            padding: 10px 16px; background: none; border: none; text-align: left;
+            font-size: 0.85rem; color: var(--text2); cursor: pointer;
+            font-family: inherit; transition: background 0.12s; border-left: 3px solid transparent;
+        }
+        .wiki-cat-btn:hover { background: var(--surface); }
+        .wiki-cat-btn.active { color: var(--primary-light); border-left-color: var(--primary); background: rgba(124,90,240,0.08); }
+        .wiki-main {
+            flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 14px 18px;
+        }
+        .wiki-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+        .wiki-list::-webkit-scrollbar { width: 3px; }
+        .wiki-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .wiki-entry {
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+            padding: 12px 14px;
+        }
+        .wiki-entry__head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+        .wiki-entry__title { font-size: 0.88rem; font-weight: 700; flex: 1; }
+        .wiki-entry__del {
+            background: none; border: none; color: var(--text3); font-size: 0.8rem;
+            cursor: pointer; padding: 3px 7px; border-radius: 5px; transition: all 0.12s;
+        }
+        .wiki-entry__del:hover { background: rgba(239,68,68,0.12); color: #f87171; }
+        .wiki-entry__content { font-size: 0.8rem; color: var(--text2); line-height: 1.6; white-space: pre-wrap; }
+        .wiki-form { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .wiki-input, .wiki-textarea {
+            width: 100%; padding: 8px 12px; background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); font-size: 0.85rem; font-family: inherit;
+            outline: none; transition: border-color 0.15s;
+        }
+        .wiki-input:focus, .wiki-textarea:focus { border-color: var(--primary-light); }
+        .wiki-textarea { resize: vertical; min-height: 80px; max-height: 160px; }
+        .wiki-form-row { display: flex; gap: 8px; align-items: flex-start; }
+        .wiki-form-row .wiki-input { flex: 1; }
+        .btn-wiki-add {
+            padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 700;
+            background: var(--primary); border: none; color: white; cursor: pointer;
+            font-family: inherit; white-space: nowrap; transition: opacity 0.15s;
+        }
+        .btn-wiki-add:hover { opacity: 0.88; }
+        .wiki-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 0.875rem; }
+
+        /* ── 커버 AI 모달 ── */
+        #modal-cover .ed-modal__box { width: min(480px, 92vw); }
+        .cover-preview {
+            width: 180px; height: 252px; border-radius: 12px; margin: 20px auto;
+            background: linear-gradient(135deg, var(--surface), var(--bg3));
+            border: 1px solid var(--border); display: flex; align-items: center;
+            justify-content: center; font-size: 3rem; overflow: hidden;
+        }
+        .cover-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .cover-actions { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 10px; }
+        .btn-gen-cover {
+            padding: 12px; border-radius: 10px; font-size: 0.9rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white; cursor: pointer; font-family: inherit;
+            transition: opacity 0.15s; width: 100%;
+        }
+        .btn-gen-cover:hover { opacity: 0.88; }
+        .btn-gen-cover:disabled { opacity: 0.45; cursor: not-allowed; }
+        .cover-result-btns { display: flex; gap: 8px; }
+        .cover-result-btns button {
+            flex: 1; padding: 9px; border-radius: 9px; font-size: 0.82rem; font-weight: 700;
+            cursor: pointer; font-family: inherit; transition: all 0.15s;
+        }
+        .btn-cover-save { background: #10b981; border: none; color: white; }
+        .btn-cover-save:hover { opacity: 0.88; }
+        .btn-cover-regen { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+        .btn-cover-regen:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .cover-status { text-align: center; font-size: 0.8rem; color: var(--text3); padding: 4px 20px; }
+        .cover-status.error { color: #f87171; }
+        .btn-check-result {
+            width: 100%; padding: 9px; border-radius: 9px; font-size: 0.82rem; font-weight: 700;
+            background: rgba(124,90,240,0.12); border: 1px solid rgba(124,90,240,0.3);
+            color: var(--primary-light); cursor: pointer; font-family: inherit; transition: all 0.15s;
+        }
+        .btn-check-result:hover { background: rgba(124,90,240,0.22); }
+        .btn-check-result:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ── AI 리뷰 모달 ── */
+        #modal-review .ed-modal__box { width: min(600px, 94vw); height: min(600px, 88vh); }
+        .review-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .review-header__title { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+        .review-header__sub { font-size: 0.75rem; color: var(--text3); }
+        .review-body { flex: 1; overflow-y: auto; padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+        .review-body::-webkit-scrollbar { width: 3px; }
+        .review-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .review-comment {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 13px 15px;
+            opacity: 0; transform: translateY(8px);
+            animation: fadeUpIn 0.35s forwards;
+        }
+        @keyframes fadeUpIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .review-comment__top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .review-comment__avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent2));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: 700; color: white; flex-shrink: 0;
+        }
+        .review-comment__nick { font-size: 0.82rem; font-weight: 700; flex: 1; }
+        .review-comment__stars { font-size: 0.75rem; color: var(--accent); letter-spacing: 1px; }
+        .review-comment__text { font-size: 0.85rem; color: var(--text2); line-height: 1.65; }
+        .review-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
+        .btn-review-req {
+            flex: 1; padding: 10px; border-radius: 9px; font-size: 0.88rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white; cursor: pointer; font-family: inherit;
+            transition: opacity 0.15s;
+        }
+        .btn-review-req:hover { opacity: 0.88; }
+        .btn-review-req:disabled { opacity: 0.45; cursor: not-allowed; }
+        .review-status { font-size: 0.75rem; color: var(--text3); text-align: center; padding: 6px 0; }
+        .review-spinner { display: flex; align-items: center; justify-content: center; padding: 32px; }
+
+        /* ── 로딩/빈 상태 ── */
+        .loading-row { display: flex; align-items: center; justify-content: center; padding: 28px; }
+        .empty-hint { text-align: center; color: var(--text3); font-size: 0.82rem; padding: 20px; }
+    </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<!-- ── 탑바 ── -->
+<div class="ed-topbar">
+    <button class="ed-topbar__back" onclick="goBack()">← 나가기</button>
+    <div class="ed-topbar__breadcrumb" id="breadcrumb">불러오는 중...</div>
+    <div class="ed-topbar__save-status" id="save-status"></div>
+    <button class="ed-btn ed-btn--outline" onclick="saveDraft()">임시저장</button>
+    <button class="ed-btn ed-btn--publish" id="btn-publish" onclick="publishEpisode()" disabled>발행</button>
+</div>
+
+<!-- ── 에디터 바디 ── -->
+<div class="editor-body">
+
+    <!-- 왼쪽 사이드바 -->
+    <aside class="ep-sidebar">
+        <div class="ep-sidebar__head">회차 목록</div>
+        <button class="btn-new-ep" onclick="createEpisode()">＋ 새 회차</button>
+        <div class="ep-list" id="ep-list">
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+        </div>
+        <div class="manage-section">소설 관리</div>
+        <div class="sidebar-foot">
+            <button class="btn-manage" onclick="openWiki()">📚 설정집 / 위키</button>
+            <button class="btn-manage" onclick="openCover()">🎨 AI 커버 이미지</button>
+        </div>
+    </aside>
+
+    <!-- 메인 에디터 -->
+    <main class="editor-main" id="editor-main">
+        <!-- 툴바 -->
+        <div class="toolbar">
+            <button class="tb-btn" title="굵게" onclick="wrapSel('**','**')"><b>B</b></button>
+            <button class="tb-btn" title="기울기" onclick="wrapSel('*','*')"><i>I</i></button>
+            <button class="tb-btn" title="밑줄" onclick="wrapSel('_','_')"><u>U</u></button>
+            <button class="tb-btn" onclick="wrapSel('“','”')">따옴표</button>
+            <div class="tb-sep"></div>
+            <button class="tb-btn" id="btn-spell" onclick="toggleSpellcheck()" title="맞춤법 검사 켜기/끄기">맞춤법</button>
+            <div class="tb-sep"></div>
+            <button class="tb-btn tb-btn--review" id="btn-ai-review" onclick="openReview()" disabled>🤖 AI 리뷰 200P</button>
+        </div>
+
+        <!-- 제목 -->
+        <div class="ep-title-wrap">
+            <input class="ep-title-input" id="ep-title" placeholder="회차 제목 입력... (최대 20자)" maxlength="20" oninput="onTitleInput()">
+            <div class="ep-title-hint"><span id="title-count">0</span> / 20</div>
+        </div>
+
+        <!-- 본문 -->
+        <div class="ep-content-wrap">
+            <textarea class="ep-content" id="ep-content" placeholder="계속 작성하세요..."
+                      maxlength="5000" spellcheck="true" oninput="onContentInput()"></textarea>
+        </div>
+        <div class="char-count-bar" id="char-count-bar">0 / 5000</div>
+    </main>
+</div>
+
+<!-- ── 위키 모달 ── -->
+<div class="ed-modal" id="modal-wiki">
+    <div class="ed-modal__backdrop" onclick="closeModal('modal-wiki')"></div>
+    <div class="ed-modal__box">
+        <div class="ed-modal__hd">
+            <div class="ed-modal__hd-title">📚 설정집 / 위키</div>
+            <button class="ed-modal__close" onclick="closeModal('modal-wiki')">✕</button>
+        </div>
+        <div class="wiki-layout">
+            <div class="wiki-cats">
+                <button class="wiki-cat-btn active" data-cat="CHARACTER" onclick="switchWikiCat('CHARACTER')">캐릭터</button>
+                <button class="wiki-cat-btn" data-cat="WORLDBUILDING" onclick="switchWikiCat('WORLDBUILDING')">세계관</button>
+                <button class="wiki-cat-btn" data-cat="PLOT" onclick="switchWikiCat('PLOT')">플롯 메모</button>
+                <button class="wiki-cat-btn" data-cat="GLOSSARY" onclick="switchWikiCat('GLOSSARY')">용어집</button>
+            </div>
+            <div class="wiki-main">
+                <div class="wiki-list" id="wiki-list">
+                    <div class="loading-row"><div class="nc-spinner"></div></div>
+                </div>
+                <div class="wiki-form">
+                    <div class="wiki-form-row">
+                        <input class="wiki-input" id="wiki-title-input" placeholder="제목 (최대 20자)" maxlength="20">
+                        <button class="btn-wiki-add" onclick="addWikiEntry()">추가</button>
+                    </div>
+                    <textarea class="wiki-textarea" id="wiki-content-input" placeholder="내용 (최대 1000자)" maxlength="1000"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 커버 AI 모달 ── -->
+<div class="ed-modal" id="modal-cover">
+    <div class="ed-modal__backdrop" onclick="closeModal('modal-cover')"></div>
+    <div class="ed-modal__box">
+        <div class="ed-modal__hd">
+            <div class="ed-modal__hd-title">🎨 AI 커버 이미지 생성</div>
+            <button class="ed-modal__close" onclick="closeModal('modal-cover')">✕</button>
+        </div>
+        <div class="cover-preview" id="cover-preview">📖</div>
+        <div class="cover-status" id="cover-status">현재 커버 이미지</div>
+        <div class="cover-actions">
+            <button class="btn-gen-cover" id="btn-gen-cover" onclick="generateCover()">✨ AI 이미지 생성 (300P)</button>
+            <button class="btn-check-result" id="btn-check-cover" onclick="checkCoverResult()" style="display:none">🔍 결과 확인하기</button>
+            <div class="cover-result-btns" id="cover-result-btns" style="display:none">
+                <button class="btn-cover-save" onclick="saveCover()">저장하기</button>
+                <button class="btn-cover-regen" onclick="generateCover()">다시 생성</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── AI 리뷰 모달 ── -->
+<div class="ed-modal" id="modal-review">
+    <div class="ed-modal__backdrop" onclick="closeModal('modal-review')"></div>
+    <div class="ed-modal__box">
+        <div class="review-header">
+            <div class="review-header__title">🤖 AI 리뷰</div>
+            <div class="review-header__sub">AI가 독자 시점에서 이 회차를 리뷰합니다 (200P 차감)</div>
+        </div>
+        <div class="review-body" id="review-body">
+            <div class="empty-hint">AI 리뷰 받기를 눌러 이 회차에 대한 독자 피드백을 받아보세요.</div>
+        </div>
+        <div class="review-footer">
+            <button class="btn-review-req" id="btn-review-req" onclick="requestReview()">AI 리뷰 받기 (200P)</button>
+            <button class="btn-check-result" id="btn-check-review" onclick="checkReviewResult()" style="display:none;flex:0 0 auto;width:auto;padding:10px 16px">🔍 결과 확인</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    /* ── 상태 ── */
+    const params        = new URLSearchParams(location.search);
+    const novelId       = params.get('novelId');
+    let   currentEpId   = params.get('episodeId') ? Number(params.get('episodeId')) : null;
+    let   novelTitle    = '';
+    let   epList        = [];
+    let   isDirty       = false;
+    let   autoSaveTimer = null;
+    let   spellActive   = true;
+
+    /* 커버 상태 */
+    let coverJobId        = null;
+    let coverPollTimer    = null;
+    let generatedCoverUrl = null;
+
+    /* AI 리뷰 상태 */
+    let reviewJobId     = null;
+    let reviewPollTimer = null;
+    let wikiCat         = 'CHARACTER';
+    let wikiData        = [];
+
+    /* ── 유틸 ── */
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtTime() {
+        const n = new Date();
+        return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+    }
+    function setSaveStatus(msg) {
+        document.getElementById('save-status').textContent = msg;
+    }
+
+    /* ── 모달 ── */
+    function openModal(id)  { document.getElementById(id).classList.add('show'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+    window.closeModal = closeModal;
+
+    /* ── 네비 이동 ── */
+    function goBack() {
+        window.location.href = '/author-dashboard.html';
+    }
+    window.goBack = goBack;
+
+    /* ── 소설 정보 로드 ── */
+    async function loadNovelTitle() {
+        try {
+            const data = await api.get('/novels/' + novelId, false);
+            novelTitle = data?.title || '소설';
+            updateBreadcrumb();
+        } catch (_) {}
+    }
+
+    function updateBreadcrumb() {
+        const ep = epList.find(e => e.id === currentEpId);
+        const epLabel = ep ? `${ep.episodeNumber}화` : (currentEpId ? '' : '회차를 선택하세요');
+        document.getElementById('breadcrumb').innerHTML =
+            `<strong>${esc(novelTitle)}</strong>${epLabel ? ` · ${epLabel}` : ''}`;
+        document.title = `${novelTitle}${epLabel ? ' · ' + epLabel : ''} - NovelCraft 에디터`;
+    }
+
+    /* ── 회차 목록 로드 ── */
+    async function loadEpList() {
+        const wrap = document.getElementById('ep-list');
+        try {
+            const res = await api.get(`/author/novels/${novelId}/episodes?size=200`, true);
+            epList = res?.content || res || [];
+            renderEpList();
+            if (currentEpId) loadEpisode(currentEpId);
+            else if (epList.length) loadEpisode(epList[0].id);
+        } catch (_) {
+            wrap.innerHTML = '<div class="empty-hint">목록 로드 실패</div>';
+        }
+    }
+
+    function renderEpList() {
+        const wrap = document.getElementById('ep-list');
+        if (!epList.length) {
+            wrap.innerHTML = '<div class="empty-hint">회차가 없습니다</div>';
+            return;
+        }
+        wrap.innerHTML = epList.map(ep => `
+        <div class="ep-item ${ep.id === currentEpId ? 'active' : ''}" onclick="loadEpisode(${ep.id})">
+            <div class="ep-item__info">
+                <div class="ep-item__num">${ep.episodeNumber}화</div>
+                <div class="ep-item__title">${esc(ep.title || '(제목 없음)')}</div>
+                <div class="ep-item__status ${ep.status === 'DRAFT' ? 'ep-item__status--draft' : 'ep-item__status--pub'}">
+                    ${ep.status === 'DRAFT' ? '작성중' : '발행됨'}
+                </div>
+            </div>
+            <button class="ep-item__del" title="삭제" onclick="event.stopPropagation();deleteEpisode(${ep.id})">✕</button>
+        </div>`).join('');
+    }
+
+    /* ── 회차 로드 ── */
+    async function loadEpisode(epId) {
+        currentEpId = epId;
+        history.replaceState({}, '', `?novelId=${novelId}&episodeId=${epId}`);
+        renderEpList();
+        updateBreadcrumb();
+
+        document.getElementById('ep-title').value = '';
+        document.getElementById('ep-content').value = '';
+        document.getElementById('btn-publish').disabled = true;
+        document.getElementById('btn-ai-review').disabled = true;
+
+        try {
+            const data = await api.get(`/author/novels/${novelId}/episodes/${epId}`, true);
+            document.getElementById('ep-title').value   = data?.title   || '';
+            document.getElementById('ep-content').value = data?.content || '';
+            updateTitleCount();
+            updateCharCount();
+            isDirty = false;
+            setSaveStatus('');
+            document.getElementById('btn-publish').disabled   = data?.status === 'PUBLISHED';
+            document.getElementById('btn-ai-review').disabled = false;
+
+            // 이전 리뷰 jobId 복원
+            const savedJobId = localStorage.getItem(`review_job_${epId}`);
+            if (savedJobId) reviewJobId = savedJobId;
+        } catch (_) {}
+    }
+
+    /* ── 새 회차 생성 ── */
+    async function createEpisode() {
+        const nextNum = epList.length ? Math.max(...epList.map(e => e.episodeNumber)) + 1 : 1;
+        try {
+            const res = await api.post(`/novels/${novelId}/episodes`, {
+                episodeNumber: nextNum, title: `${nextNum}화`, content: ''
+            }, true);
+            await loadEpList();
+            if (res?.episodeId) loadEpisode(res.episodeId);
+            Toast.success(`${nextNum}화가 생성됐습니다. 제목과 내용을 작성하세요.`);
+        } catch (e) {
+            Toast.error(e.message || '생성 실패');
+        }
+    }
+    window.createEpisode = createEpisode;
+
+    /* ── 회차 삭제 ── */
+    async function deleteEpisode(epId) {
+        const ep = epList.find(e => e.id === epId);
+        if (!confirm(`${ep?.episodeNumber || ''}화를 삭제하시겠습니까?`)) return;
+        try {
+            await api.delete(`/episodes/${epId}`, true);
+            if (currentEpId === epId) {
+                currentEpId = null;
+                document.getElementById('ep-title').value = '';
+                document.getElementById('ep-content').value = '';
+            }
+            await loadEpList();
+            Toast.success('삭제됐습니다.');
+        } catch (e) {
+            Toast.error(e.message || '삭제 실패');
+        }
+    }
+    window.deleteEpisode = deleteEpisode;
+
+    /* ── 제목/본문 입력 ── */
+    function onTitleInput() {
+        updateTitleCount();
+        isDirty = true;
+        setSaveStatus('');
+        scheduleAutoSave();
+    }
+    function onContentInput() {
+        updateCharCount();
+        isDirty = true;
+        setSaveStatus('');
+        scheduleAutoSave();
+    }
+    function updateTitleCount() {
+        const v = document.getElementById('ep-title').value;
+        document.getElementById('title-count').textContent = v.length;
+    }
+    function updateCharCount() {
+        const v = document.getElementById('ep-content').value;
+        const bar = document.getElementById('char-count-bar');
+        bar.textContent = `${v.length} / 5000`;
+        bar.className = 'char-count-bar' + (v.length > 4800 ? ' danger' : v.length > 4200 ? ' warn' : '');
+    }
+    window.onTitleInput   = onTitleInput;
+    window.onContentInput = onContentInput;
+
+    /* ── 자동저장 ── */
+    function scheduleAutoSave() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => saveEpisodeQuiet(), 3000);
+    }
+
+    async function saveEpisodeQuiet() {
+        if (!currentEpId || !isDirty) return;
+        const title   = document.getElementById('ep-title').value;
+        const content = document.getElementById('ep-content').value;
+        try {
+            await api.patch(`/episodes/${currentEpId}`, { title, content }, true);
+            isDirty = false;
+            setSaveStatus(`자동저장 ${fmtTime()}`);
+            // epList 제목 업데이트
+            const ep = epList.find(e => e.id === currentEpId);
+            if (ep) { ep.title = title; renderEpList(); }
+        } catch (_) {}
+    }
+
+    async function saveDraft() {
+        if (!currentEpId) { Toast.error('회차를 먼저 선택하세요.'); return; }
+        clearTimeout(autoSaveTimer);
+        const title   = document.getElementById('ep-title').value;
+        const content = document.getElementById('ep-content').value;
+        try {
+            await api.patch(`/episodes/${currentEpId}`, { title, content }, true);
+            isDirty = false;
+            setSaveStatus(`저장됨 ${fmtTime()}`);
+            Toast.success('저장됐습니다.');
+            const ep = epList.find(e => e.id === currentEpId);
+            if (ep) { ep.title = title; renderEpList(); }
+        } catch (e) {
+            Toast.error(e.message || '저장 실패');
+        }
+    }
+    window.saveDraft = saveDraft;
+
+    /* ── 발행 ── */
+    async function publishEpisode() {
+        if (!currentEpId) return;
+        if (!confirm('이 회차를 발행하시겠습니까? 발행 후에는 독자에게 공개됩니다.')) return;
+        await saveDraft();
+        try {
+            await api.post(`/episodes/${currentEpId}/publish`, {}, true);
+            Toast.success('발행됐습니다!');
+            document.getElementById('btn-publish').disabled = true;
+            const ep = epList.find(e => e.id === currentEpId);
+            if (ep) { ep.status = 'PUBLISHED'; renderEpList(); }
+        } catch (e) {
+            Toast.error(e.message || '발행 실패');
+        }
+    }
+    window.publishEpisode = publishEpisode;
+
+    /* ── 맞춤법 토글 ── */
+    function toggleSpellcheck() {
+        spellActive = !spellActive;
+        const ta  = document.getElementById('ep-content');
+        const btn = document.getElementById('btn-spell');
+        ta.setAttribute('spellcheck', spellActive ? 'true' : 'false');
+        ta.focus();
+        btn.classList.toggle('tb-btn--active', spellActive);
+        btn.title = spellActive ? '맞춤법 켜짐 (클릭해서 끄기)' : '맞춤법 꺼짐 (클릭해서 켜기)';
+    }
+    window.toggleSpellcheck = toggleSpellcheck;
+
+    /* ── 텍스트 감싸기 ── */
+    function wrapSel(open, close) {
+        const ta = document.getElementById('ep-content');
+        const s = ta.selectionStart, e = ta.selectionEnd;
+        const v = ta.value;
+        const selected = v.slice(s, e) || '텍스트';
+        ta.value = v.slice(0, s) + open + selected + close + v.slice(e);
+        ta.selectionStart = s + open.length;
+        ta.selectionEnd   = s + open.length + selected.length;
+        ta.focus();
+        onContentInput();
+    }
+    window.wrapSel = wrapSel;
+
+    /* ────────── 위키 ────────── */
+    function openWiki() {
+        if (!novelId) return;
+        loadWiki();
+        openModal('modal-wiki');
+    }
+    window.openWiki = openWiki;
+
+    async function loadWiki() {
+        const wrap = document.getElementById('wiki-list');
+        wrap.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+        try {
+            wikiData = await api.get(`/novels/${novelId}/wiki`, true) || [];
+            renderWikiList();
+        } catch (_) {
+            wrap.innerHTML = '<div class="empty-hint">불러오기 실패</div>';
+        }
+    }
+
+    function renderWikiList() {
+        const wrap = document.getElementById('wiki-list');
+        const filtered = wikiData.filter(w => w.category === wikiCat);
+        if (!filtered.length) {
+            wrap.innerHTML = '<div class="empty-hint">항목이 없습니다. 아래에서 추가하세요.</div>';
+            return;
+        }
+        wrap.innerHTML = filtered.map(w => `
+        <div class="wiki-entry">
+            <div class="wiki-entry__head">
+                <div class="wiki-entry__title">${esc(w.title)}</div>
+                <button class="wiki-entry__del" onclick="deleteWiki(${w.wikiId})">삭제</button>
+            </div>
+            <div class="wiki-entry__content">${esc(w.content)}</div>
+        </div>`).join('');
+    }
+
+    function switchWikiCat(cat) {
+        wikiCat = cat;
+        document.querySelectorAll('.wiki-cat-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.cat === cat)
+        );
+        renderWikiList();
+    }
+    window.switchWikiCat = switchWikiCat;
+
+    async function addWikiEntry() {
+        const title   = document.getElementById('wiki-title-input').value.trim();
+        const content = document.getElementById('wiki-content-input').value.trim();
+        if (!title)   { Toast.error('제목을 입력하세요.'); return; }
+        if (!content) { Toast.error('내용을 입력하세요.'); return; }
+        try {
+            await api.post(`/novels/${novelId}/wiki`, { category: wikiCat, title, content }, true);
+            document.getElementById('wiki-title-input').value   = '';
+            document.getElementById('wiki-content-input').value = '';
+            Toast.success('추가됐습니다.');
+            loadWiki();
+        } catch (e) {
+            Toast.error(e.message || '추가 실패');
+        }
+    }
+    window.addWikiEntry = addWikiEntry;
+
+    async function deleteWiki(wikiId) {
+        if (!confirm('삭제하시겠습니까?')) return;
+        try {
+            await api.delete(`/novels/${novelId}/wiki/${wikiId}`, true);
+            Toast.success('삭제됐습니다.');
+            loadWiki();
+        } catch (e) {
+            Toast.error(e.message || '삭제 실패');
+        }
+    }
+    window.deleteWiki = deleteWiki;
+
+    /* ────────── AI 커버 ────────── */
+    function openCover() {
+        const preview    = document.getElementById('cover-preview');
+        const statusEl   = document.getElementById('cover-status');
+        const genBtn     = document.getElementById('btn-gen-cover');
+        const checkBtn   = document.getElementById('btn-check-cover');
+        const resultBtns = document.getElementById('cover-result-btns');
+
+        // 폴링 이미 진행 중이면 UI만 생성 중 상태로
+        if (coverJobId && coverPollTimer) {
+            preview.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+            statusEl.textContent = 'AI가 이미지를 생성하고 있습니다...';
+            statusEl.className = 'cover-status';
+            genBtn.style.display  = 'none';
+            checkBtn.style.display = '';
+            resultBtns.style.display = 'none';
+            openModal('modal-cover');
+            return;
+        }
+
+        // localStorage에 저장된 jobId 복원
+        const savedJob = localStorage.getItem(`cover_job_${novelId}`);
+        if (savedJob) {
+            coverJobId = savedJob;
+            preview.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+            statusEl.textContent = 'AI 이미지 생성 요청이 진행 중입니다. 결과를 확인해 보세요.';
+            statusEl.className = 'cover-status';
+            genBtn.style.display  = 'none';
+            checkBtn.style.display = '';
+            resultBtns.style.display = 'none';
+            generatedCoverUrl = null;
+            // 자동 폴링 재개
+            if (!coverPollTimer) coverPollTimer = setInterval(pollCover, 4000);
+            openModal('modal-cover');
+            return;
+        }
+
+        // 기본: 현재 커버 표시
+        api.get('/novels/' + novelId, false).then(d => {
+            if (d?.coverImageUrl) {
+                preview.innerHTML = `<img src="${esc(d.coverImageUrl)}" alt="cover">`;
+            } else {
+                preview.textContent = '📖';
+            }
+        }).catch(() => { preview.textContent = '📖'; });
+        statusEl.textContent = '현재 커버 이미지';
+        statusEl.className = 'cover-status';
+        resultBtns.style.display = 'none';
+        genBtn.style.display  = '';
+        checkBtn.style.display = 'none';
+        generatedCoverUrl = null;
+        openModal('modal-cover');
+    }
+    window.openCover = openCover;
+
+    async function generateCover() {
+        clearInterval(coverPollTimer);
+        coverPollTimer = null;
+        const genBtn   = document.getElementById('btn-gen-cover');
+        const checkBtn = document.getElementById('btn-check-cover');
+        const statusEl = document.getElementById('cover-status');
+        genBtn.disabled = true;
+        genBtn.textContent = '요청 중...';
+        document.getElementById('cover-result-btns').style.display = 'none';
+        checkBtn.style.display = 'none';
+        statusEl.textContent = 'AI가 이미지를 생성하고 있습니다. 잠시 기다려 주세요...';
+        statusEl.className = 'cover-status';
+        document.getElementById('cover-preview').innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+        try {
+            const res = await api.post(`/ai/novels/${novelId}/cover`, {}, true);
+            coverJobId = res?.jobId;
+            if (!coverJobId) throw new Error('jobId 없음');
+            localStorage.setItem(`cover_job_${novelId}`, coverJobId);
+            genBtn.style.display  = 'none';
+            genBtn.disabled = false;
+            genBtn.textContent = '✨ AI 이미지 생성 (300P)';
+            checkBtn.style.display = '';
+            coverPollTimer = setInterval(pollCover, 4000);
+        } catch (e) {
+            Toast.error(e.message || '생성 요청 실패');
+            genBtn.disabled = false;
+            genBtn.textContent = '✨ AI 이미지 생성 (300P)';
+            genBtn.style.display = '';
+            checkBtn.style.display = 'none';
+            statusEl.textContent = '요청 실패. 다시 시도해 주세요.';
+            statusEl.className = 'cover-status error';
+        }
+    }
+    window.generateCover = generateCover;
+
+    async function pollCover() {
+        if (!coverJobId) return;
+        try {
+            const job = await api.get(`/ai/novels/cover/status/${coverJobId}`, true);
+            const statusEl = document.getElementById('cover-status');
+            const genBtn   = document.getElementById('btn-gen-cover');
+            const checkBtn = document.getElementById('btn-check-cover');
+            const resultBtns = document.getElementById('cover-result-btns');
+            if (job?.status === 'COMPLETED' && job.coverImageUrl) {
+                clearInterval(coverPollTimer);
+                coverPollTimer = null;
+                localStorage.removeItem(`cover_job_${novelId}`);
+                generatedCoverUrl = job.coverImageUrl;
+                document.getElementById('cover-preview').innerHTML =
+                    `<img src="${esc(generatedCoverUrl)}" alt="generated cover">`;
+                statusEl.textContent = '✅ 이미지 생성 완료!';
+                statusEl.className = 'cover-status';
+                genBtn.style.display  = 'none';
+                checkBtn.style.display = 'none';
+                resultBtns.style.display = 'flex';
+            } else if (job?.status === 'FAILED') {
+                clearInterval(coverPollTimer);
+                coverPollTimer = null;
+                localStorage.removeItem(`cover_job_${novelId}`);
+                const errMsg = job.errorMessage || '알 수 없는 오류';
+                statusEl.textContent = '❌ 생성 실패: ' + errMsg;
+                statusEl.className = 'cover-status error';
+                document.getElementById('cover-preview').textContent = '📖';
+                genBtn.disabled = false;
+                genBtn.textContent = '✨ AI 이미지 생성 (300P)';
+                genBtn.style.display = '';
+                checkBtn.style.display = 'none';
+                resultBtns.style.display = 'none';
+            }
+            // PENDING / PROCESSING → 계속 대기
+        } catch (_) {}
+    }
+
+    async function saveCover() {
+        if (!generatedCoverUrl) return;
+        try {
+            await api.patch(`/novels/${novelId}/cover`, { coverImageUrl: generatedCoverUrl }, true);
+            Toast.success('커버 이미지가 저장됐습니다!');
+            closeModal('modal-cover');
+        } catch (e) {
+            Toast.error(e.message || '저장 실패');
+        }
+    }
+    window.saveCover = saveCover;
+
+    async function checkCoverResult() {
+        if (!coverJobId) {
+            const saved = localStorage.getItem(`cover_job_${novelId}`);
+            if (!saved) { Toast.error('진행 중인 작업이 없습니다.'); return; }
+            coverJobId = saved;
+        }
+        const btn = document.getElementById('btn-check-cover');
+        btn.textContent = '확인 중...';
+        btn.disabled = true;
+        await pollCover();
+        // pollCover가 완료/실패 처리하면 버튼이 숨겨짐; 아직 진행 중이면 원상복구
+        if (btn.style.display !== 'none') {
+            btn.textContent = '🔍 결과 확인하기';
+            btn.disabled = false;
+            document.getElementById('cover-status').textContent = '아직 생성 중입니다. 잠시 후 다시 확인해 주세요.';
+        }
+    }
+    window.checkCoverResult = checkCoverResult;
+
+    /* ────────── AI 리뷰 ────────── */
+    function openReview() {
+        if (!currentEpId) { Toast.error('회차를 먼저 선택하세요.'); return; }
+        openModal('modal-review');
+        // 이전 완료된 리뷰가 있으면 복원
+        const savedResult = localStorage.getItem(`review_result_${currentEpId}`);
+        if (savedResult) {
+            try {
+                const comments = JSON.parse(savedResult);
+                renderReviewComments(comments, false);
+                return;
+            } catch (_) {}
+        }
+        // 진행 중인 jobId가 있으면 폴링 재개
+        const savedJob = localStorage.getItem(`review_job_${currentEpId}`);
+        if (savedJob) {
+            reviewJobId = savedJob;
+            document.getElementById('review-body').innerHTML =
+                '<div class="review-spinner"><div class="nc-spinner"></div></div>' +
+                '<div class="review-status">AI 리뷰 처리 중...</div>';
+            document.getElementById('btn-review-req').disabled = true;
+            document.getElementById('btn-check-review').style.display = '';
+            if (!reviewPollTimer) reviewPollTimer = setInterval(pollReview, 3000);
+            return;
+        }
+        document.getElementById('btn-check-review').style.display = 'none';
+    }
+    window.openReview = openReview;
+
+    async function requestReview() {
+        if (!currentEpId) return;
+        const content = document.getElementById('ep-content').value.trim();
+        if (!content) { Toast.error('본문을 먼저 작성하세요.'); return; }
+        // 저장 먼저
+        await saveEpisodeQuiet();
+        document.getElementById('btn-review-req').disabled = true;
+        document.getElementById('review-body').innerHTML =
+            '<div class="review-spinner"><div class="nc-spinner"></div></div>' +
+            '<div class="review-status">AI 리뷰를 요청했습니다. 잠시 기다려 주세요...</div>';
+        try {
+            const res = await api.post(`/ai/author/v2/episodes/${currentEpId}/ai-review`, {}, true);
+            reviewJobId = res?.jobId;
+            if (!reviewJobId) throw new Error('jobId 없음');
+            localStorage.setItem(`review_job_${currentEpId}`, reviewJobId);
+            document.getElementById('btn-check-review').style.display = '';
+            reviewPollTimer = setInterval(pollReview, 3000);
+        } catch (e) {
+            Toast.error(e.message || '요청 실패');
+            document.getElementById('btn-review-req').disabled = false;
+            document.getElementById('btn-check-review').style.display = 'none';
+            document.getElementById('review-body').innerHTML =
+                '<div class="empty-hint">요청에 실패했습니다. 다시 시도해 주세요.</div>';
+        }
+    }
+    window.requestReview = requestReview;
+
+    async function pollReview() {
+        if (!reviewJobId) return;
+        try {
+            const job = await api.get(`/ai/author/v2/jobs/${reviewJobId}`, true);
+            if (job?.status === 'COMPLETED') {
+                clearInterval(reviewPollTimer);
+                reviewPollTimer = null;
+                localStorage.removeItem(`review_job_${currentEpId}`);
+                const comments = job.result?.comments || [];
+                localStorage.setItem(`review_result_${currentEpId}`, JSON.stringify(comments));
+                renderReviewComments(comments, true);
+                document.getElementById('btn-review-req').disabled = false;
+                document.getElementById('btn-review-req').textContent = '다시 받기 (200P)';
+                document.getElementById('btn-check-review').style.display = 'none';
+            } else if (job?.status === 'FAILED') {
+                clearInterval(reviewPollTimer);
+                reviewPollTimer = null;
+                localStorage.removeItem(`review_job_${currentEpId}`);
+                const errMsg = job.errorMessage || 'AI 리뷰 생성에 실패했습니다.';
+                document.getElementById('review-body').innerHTML =
+                    `<div class="empty-hint">❌ ${esc(errMsg)}</div>`;
+                document.getElementById('btn-review-req').disabled = false;
+                document.getElementById('btn-check-review').style.display = 'none';
+                Toast.error(errMsg);
+            }
+            // PROCESSING → 계속 대기
+        } catch (_) {}
+    }
+
+    async function checkReviewResult() {
+        if (!reviewJobId) {
+            const saved = localStorage.getItem(`review_job_${currentEpId}`);
+            if (!saved) { Toast.error('진행 중인 작업이 없습니다.'); return; }
+            reviewJobId = saved;
+        }
+        const btn = document.getElementById('btn-check-review');
+        btn.textContent = '확인 중...';
+        btn.disabled = true;
+        await pollReview();
+        // pollReview가 완료/실패를 처리하면 버튼이 숨겨짐; 아직 진행 중이면 원상복구
+        if (btn.style.display !== 'none') {
+            btn.textContent = '🔍 결과 확인';
+            btn.disabled = false;
+            document.getElementById('review-body').innerHTML =
+                '<div class="review-spinner"><div class="nc-spinner"></div></div>' +
+                '<div class="review-status">아직 처리 중입니다. 잠시 후 다시 확인해 주세요.</div>';
+        }
+    }
+    window.checkReviewResult = checkReviewResult;
+
+    function renderReviewComments(comments, animate) {
+        if (!comments?.length) {
+            document.getElementById('review-body').innerHTML = '<div class="empty-hint">리뷰 결과가 없습니다.</div>';
+            return;
+        }
+        const body = document.getElementById('review-body');
+        body.innerHTML = '';
+        comments.forEach((c, i) => {
+            const stars = '★'.repeat(Math.round(c.rating || 0)) + '☆'.repeat(5 - Math.round(c.rating || 0));
+            const initial = (c.nickname || '독자').charAt(0).toUpperCase();
+            const div = document.createElement('div');
+            div.className = 'review-comment';
+            div.style.animationDelay = animate ? `${i * 280}ms` : '0ms';
+            div.innerHTML = `
+            <div class="review-comment__top">
+                <div class="review-comment__avatar">${esc(initial)}</div>
+                <div class="review-comment__nick">${esc(c.nickname || '독자' + (i+1))}</div>
+                <div class="review-comment__stars">${stars}</div>
+            </div>
+            <div class="review-comment__text">${esc(c.content)}</div>`;
+            body.appendChild(div);
+        });
+        body.scrollTop = 0;
+    }
+
+    /* ── 초기화 ── */
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        if (!novelId) { window.location.href = '/author-dashboard.html'; return; }
+        loadNovelTitle();
+        loadEpList();
+        // 스펠체크 초기 상태 표시
+        document.getElementById('btn-spell').classList.add('tb-btn--active');
+    });
+
+    window.loadEpisode = loadEpisode;
+})();
+</script>
+</body>
+</html>

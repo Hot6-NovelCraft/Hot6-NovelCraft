@@ -64,6 +64,19 @@ public class NovelController {
     }
 
     /**
+     * 소설 커버 이미지 URL 저장 (AI 커버 생성 후 호출)
+     */
+    @PatchMapping("/novels/{novelId}/cover")
+    public ResponseEntity<BaseResponse<Void>> updateNovelCoverImage(
+            @PathVariable Long novelId,
+            @RequestBody java.util.Map<String, String> body,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        novelService.updateNovelCoverImage(novelId, body.get("coverImageUrl"), userDetails);
+        return ResponseEntity.ok(BaseResponse.success("200", "커버 이미지 저장 성공", null));
+    }
+
+    /**
      * 소설 삭제
      * 정은식
      */

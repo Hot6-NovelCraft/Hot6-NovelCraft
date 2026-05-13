@@ -106,6 +106,14 @@ public class NovelService {
         return NovelUpdateResponse.from(novel.getId());
     }
 
+    // 커버 이미지 URL 저장
+    @Transactional
+    public void updateNovelCoverImage(Long novelId, String coverImageUrl, UserDetailsImpl userDetails) {
+        Novel novel = findNovelById(novelId, userDetails.getUser().getId());
+        novel.updateCoverImage(coverImageUrl);
+        evictNovelListCache();
+    }
+
     // 소설 삭제
     @Transactional
     public NovelDeleteResponse deleteNovel(Long novelId, UserDetailsImpl userDetails) {
