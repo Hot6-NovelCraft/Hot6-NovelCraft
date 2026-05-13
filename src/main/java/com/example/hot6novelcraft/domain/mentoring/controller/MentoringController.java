@@ -7,6 +7,7 @@ import com.example.hot6novelcraft.domain.mentoring.dto.response.ManuscriptUrlRes
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringDetailResponse;
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringFeedbackResponse;
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringReceivedResponse;
+import org.springframework.http.ResponseEntity;
 import com.example.hot6novelcraft.domain.mentoring.service.MentoringService;
 import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
 import jakarta.validation.Valid;
@@ -156,6 +157,28 @@ public class MentoringController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(BaseResponse.success("201", "피드백이 등록되었습니다",
                         mentoringService.createFeedback(mentoringId, userDetails.getUser().getId(), request)));
+    }
+
+    // =====================================================================
+    // 멘티 전용 엔드포인트
+    // =====================================================================
+
+    // 멘티가 멘토링 종료
+    @PatchMapping("/api/v2/mentorings/{mentoringId}/complete-by-mentee")
+    public ResponseEntity<BaseResponse<Void>> completeMentoringByMentee(
+            @PathVariable Long mentoringId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        mentoringService.completeMentoringByMentee(mentoringId, userDetails.getUser().getId());
+        return ResponseEntity.ok(BaseResponse.success("200", "멘토링이 종료되었습니다", null));
+    }
+
+    // 멘티가 자신의 멘토링 상세 조회 (피드백 포함)
+    @GetMapping("/api/v2/mentorings/{mentoringId}/mentee")
+    public ResponseEntity<BaseResponse<MentoringDetailResponse>> getMentoringDetailForMentee(
+            @PathVariable Long mentoringId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        return ResponseEntity.ok(BaseResponse.success("200", "멘토링 상세 조회 완료",
+                mentoringService.getMentoringDetailForMentee(mentoringId, userDetails.getUser().getId())));
     }
 
     // V2: 비관적 락 + 유니크 제약으로 sessionNumber 동시성 보호

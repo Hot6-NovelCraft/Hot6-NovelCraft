@@ -23,7 +23,8 @@ public enum MentoringExceptionEnum implements ErrorCode {
     MENTORING_SELF_APPLY(HttpStatus.BAD_REQUEST, "본인에게 멘토링을 신청할 수 없습니다"),
     MENTORING_NOT_AUTHOR(HttpStatus.FORBIDDEN, "작가 권한이 필요합니다"),
     MENTORING_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "완료된 멘토링만 평가할 수 있습니다"),
-    MENTORING_REVIEW_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 평가한 멘토링입니다");
+    MENTORING_REVIEW_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 평가한 멘토링입니다"),
+    MENTORING_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "대기 중인 신청만 취소할 수 있습니다");
 
 
 

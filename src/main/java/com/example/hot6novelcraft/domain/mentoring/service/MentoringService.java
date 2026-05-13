@@ -135,6 +135,50 @@ public class MentoringService {
     }
 
     // =====================================================================
+    // 멘티 전용
+    // =====================================================================
+
+    // 멘티가 멘토링 종료
+    @Transactional
+    public void completeMentoringByMentee(Long mentoringId, Long menteeId) {
+        Mentorship mentorship = mentorshipRepository.findByIdAndMenteeId(mentoringId, menteeId)
+                .orElseThrow(() -> new ServiceErrorException(MentoringExceptionEnum.MENTORING_NOT_FOUND));
+        if (mentorship.getStatus() != MentorshipStatus.ACCEPTED) {
+            throw new ServiceErrorException(MentoringExceptionEnum.MENTORING_NOT_ACCEPTED);
+        }
+        Mentor mentor = mentorRepository.findById(mentorship.getMentorId())
+                .orElseThrow(() -> new ServiceErrorException(MentorExceptionEnum.MENTOR_NOT_FOUND));
+        mentor.increaseSlot();
+        mentorship.complete();
+    }
+
+    // 멘티가 자신의 멘토링 상세 조회 (피드백 포함)
+    public MentoringDetailResponse getMentoringDetailForMentee(Long mentoringId, Long menteeId) {
+        Mentorship mentorship = mentorshipRepository.findByIdAndMenteeId(mentoringId, menteeId)
+                .orElseThrow(() -> new ServiceErrorException(MentoringExceptionEnum.MENTORING_NOT_FOUND));
+
+        Mentor mentor = mentorRepository.findById(mentorship.getMentorId())
+                .orElseThrow(() -> new ServiceErrorException(MentorExceptionEnum.MENTOR_NOT_FOUND));
+
+        String mentorName = userRepository.findByIdAndIsDeletedFalse(mentor.getUserId())
+                .map(User::getNickname).orElse("알 수 없는 멘토");
+        String menteeName = userRepository.findByIdAndIsDeletedFalse(menteeId)
+                .map(User::getNickname).orElse("알 수 없는 사용자");
+        String novelTitle = mentorship.getCurrentNovelId() != null
+                ? novelRepository.findByIdAndIsDeletedFalse(mentorship.getCurrentNovelId())
+                        .map(Novel::getTitle).orElse("알 수 없는 소설")
+                : "선택 없음";
+
+        List<MentoringDetailResponse.FeedbackInfo> feedbacks = mentorFeedbackRepository
+                .findAllByMentorshipIdOrderByCreatedAtAsc(mentoringId)
+                .stream()
+                .map(MentoringDetailResponse.FeedbackInfo::from)
+                .toList();
+
+        return MentoringDetailResponse.of(mentorship, mentorName, menteeName, novelTitle, feedbacks);
+    }
+
+    // =====================================================================
     // getReceivedMentorings
     // =====================================================================
 

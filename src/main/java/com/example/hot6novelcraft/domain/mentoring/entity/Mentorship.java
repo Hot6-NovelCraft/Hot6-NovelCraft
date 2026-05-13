@@ -77,6 +77,10 @@ public class Mentorship extends BaseEntity {
         this.completedAt = LocalDateTime.now();
     }
 
+    public void cancel() {
+        this.status = MentorshipStatus.CANCELLED;
+    }
+
     public void increaseSession() {
         this.totalSessions++;
     }

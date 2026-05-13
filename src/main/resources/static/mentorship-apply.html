@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>멘토링 신청 - NovelCraft</title>
+  <script src="/common.js"></script>
+  <style>
+    body { background: var(--bg); color: var(--text1); font-family: var(--font-sans); }
+
+    /* ── 상단 네비 ── */
+    .top-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px;
+    }
+    .top-bar__logo { font-family: 'Noto Serif KR', serif; font-size: 1rem; font-weight: 700; color: var(--text1); text-decoration: none; }
+    .top-bar__back {
+      background: none; border: none; color: var(--text3); font-family: inherit;
+      font-size: .88rem; cursor: pointer; padding: 6px 12px; border-radius: 8px;
+      border: 1px solid var(--border); transition: all .2s;
+    }
+    .top-bar__back:hover { color: var(--text1); border-color: var(--text2); }
+
+    /* ── 레이아웃 ── */
+    .page-wrap {
+      max-width: 900px; margin: 0 auto;
+      padding: 72px 20px 60px;
+      display: grid;
+      grid-template-columns: 1fr 240px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* ── 멘토 정보 카드 ── */
+    .mentor-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; margin-bottom: 16px;
+    }
+    .mentor-card-top { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+    .mentor-avatar {
+      width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700; color: white;
+    }
+    .mentor-info { flex: 1; }
+    .mentor-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+    .mentor-name { font-size: 1rem; font-weight: 700; }
+    .level-badge {
+      padding: 2px 8px; border-radius: 12px; font-size: .68rem; font-weight: 700;
+      background: rgba(124,90,240,.15); color: var(--primary-light); border: 1px solid rgba(124,90,240,.3);
+    }
+    .level-badge--intro  { background: rgba(148,163,184,.12); color: #94a3b8; border-color: rgba(148,163,184,.3); }
+    .level-badge--elem   { background: rgba(52,211,153,.12);  color: #34d399; border-color: rgba(52,211,153,.3); }
+    .level-badge--inter  { background: rgba(251,191,36,.12);  color: #fbbf24; border-color: rgba(251,191,36,.3); }
+    .level-badge--prof   { background: rgba(124,90,240,.15);  color: var(--primary-light); border-color: rgba(124,90,240,.3); }
+    .mentor-desc { font-size: .82rem; color: var(--text3); line-height: 1.55; margin-bottom: 8px; }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      padding: 3px 10px; border-radius: 12px; font-size: .74rem;
+      background: var(--bg3); color: var(--text3); border: 1px solid var(--border);
+    }
+
+    /* ── 통계 바 ── */
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1px; background: var(--border);
+      border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .stat-item {
+      background: var(--surface); padding: 14px 10px; text-align: center;
+    }
+    .stat-item__label { font-size: .72rem; color: var(--text3); margin-bottom: 4px; }
+    .stat-item__value { font-size: 1.1rem; font-weight: 700; color: var(--text1); }
+
+    /* ── 신청서 폼 ── */
+    .apply-form-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 22px 22px;
+    }
+    .apply-form-title { font-size: .95rem; font-weight: 700; color: var(--text1); margin-bottom: 20px; }
+    .form-group { margin-bottom: 20px; }
+    .form-label {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: .85rem; font-weight: 600; color: var(--text2); margin-bottom: 8px;
+    }
+    .form-label-opt { font-size: .78rem; color: var(--text3); font-weight: 400; }
+    .form-label-req { font-size: .78rem; color: #f87171; font-weight: 600; }
+    .form-textarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text1); font-family: var(--font-sans); font-size: .9rem;
+      line-height: 1.75; padding: 12px 14px; resize: vertical; min-height: 110px;
+      transition: border-color .2s;
+    }
+    .form-textarea:focus { outline: none; border-color: var(--primary); }
+    .char-count { font-size: .74rem; color: var(--text3); text-align: right; margin-top: 5px; }
+    .form-select {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text1); font-family: var(--font-sans); font-size: .9rem;
+      padding: 11px 14px; appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+      padding-right: 38px; transition: border-color .2s;
+    }
+    .form-select:focus { outline: none; border-color: var(--primary); }
+
+    /* ── 파일 업로드 ── */
+    .file-upload-area {
+      border: 1.5px dashed var(--border); border-radius: 10px; padding: 20px;
+      text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+    }
+    .file-upload-area:hover { border-color: var(--primary); background: rgba(124,90,240,.04); }
+    .file-upload-area.has-file { border-color: var(--primary); background: rgba(124,90,240,.06); }
+    .file-upload-icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .file-upload-text { font-size: .88rem; color: var(--text2); font-weight: 500; }
+    .file-upload-hint { font-size: .76rem; color: var(--text3); margin-top: 4px; }
+    .file-upload-name { font-size: .85rem; color: var(--primary-light); font-weight: 600; margin-top: 6px; }
+    .file-input-hidden { display: none; }
+
+    /* ── 하단 버튼 ── */
+    .bottom-btns {
+      display: grid; grid-template-columns: 1fr 2fr; gap: 12px;
+      margin-top: 24px;
+    }
+    .btn-cancel {
+      padding: 14px; border-radius: 12px;
+      background: transparent; border: 1px solid var(--border); color: var(--text2);
+      font-size: .95rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .2s;
+    }
+    .btn-cancel:hover { border-color: var(--text2); color: var(--text1); }
+    .btn-submit {
+      padding: 14px; border-radius: 12px;
+      background: var(--primary); border: none; color: white;
+      font-size: .95rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .2s;
+    }
+    .btn-submit:hover { opacity: .88; }
+    .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── 우측 신청 안내 ── */
+    .guide-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 18px; position: sticky; top: 72px;
+    }
+    .guide-title { font-size: .82rem; font-weight: 700; color: var(--text2); margin-bottom: 14px; }
+    .guide-item {
+      display: flex; gap: 8px; font-size: .82rem; color: var(--text3);
+      padding: 8px 0; line-height: 1.5;
+    }
+    .guide-item + .guide-item { border-top: 1px solid var(--border); }
+    .guide-dot { color: var(--primary-light); flex-shrink: 0; }
+
+    /* ── 로딩 ── */
+    .loading-wrap {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; padding: 60px 0; color: var(--text3); grid-column: 1/-1;
+    }
+    .loading-wrap::before {
+      content: ''; width: 22px; height: 22px;
+      border: 2px solid var(--border); border-top-color: var(--primary);
+      border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    .spin {
+      display: inline-block; width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: white;
+      border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-wrap {
+      text-align: center; padding: 60px 20px; color: var(--text3); grid-column: 1/-1;
+    }
+
+    @media (max-width: 680px) {
+      .page-wrap { grid-template-columns: 1fr; }
+      .guide-card { position: static; }
+    }
+  </style>
+</head>
+<body>
+<!-- 상단 바 -->
+<div class="top-bar">
+  <a href="/index.html" class="top-bar__logo">✦ NovelCraft</a>
+  <button class="top-bar__back" onclick="history.back()">← 뒤로</button>
+</div>
+
+<div class="page-wrap" id="page-wrap">
+  <div class="loading-wrap">불러오는 중</div>
+</div>
+
+<script>
+  const GENRE_LABELS = {
+    FANTASY:'판타지', ROMANCE_FANTASY:'로판', MODERN:'현대', CHIVALROUS:'무협',
+    BL:'BL', SF:'SF', HORROR:'호러', CLASSIC:'고전', DAILY_LIFE:'일상',
+  };
+  const CAREER_FULL = {
+    INTRODUCTION:'입문', ELEMENTARY:'초급', INTERMEDIATE:'중급', PROFICIENT:'전문',
+  };
+  const CAREER_CLS = {
+    INTRODUCTION:'level-badge--intro', ELEMENTARY:'level-badge--elem',
+    INTERMEDIATE:'level-badge--inter', PROFICIENT:'level-badge--prof',
+  };
+
+  let mentorId       = null;
+  let mentorData     = null;
+  let myNovels       = [];
+  let uploadedUrl    = null;
+
+  async function init() {
+    if (!Auth.isLoggedIn()) {
+      location.href = `/login.html?redirect=${encodeURIComponent(location.pathname + location.search)}`;
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    mentorId = params.get('mentorId');
+    if (!mentorId) {
+      showError('잘못된 접근입니다.');
+      return;
+    }
+
+    try {
+      const [detailRes, novelsRes, historyRes] = await Promise.allSettled([
+        api.get(`/mentorships/mentors/${mentorId}`, false),
+        api.get('/author/novels?page=0&size=30', true),
+        api.get('/mentorships/v2/me/history', true),
+      ]);
+
+      mentorData = detailRes.status === 'fulfilled'
+        ? (detailRes.value?.data || detailRes.value) : null;
+
+      if (!mentorData) { showError('멘토 정보를 찾을 수 없습니다.'); return; }
+
+      myNovels = novelsRes.status === 'fulfilled'
+        ? (novelsRes.value?.data?.content || novelsRes.value?.data || novelsRes.value?.content || [])
+        : [];
+
+      /* 이미 PENDING 신청이 있으면 이 멘토가 아닌 경우 차단 */
+      if (historyRes.status === 'fulfilled') {
+        const history = historyRes.value?.data || historyRes.value || [];
+        const pending = history.find(h => h.status === 'PENDING');
+        if (pending && String(pending.mentorId) !== String(mentorId)) {
+          showError(`이미 <strong>${pending.mentorNickname}</strong> 멘토님께 신청 중입니다.<br>수락 전에는 다른 멘토에게 신청할 수 없습니다.`);
+          return;
+        }
+      }
+
+      render();
+    } catch {
+      showError('정보를 불러오지 못했습니다.');
+    }
+  }
+
+  function render() {
+    const wrap = document.getElementById('page-wrap');
+    const m = mentorData;
+    const initial  = (m.nickname || '?').charAt(0).toUpperCase();
+    const levelTxt = CAREER_FULL[m.careerLevel] || m.careerLevel || '';
+    const levelCls = CAREER_CLS[m.careerLevel]  || '';
+
+    const genreTags = (m.mainGenres || []).map(g =>
+      `<span class="tag">${GENRE_LABELS[g]||g}</span>`).join('');
+    const fieldTags = (m.specialFields || []).map(f =>
+      `<span class="tag">${f}</span>`).join('');
+    const styleTags = (m.mentoringStyle || []).map(s =>
+      `<span class="tag">${s}</span>`).join('');
+
+    const descParts = [];
+    if (m.mainGenres?.length) descParts.push((m.mainGenres).map(g=>GENRE_LABELS[g]||g).join('/'));
+    if (m.awardsCareer) descParts.push(m.awardsCareer.slice(0,40) + (m.awardsCareer.length>40?'…':''));
+
+    const novelOptions = myNovels.map(n =>
+      `<option value="${n.novelId || n.id}">${esc(n.title)}</option>`).join('');
+
+    wrap.innerHTML = `
+      <!-- 왼쪽: 폼 -->
+      <div>
+        <!-- 멘토 카드 -->
+        <div class="mentor-card">
+          <div class="mentor-card-top">
+            <div class="mentor-avatar">${esc(initial)}</div>
+            <div class="mentor-info">
+              <div class="mentor-name-row">
+                <span class="mentor-name">${esc(m.nickname || '멘토')}</span>
+                <span class="level-badge ${levelCls}">${levelTxt}</span>
+              </div>
+              ${descParts.length ? `<div class="mentor-desc">${esc(descParts.join(' · '))}</div>` : ''}
+              ${m.bio ? `<div class="mentor-desc" style="margin-bottom:10px">${esc(m.bio.slice(0,100)+(m.bio.length>100?'…':''))}</div>` : ''}
+              <div class="tag-row">
+                ${fieldTags}${styleTags ? styleTags : ''}
+              </div>
+            </div>
+          </div>
+          ${genreTags ? `<div class="tag-row" style="margin-top:8px">${genreTags}</div>` : ''}
+        </div>
+
+        <!-- 통계 바 -->
+        <div class="stats-bar">
+          <div class="stat-item">
+            <div class="stat-item__label">최대 멘티</div>
+            <div class="stat-item__value">${m.maxMentees ?? '-'}명</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-item__label">전문 분야</div>
+            <div class="stat-item__value">${(m.specialFields||[]).length}개</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-item__label">주력 장르</div>
+            <div class="stat-item__value">${(m.mainGenres||[]).length}개</div>
+          </div>
+        </div>
+
+        <!-- 신청서 폼 -->
+        <div class="apply-form-card">
+          <div class="apply-form-title">멘토링 신청서</div>
+
+          <div class="form-group">
+            <div class="form-label">
+              신청 동기
+              <span class="form-label-req">*필수</span>
+            </div>
+            <textarea class="form-textarea" id="motivation" maxlength="500"
+              placeholder="${esc(m.nickname||'멘토')}님에게 멘토링을 신청하는 이유와 목표를 적어주세요"
+              oninput="document.getElementById('mot-count').textContent=this.value.length+' / 500'"></textarea>
+            <div class="char-count" id="mot-count">0 / 500</div>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              현재 작업 중인 소설
+              <span class="form-label-opt">(선택)</span>
+            </div>
+            <select class="form-select" id="novel-select">
+              <option value="">소설 선택 안 함</option>
+              ${novelOptions}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label">
+              원고 첨부
+              <span class="form-label-opt">(선택)</span>
+            </div>
+            <div class="file-upload-area" id="file-area" onclick="document.getElementById('file-input').click()">
+              <div class="file-upload-icon">📎</div>
+              <div class="file-upload-text">클릭하여 원고 업로드 (S3)</div>
+              <div class="file-upload-hint">txt, docx, hwp · 최대 10MB</div>
+              <div class="file-upload-name" id="file-name" style="display:none"></div>
+            </div>
+            <input type="file" id="file-input" class="file-input-hidden"
+              accept=".txt,.docx,.hwp" onchange="handleFile(this)">
+          </div>
+
+          <div class="bottom-btns">
+            <button class="btn-cancel" onclick="history.back()">취소</button>
+            <button class="btn-submit" id="submit-btn" onclick="submitApply()">신청하기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 오른쪽: 신청 안내 -->
+      <div>
+        <div class="guide-card">
+          <div class="guide-title">신청 안내</div>
+          <div class="guide-item"><span class="guide-dot">·</span>수락까지 1~3일 소요</div>
+          <div class="guide-item"><span class="guide-dot">·</span>거절 시 사유 안내</div>
+          <div class="guide-item"><span class="guide-dot">·</span>정원 초과 시 대기 가능</div>
+          <div class="guide-item"><span class="guide-dot">·</span>수락 시 1:1 채팅방 자동 개설</div>
+          <div class="guide-item"><span class="guide-dot">·</span>채팅방에서 원고 공유 및 피드백 진행</div>
+        </div>
+      </div>`;
+  }
+
+  function handleFile(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    const nameEl = document.getElementById('file-name');
+    const area   = document.getElementById('file-area');
+    nameEl.textContent = `📄 ${file.name}`;
+    nameEl.style.display = 'block';
+    area.classList.add('has-file');
+  }
+
+  async function submitApply() {
+    const motivation = document.getElementById('motivation')?.value?.trim() || '';
+    if (!motivation) {
+      Toast.error('신청 동기를 입력해 주세요');
+      document.getElementById('motivation')?.focus();
+      return;
+    }
+    if (motivation.length < 10) {
+      Toast.error('신청 동기는 10자 이상 입력해 주세요');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>신청 중…';
+
+    try {
+      /* 원고 파일 업로드 */
+      const fileInput = document.getElementById('file-input');
+      let manuscriptUrl = null;
+      if (fileInput.files?.[0]) {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        const token = localStorage.getItem('accessToken');
+        const uploadRes = await fetch('/api/files/manuscripts/upload', {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData,
+        });
+        const uploadJson = await uploadRes.json();
+        manuscriptUrl = uploadJson?.data?.fileUrl || uploadJson?.fileUrl || null;
+      }
+
+      const novelId = document.getElementById('novel-select')?.value || null;
+      const body = {
+        mentorId:      Number(mentorId),
+        motivation:    motivation || null,
+        currentNovelId: novelId ? Number(novelId) : null,
+        manuscriptUrl,
+      };
+
+      await api.post('/mentorships', body, true);
+
+      /* 완료 페이지로 이동 */
+      location.href = `/mentorship-complete.html?mentorNickname=${encodeURIComponent(mentorData?.nickname || '멘토')}`;
+    } catch (e) {
+      Toast.error(e?.message || '신청 중 오류가 발생했습니다.');
+      btn.disabled = false;
+      btn.textContent = '신청하기';
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('page-wrap').innerHTML = `
+      <div class="error-wrap">
+        <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+        <div style="margin-bottom:16px">${msg}</div>
+        <button onclick="history.back()" class="nc-btn nc-btn--primary">돌아가기</button>
+      </div>`;
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
+</body>
+</html>

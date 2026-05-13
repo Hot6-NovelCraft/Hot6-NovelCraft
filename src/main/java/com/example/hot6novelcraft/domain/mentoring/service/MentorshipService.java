@@ -14,6 +14,7 @@ import com.example.hot6novelcraft.domain.mentoring.dto.response.*;
 import com.example.hot6novelcraft.domain.mentoring.entity.Mentorship;
 import com.example.hot6novelcraft.domain.mentoring.entity.enums.MentorshipStatus;
 import com.example.hot6novelcraft.domain.mentoring.repository.MentorshipRepository;
+import com.example.hot6novelcraft.domain.mentoring.repository.MentorshipReviewRepository;
 import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.entity.enums.CareerLevel;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
@@ -29,7 +30,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -39,6 +42,7 @@ public class MentorshipService {
     private final MentorshipRepository mentorshipRepository;
     private final MentorRepository mentorRepository;
     private final UserRepository userRepository;
+    private final MentorshipReviewRepository mentorshipReviewRepository;
 
     private final FileUploadService fileUploadService;
     private final ObjectMapper objectMapper;
@@ -56,8 +60,8 @@ public class MentorshipService {
             throw new ServiceErrorException(MentoringExceptionEnum.MENTORING_NOT_AUTHOR);
         }
 
-        // 멘토 조회 (못 찾으면 NOT_FOUND)
-        Mentor mentor = mentorRepository.findByUserId(request.mentorId())
+        // 멘토 조회 (못 찾으면 NOT_FOUND) - mentorId는 Mentor 엔티티 PK
+        Mentor mentor = mentorRepository.findById(request.mentorId())
                 .orElseThrow(() -> new ServiceErrorException(MentorExceptionEnum.MENTOR_NOT_FOUND));
 
         // 본인한테 신청 불가
@@ -90,7 +94,17 @@ public class MentorshipService {
         Mentorship saved = mentorshipRepository.save(mentorship);
         log.info("[Mentorship] 멘토링 신청 완료 menteeId={} mentorId={}", menteeId, request.mentorId());
 
-        eventPublisher.publishEvent(NotificationEvent.mentorshipRequest(mentor.getUserId(), mentee.getNickname(), saved.getId()));
+        // 즉시수락 여부 처리
+        if (Boolean.TRUE.equals(mentor.getAllowInstant())) {
+            mentor.decreaseSlot();
+            saved.approve();
+            log.info("[Mentorship] 즉시수락 처리 menteeId={} mentorId={}", menteeId, request.mentorId());
+            String mentorNickname = userRepository.findById(mentor.getUserId())
+                    .map(com.example.hot6novelcraft.domain.user.entity.User::getNickname).orElse("멘토");
+            eventPublisher.publishEvent(NotificationEvent.mentorshipAccepted(menteeId, mentorNickname, saved.getId()));
+        } else {
+            eventPublisher.publishEvent(NotificationEvent.mentorshipRequest(mentor.getUserId(), mentee.getNickname(), saved.getId()));
+        }
 
         return MentorshipCreateResponse.from(saved.getId());
     }
@@ -109,11 +123,11 @@ public class MentorshipService {
         return fileUploadService.uploadManuscript(file);
     }
 
-    // 멘토 목록 조회(멘티 시점) - 필터: 장르,등급
+    // 멘토 목록 조회(멘티 시점) - 필터: 장르,등급 / 본인 멘토 제외
     @Transactional(readOnly = true)
-    public Page<MentorshipListResponse> getMentorList(String genre, CareerLevel careerLevel, Pageable pageable) {
+    public Page<MentorshipListResponse> getMentorList(String genre, CareerLevel careerLevel, Long currentUserId, Pageable pageable) {
 
-        Page<MentorWithNickname> mentors = mentorshipRepository.findMentorList(genre, careerLevel, pageable);
+        Page<MentorWithNickname> mentors = mentorshipRepository.findMentorList(genre, careerLevel, currentUserId, pageable);
 
         return mentors.map(m -> MentorshipListResponse.of(
                 m.mentorId(),
@@ -178,22 +192,28 @@ public class MentorshipService {
         // Mentorship -> DTO 변환
         return mentorships.stream()
                 .map(m -> {
-                    String mentorNickname = mentorRepository.findById(m.getMentorId())
-                            .flatMap(mentor -> userRepository.findById(mentor.getUserId()))
-                            .map(User::getNickname)
-                            .orElse("알 수 없는 멘토");
+                    Mentor mentor = mentorRepository.findById(m.getMentorId()).orElse(null);
+                    String mentorNickname = mentor == null ? "알 수 없는 멘토"
+                            : userRepository.findById(mentor.getUserId())
+                                    .map(User::getNickname).orElse("알 수 없는 멘토");
+                    boolean hasReview = mentorshipReviewRepository.existsByMentorshipId(m.getId());
 
                     return new MentorshipHistoryResponse(
                             m.getId(),
+                            m.getMentorId(),
                             mentorNickname,
                             m.getStatus(),
-                            m.getCreatedAt()
+                            m.getCreatedAt(),
+                            m.getMotivation(),
+                            m.getManuscriptUrl(),
+                            m.getCurrentNovelId(),
+                            hasReview
                     );
                 })
                 .toList();
     }
 
-    // V2: N+1 개선 - QueryDSL JOIN으로 멘토 닉네임 한번에 조회
+    // V2: N+1 개선 - QueryDSL JOIN으로 멘토 닉네임 한번에 조회 + hasReview 배치 처리
     @Transactional(readOnly = true)
     public List<MentorshipHistoryResponse> getMyHistoryV2(Long menteeId, MentorshipStatus status) {
         User mentee = userRepository.findById(menteeId)
@@ -203,7 +223,36 @@ public class MentorshipService {
             throw new ServiceErrorException(MentoringExceptionEnum.MENTORING_NOT_AUTHOR);
         }
 
-        return mentorshipRepository.findMyHistoryWithMentorNickname(menteeId, status);
+        List<MentorshipHistoryResponse> list =
+                mentorshipRepository.findMyHistoryWithMentorNickname(menteeId, status);
+        if (list.isEmpty()) return list;
+
+        List<Long> allIds = list.stream().map(MentorshipHistoryResponse::mentorshipId).toList();
+        Set<Long> reviewedIds = new HashSet<>(mentorshipReviewRepository.findReviewedMentorshipIds(allIds));
+        if (reviewedIds.isEmpty()) return list;
+
+        return list.stream()
+                .map(h -> reviewedIds.contains(h.mentorshipId())
+                        ? new MentorshipHistoryResponse(h.mentorshipId(), h.mentorId(), h.mentorNickname(),
+                                h.status(), h.appliedAt(), h.motivation(), h.manuscriptUrl(),
+                                h.currentNovelId(), true)
+                        : h)
+                .toList();
+    }
+
+    // 멘토링 신청 취소(멘티) - PENDING 상태만 가능
+    @Transactional
+    public void cancelMentorship(Long menteeId, Long mentorshipId) {
+
+        Mentorship mentorship = mentorshipRepository.findByIdAndMenteeId(mentorshipId, menteeId)
+                .orElseThrow(() -> new ServiceErrorException(MentoringExceptionEnum.MENTORING_UNAUTHORIZED));
+
+        if (mentorship.getStatus() != MentorshipStatus.PENDING) {
+            throw new ServiceErrorException(MentoringExceptionEnum.MENTORING_CANCEL_NOT_ALLOWED);
+        }
+
+        mentorship.cancel();
+        log.info("[Mentorship] 멘토링 신청 취소 menteeId={} mentorshipId={}", menteeId, mentorshipId);
     }
 
     // JSON 문자열을 List<String>으로 변환
@@ -214,7 +263,7 @@ public class MentorshipService {
         try {
             return objectMapper.readValue(json, new TypeReference<List<String>>() {});
         } catch (JsonProcessingException e) {
-            throw new ServiceErrorException(MentorExceptionEnum.MENTOR_JSON_SERIALIZE_FAILED);
+            return List.of();
         }
     }
 }

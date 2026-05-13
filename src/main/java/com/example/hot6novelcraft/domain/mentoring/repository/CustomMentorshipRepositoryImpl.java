@@ -27,7 +27,7 @@ public class CustomMentorshipRepositoryImpl implements CustomMentorshipRepositor
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Page<MentorWithNickname> findMentorList(String genre, CareerLevel careerLevel, Pageable pageable) {
+    public Page<MentorWithNickname> findMentorList(String genre, CareerLevel careerLevel, Long excludeUserId, Pageable pageable) {
         QMentor mentor = QMentor.mentor;
         QUser user = QUser.user;
 
@@ -39,6 +39,9 @@ public class CustomMentorshipRepositoryImpl implements CustomMentorshipRepositor
         }
         if (careerLevel != null) {
             where.and(mentor.careerLevel.eq(careerLevel));
+        }
+        if (excludeUserId != null) {
+            where.and(mentor.userId.ne(excludeUserId));
         }
 
         List<MentorWithNickname> content = queryFactory
@@ -54,7 +57,7 @@ public class CustomMentorshipRepositoryImpl implements CustomMentorshipRepositor
                         mentor.maxMentees
                 ))
                 .from(mentor)
-                .join(user).on(user.id.eq(mentor.userId))
+                .join(user).on(user.id.eq(mentor.userId).and(user.isDeleted.eq(false)))
                 .where(where)
                 .orderBy(mentor.createdAt.desc())
                 .offset(pageable.getOffset())
@@ -64,6 +67,7 @@ public class CustomMentorshipRepositoryImpl implements CustomMentorshipRepositor
         Long total = queryFactory
                 .select(mentor.count())
                 .from(mentor)
+                .join(user).on(user.id.eq(mentor.userId).and(user.isDeleted.eq(false)))
                 .where(where)
                 .fetchOne();
 
@@ -86,13 +90,17 @@ public class CustomMentorshipRepositoryImpl implements CustomMentorshipRepositor
                 .select(Projections.constructor(
                         MentorshipHistoryResponse.class,
                         mentorship.id,
+                        mentorship.mentorId,
                         // null 방어 - 탈퇴한 멘토는 기본값으로 대체
                         Expressions.cases()
                                 .when(user.nickname.isNull())
                                 .then("알 수 없는 멘토")
                                 .otherwise(user.nickname),
                         mentorship.status,
-                        mentorship.createdAt
+                        mentorship.createdAt,
+                        mentorship.motivation,
+                        mentorship.manuscriptUrl,
+                        mentorship.currentNovelId
                 ))
                 .from(mentorship)
                 .join(mentor).on(mentor.id.eq(mentorship.mentorId))

@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface MentorshipReviewRepository extends JpaRepository<MentorshipReview, Long> {
 
     @Query("SELECT AVG(r.rating) FROM MentorshipReview r WHERE r.mentorshipId IN " +
@@ -21,5 +23,9 @@ public interface MentorshipReviewRepository extends JpaRepository<MentorshipRevi
 
     // 멘토링 ID로 리뷰 존재 여부 확인 (중복 평가 방지)
     boolean existsByMentorshipId(Long mentorshipId);
+
+    // 여러 멘토링 중 리뷰가 존재하는 ID 목록 (N+1 방지)
+    @Query("SELECT r.mentorshipId FROM MentorshipReview r WHERE r.mentorshipId IN :ids")
+    List<Long> findReviewedMentorshipIds(@Param("ids") List<Long> ids);
 
 }
