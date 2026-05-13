@@ -175,9 +175,93 @@
         }
         .btn-new-novel:hover { border-color: var(--primary-light); color: var(--primary-light); }
 
+        .btn-action--modify {
+            background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.28);
+            color: #f59e0b;
+        }
+        .btn-action--modify:hover { background: #f59e0b; border-color: #f59e0b; color: white; }
+
         /* ── 빈 상태 / 로딩 ── */
         .empty-box { padding: 40px; text-align: center; color: var(--text3); font-size: 0.875rem; }
         .loading-box { padding: 40px; display: flex; align-items: center; justify-content: center; }
+
+        /* ── 소설 등록/수정 모달 ── */
+        .nm-backdrop {
+            position: fixed; inset: 0; z-index: 600;
+            background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .nm-backdrop.show { opacity: 1; pointer-events: all; }
+        .nm-box {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 18px; width: min(540px, 96vw);
+            max-height: 90vh; overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.96) translateY(12px); transition: transform 0.2s;
+        }
+        .nm-backdrop.show .nm-box { transform: scale(1) translateY(0); }
+        .nm-box::-webkit-scrollbar { width: 4px; }
+        .nm-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .nm-hd {
+            padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px; position: sticky; top: 0;
+            background: var(--surface2); z-index: 1;
+        }
+        .nm-hd__title { font-size: 1.05rem; font-weight: 700; flex: 1; }
+        .nm-hd__close {
+            background: none; border: none; color: var(--text3); font-size: 1.1rem;
+            cursor: pointer; padding: 4px 9px; border-radius: 7px; transition: background 0.15s;
+        }
+        .nm-hd__close:hover { background: var(--surface); color: var(--text); }
+        .nm-body { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+        .nm-field label {
+            display: block; font-size: 0.78rem; font-weight: 700; color: var(--text3);
+            margin-bottom: 7px; letter-spacing: 0.04em; text-transform: uppercase;
+        }
+        .nm-input, .nm-textarea, .nm-select {
+            width: 100%; padding: 10px 14px; background: var(--bg2);
+            border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text); font-size: 0.88rem; font-family: inherit;
+            outline: none; transition: border-color 0.15s; box-sizing: border-box;
+        }
+        .nm-input:focus, .nm-textarea:focus, .nm-select:focus { border-color: var(--primary-light); }
+        .nm-textarea { resize: vertical; min-height: 90px; max-height: 200px; line-height: 1.6; }
+        .nm-select { cursor: pointer; }
+        .nm-input-hint { font-size: 0.7rem; color: var(--text3); text-align: right; margin-top: 4px; }
+        .nm-tags-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+        }
+        .nm-tag-chip {
+            display: flex; align-items: center; justify-content: center;
+            padding: 7px 6px; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text3); cursor: pointer; transition: all 0.14s;
+            user-select: none;
+        }
+        .nm-tag-chip:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .nm-tag-chip.selected {
+            background: rgba(124,90,240,0.15); border-color: var(--primary);
+            color: var(--primary-light);
+        }
+        .nm-tag-hint { font-size: 0.72rem; color: var(--text3); margin-top: 6px; }
+        .nm-foot {
+            padding: 0 22px 22px; display: flex; gap: 10px;
+        }
+        .nm-btn {
+            flex: 1; padding: 12px; border-radius: 11px; font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; font-family: inherit; transition: all 0.15s;
+        }
+        .nm-btn--cancel {
+            background: transparent; border: 1px solid var(--border); color: var(--text2);
+        }
+        .nm-btn--cancel:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .nm-btn--submit {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white;
+        }
+        .nm-btn--submit:hover { opacity: 0.88; }
+        .nm-btn--submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
         @media (max-width: 640px) {
             .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -231,7 +315,7 @@
     </div>
 
     <!-- 연재 현황 -->
-    <div class="section" id="serial-section" style="display:none">
+    <div class="section" id="serial-section" style="display:none" >
         <div class="section__head">
             <div class="section__title">연재 현황</div>
             <select class="serial-select" id="serial-select" onchange="onSerialChange()"></select>
@@ -255,6 +339,71 @@
                     <div class="serial-stat__value" id="serial-views">-</div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 소설 등록/수정 모달 ── -->
+<div class="nm-backdrop" id="nm-backdrop" onclick="if(event.target===this)closeNovelModal()">
+    <div class="nm-box" id="nm-box">
+        <div class="nm-hd">
+            <div class="nm-hd__title" id="nm-hd-title">새 소설 등록</div>
+            <button class="nm-hd__close" onclick="closeNovelModal()">✕</button>
+        </div>
+        <div class="nm-body">
+            <div class="nm-field">
+                <label>소설 제목</label>
+                <input class="nm-input" id="nm-title" placeholder="소설 제목 (최대 20자)" maxlength="20" oninput="document.getElementById('nm-title-hint').textContent=this.value.length+' / 20'">
+                <div class="nm-input-hint" id="nm-title-hint">0 / 20</div>
+            </div>
+            <div class="nm-field">
+                <label>소설 소개</label>
+                <textarea class="nm-textarea" id="nm-desc" placeholder="독자에게 보여줄 소설 소개를 입력하세요."></textarea>
+            </div>
+            <div class="nm-field">
+                <label>메인 장르</label>
+                <select class="nm-select" id="nm-genre">
+                    <option value="">장르 선택</option>
+                    <option value="FANTASY">판타지</option>
+                    <option value="ROMANCE_FANTASY">로판</option>
+                    <option value="MODERN">현대</option>
+                    <option value="CHIVALROUS">무협</option>
+                    <option value="BL">BL</option>
+                    <option value="SF">SF</option>
+                    <option value="HORROR">공포</option>
+                    <option value="CLASSIC">고전</option>
+                    <option value="DAILY_LIFE">일상물</option>
+                </select>
+            </div>
+            <div class="nm-field">
+                <label>태그 <span style="font-weight:400;text-transform:none">(최소 1개 선택)</span></label>
+                <div class="nm-tags-grid" id="nm-tags-grid">
+                    <div class="nm-tag-chip" data-tag="ISEKAI" onclick="toggleTag(this)">이세계</div>
+                    <div class="nm-tag-chip" data-tag="REGRESSION" onclick="toggleTag(this)">회귀</div>
+                    <div class="nm-tag-chip" data-tag="HEALING" onclick="toggleTag(this)">힐링</div>
+                    <div class="nm-tag-chip" data-tag="ACTION" onclick="toggleTag(this)">액션</div>
+                    <div class="nm-tag-chip" data-tag="ROMANCE" onclick="toggleTag(this)">로맨스</div>
+                    <div class="nm-tag-chip" data-tag="COMEDY" onclick="toggleTag(this)">개그</div>
+                    <div class="nm-tag-chip" data-tag="MYSTERY" onclick="toggleTag(this)">미스터리</div>
+                    <div class="nm-tag-chip" data-tag="MARTIAL_ARTS" onclick="toggleTag(this)">무공</div>
+                    <div class="nm-tag-chip" data-tag="VILLAIN" onclick="toggleTag(this)">빌런</div>
+                    <div class="nm-tag-chip" data-tag="MUNCHKIN" onclick="toggleTag(this)">먼치킨</div>
+                    <div class="nm-tag-chip" data-tag="ACADEMY" onclick="toggleTag(this)">아카데미</div>
+                    <div class="nm-tag-chip" data-tag="CONTRACT" onclick="toggleTag(this)">계약</div>
+                    <div class="nm-tag-chip" data-tag="POSSESSION" onclick="toggleTag(this)">빙의</div>
+                    <div class="nm-tag-chip" data-tag="REINCARNATION" onclick="toggleTag(this)">환생</div>
+                    <div class="nm-tag-chip" data-tag="HAREM" onclick="toggleTag(this)">하렘</div>
+                    <div class="nm-tag-chip" data-tag="REVENGE" onclick="toggleTag(this)">복수</div>
+                    <div class="nm-tag-chip" data-tag="GROWTH" onclick="toggleTag(this)">성장</div>
+                    <div class="nm-tag-chip" data-tag="DUNGEON" onclick="toggleTag(this)">던전</div>
+                    <div class="nm-tag-chip" data-tag="ADULT" onclick="toggleTag(this)">성인</div>
+                </div>
+                <div class="nm-tag-hint" id="nm-tag-hint">선택된 태그: 없음</div>
+            </div>
+        </div>
+        <div class="nm-foot">
+            <button class="nm-btn nm-btn--cancel" onclick="closeNovelModal()">취소</button>
+            <button class="nm-btn nm-btn--submit" id="nm-submit-btn" onclick="submitNovelForm()">등록하기</button>
         </div>
     </div>
 </div>
@@ -361,7 +510,8 @@
                 </div>
                 <div class="novel-card__actions">
                     <button class="btn-action btn-action--stats" onclick="goStats(${n.id})">회차통계</button>
-                    <button class="btn-action btn-action--edit" onclick="editNovel(${n.id})">편집</button>
+                    <button class="btn-action btn-action--edit" onclick="editNovel(${n.id})">에디터</button>
+                    <button class="btn-action btn-action--modify" onclick="openNovelModal('edit',${n.id})">수정</button>
                     <button class="btn-action btn-action--danger" onclick="deleteNovel(${n.id}, '${esc(n.title).replace(/'/g,"\\'")}')">삭제</button>
                 </div>
             </div>`;
@@ -408,9 +558,114 @@
             n.episodeCount > 0 ? n.episodeCount + '화' : '없음';
     }
 
+    // ── 소설 등록/수정 모달 ──
+    let nmMode    = 'create'; // 'create' | 'edit'
+    let nmNovelId = null;
+
+    function openNovelModal(mode, novelId) {
+        nmMode    = mode;
+        nmNovelId = novelId || null;
+
+        // 폼 초기화
+        document.getElementById('nm-title').value = '';
+        document.getElementById('nm-title-hint').textContent = '0 / 20';
+        document.getElementById('nm-desc').value = '';
+        document.getElementById('nm-genre').value = '';
+        document.querySelectorAll('.nm-tag-chip').forEach(c => c.classList.remove('selected'));
+        document.getElementById('nm-tag-hint').textContent = '선택된 태그: 없음';
+
+        if (mode === 'create') {
+            document.getElementById('nm-hd-title').textContent = '새 소설 등록';
+            document.getElementById('nm-submit-btn').textContent = '등록하기';
+        } else {
+            document.getElementById('nm-hd-title').textContent = '소설 정보 수정';
+            document.getElementById('nm-submit-btn').textContent = '수정하기';
+            document.getElementById('nm-submit-btn').disabled = true;
+            // 기존 정보 로드
+            api.get('/novels/' + novelId, false).then(d => {
+                document.getElementById('nm-title').value = d?.title || '';
+                document.getElementById('nm-title-hint').textContent = (d?.title || '').length + ' / 20';
+                document.getElementById('nm-desc').value = d?.description || '';
+                if (d?.genre) document.getElementById('nm-genre').value = d.genre;
+                // tags는 "ISEKAI,MUNCHKIN" 형태
+                if (d?.tags) {
+                    d.tags.split(',').forEach(t => {
+                        const chip = document.querySelector(`.nm-tag-chip[data-tag="${t.trim()}"]`);
+                        if (chip) chip.classList.add('selected');
+                    });
+                    updateTagHint();
+                }
+                document.getElementById('nm-submit-btn').disabled = false;
+            }).catch(() => {
+                Toast.error('소설 정보를 불러오지 못했습니다.');
+                document.getElementById('nm-submit-btn').disabled = false;
+            });
+        }
+
+        document.getElementById('nm-backdrop').classList.add('show');
+    }
+
+    function closeNovelModal() {
+        document.getElementById('nm-backdrop').classList.remove('show');
+    }
+
+    function toggleTag(chip) {
+        chip.classList.toggle('selected');
+        updateTagHint();
+    }
+
+    function updateTagHint() {
+        const TAG_LABEL = {
+            ISEKAI:'이세계', REGRESSION:'회귀', HEALING:'힐링', ACTION:'액션',
+            ROMANCE:'로맨스', COMEDY:'개그', MYSTERY:'미스터리', MARTIAL_ARTS:'무공',
+            VILLAIN:'빌런', MUNCHKIN:'먼치킨', ACADEMY:'아카데미', CONTRACT:'계약',
+            POSSESSION:'빙의', REINCARNATION:'환생', HAREM:'하렘', REVENGE:'복수',
+            GROWTH:'성장', DUNGEON:'던전', ADULT:'성인'
+        };
+        const selected = [...document.querySelectorAll('.nm-tag-chip.selected')]
+            .map(c => TAG_LABEL[c.dataset.tag] || c.dataset.tag);
+        document.getElementById('nm-tag-hint').textContent =
+            selected.length ? '선택됨: ' + selected.join(', ') : '선택된 태그: 없음';
+    }
+
+    async function submitNovelForm() {
+        const title = document.getElementById('nm-title').value.trim();
+        const desc  = document.getElementById('nm-desc').value.trim();
+        const genre = document.getElementById('nm-genre').value;
+        const tags  = [...document.querySelectorAll('.nm-tag-chip.selected')].map(c => c.dataset.tag);
+
+        if (!title)         { Toast.error('소설 제목을 입력해 주세요.'); return; }
+        if (!desc)          { Toast.error('소설 소개를 입력해 주세요.'); return; }
+        if (!genre)         { Toast.error('장르를 선택해 주세요.'); return; }
+        if (!tags.length)   { Toast.error('태그를 최소 1개 선택해 주세요.'); return; }
+
+        const btn = document.getElementById('nm-submit-btn');
+        btn.disabled = true;
+        btn.textContent = '처리 중...';
+
+        const body = { title, description: desc, genre, tags };
+
+        try {
+            if (nmMode === 'create') {
+                await api.post('/novels', body, true);
+                Toast.success('소설이 등록됐습니다!');
+            } else {
+                await api.patch('/novels/' + nmNovelId, body, true);
+                Toast.success('수정됐습니다!');
+            }
+            closeNovelModal();
+            loadNovels();
+        } catch (e) {
+            Toast.error(e.message || (nmMode === 'create' ? '등록 실패' : '수정 실패'));
+        } finally {
+            btn.disabled = false;
+            btn.textContent = nmMode === 'create' ? '등록하기' : '수정하기';
+        }
+    }
+
     // ── 액션 ──
     function goNewNovel() {
-        window.location.href = '/novel-editor.html';
+        openNovelModal('create');
     }
 
     function editNovel(novelId) {
@@ -444,13 +699,17 @@
         loadStats();
     });
 
-    window.setFilter   = setFilter;
-    window.goNewNovel  = goNewNovel;
-    window.editNovel   = editNovel;
-    window.goStats     = goStats;
-    window.goNewEpisode = goNewEpisode;
-    window.deleteNovel = deleteNovel;
-    window.onSerialChange = onSerialChange;
+    window.setFilter       = setFilter;
+    window.goNewNovel      = goNewNovel;
+    window.editNovel       = editNovel;
+    window.goStats         = goStats;
+    window.goNewEpisode    = goNewEpisode;
+    window.deleteNovel     = deleteNovel;
+    window.onSerialChange  = onSerialChange;
+    window.openNovelModal  = openNovelModal;
+    window.closeNovelModal = closeNovelModal;
+    window.toggleTag       = toggleTag;
+    window.submitNovelForm = submitNovelForm;
 
 })();
 </script>
