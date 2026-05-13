@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회차 통계 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        .page-wrap { max-width: 960px; margin: 0 auto; padding: 32px 24px 60px; }
+
+        /* ── 헤더 ── */
+        .page-header {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 28px; flex-wrap: wrap;
+        }
+        .page-header__back {
+            padding: 7px 14px; border-radius: 9px;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2); font-size: 0.82rem; cursor: pointer;
+            font-family: inherit; transition: all 0.18s;
+        }
+        .page-header__back:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .page-header__title {
+            font-family: 'Noto Serif KR', serif; font-size: 1.3rem; font-weight: 900; flex: 1;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .page-header__sub {
+            font-size: 0.8rem; color: var(--text3); white-space: nowrap;
+        }
+
+        /* ── 총계 카드 ── */
+        .overview-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+            margin-bottom: 28px;
+        }
+        .ov-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 16px 18px;
+        }
+        .ov-card__label { font-size: 0.72rem; color: var(--text3); margin-bottom: 6px; font-weight: 600; }
+        .ov-card__value { font-size: 1.3rem; font-weight: 900; font-family: 'Noto Serif KR', serif; }
+        .ov-card__value--views   { color: var(--primary-light); }
+        .ov-card__value--today   { color: #10b981; }
+        .ov-card__value--likes   { color: #f87171; }
+        .ov-card__value--comments{ color: #f59e0b; }
+        .ov-card__value--pays    { color: var(--accent); }
+
+        /* ── 회차 목록 테이블 ── */
+        .section { margin-bottom: 28px; }
+        .section__title {
+            font-size: 0.95rem; font-weight: 700; margin-bottom: 14px;
+            padding-bottom: 10px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .section__count {
+            font-size: 0.78rem; color: var(--text3); font-weight: 400;
+        }
+
+        .ep-table-wrap {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+        }
+        .ep-table {
+            width: 100%; border-collapse: collapse; font-size: 0.875rem;
+        }
+        .ep-table thead th {
+            padding: 12px 16px; text-align: left; font-size: 0.72rem;
+            font-weight: 700; color: var(--text3); text-transform: uppercase;
+            letter-spacing: 0.04em; background: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--border); white-space: nowrap;
+        }
+        .ep-table thead th.num { text-align: center; }
+        .ep-table thead th.right { text-align: right; }
+        .ep-table tbody tr {
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            cursor: pointer; transition: background 0.15s;
+        }
+        .ep-table tbody tr:last-child { border-bottom: none; }
+        .ep-table tbody tr:hover { background: rgba(124,90,240,0.06); }
+        .ep-table tbody tr.selected { background: rgba(124,90,240,0.1); }
+        .ep-table td {
+            padding: 13px 16px; vertical-align: middle;
+        }
+        .ep-table td.num { text-align: center; font-weight: 700; color: var(--text3); }
+        .ep-table td.right { text-align: right; font-weight: 700; }
+        .ep-num-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 12px;
+            font-size: 0.72rem; font-weight: 700;
+            background: rgba(124,90,240,0.15); color: var(--primary-light);
+            border: 1px solid rgba(124,90,240,0.28);
+        }
+        .ep-title {
+            font-weight: 600; max-width: 260px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .stat-today  { color: #10b981; }
+        .stat-likes  { color: #f87171; }
+        .stat-cmts   { color: #f59e0b; }
+        .stat-pays   { color: var(--accent); }
+
+        /* ── 선택 회차 상세 ── */
+        .ep-detail-panel {
+            background: linear-gradient(135deg, rgba(124,90,240,0.07), rgba(16,185,129,0.04));
+            border: 1px solid rgba(124,90,240,0.25);
+            border-radius: 14px; padding: 20px 22px; margin-bottom: 24px;
+            display: none;
+        }
+        .ep-detail-panel.show { display: block; }
+        .ep-detail-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+        }
+        .ep-detail-num {
+            font-size: 0.78rem; font-weight: 700; color: var(--primary-light);
+        }
+        .ep-detail-title {
+            font-size: 1rem; font-weight: 700; flex: 1;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ep-detail-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+        }
+        .ep-detail-stat {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 12px 14px; text-align: center;
+        }
+        .ep-detail-stat__label { font-size: 0.7rem; color: var(--text3); margin-bottom: 5px; }
+        .ep-detail-stat__value { font-size: 1.15rem; font-weight: 900; }
+
+        /* ── 정렬 ── */
+        .sort-btn {
+            padding: 5px 12px; border-radius: 8px; font-size: 0.75rem;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            background: transparent; border: 1px solid var(--border); color: var(--text3);
+            transition: all 0.15s;
+        }
+        .sort-btn.active { background: var(--surface); border-color: var(--primary); color: var(--primary-light); }
+        .sort-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        /* ── 빈 / 로딩 ── */
+        .empty-box { padding: 48px; text-align: center; color: var(--text3); font-size: 0.875rem; }
+        .loading-box { padding: 48px; display: flex; align-items: center; justify-content: center; }
+
+        /* ── 반응형 ── */
+        @media (max-width: 760px) {
+            .overview-grid { grid-template-columns: repeat(3, 1fr); }
+            .ep-detail-grid { grid-template-columns: repeat(2, 1fr); }
+            .ep-table thead th.hide-sm,
+            .ep-table tbody td.hide-sm { display: none; }
+        }
+        @media (max-width: 520px) {
+            .overview-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="page-wrap">
+    <!-- 헤더 -->
+    <div class="page-header">
+        <button class="page-header__back" onclick="window.location.href='/author-dashboard.html'">← 대시보드</button>
+        <div class="page-header__title" id="novel-title">회차 통계</div>
+        <div class="page-header__sub" id="novel-ep-count"></div>
+    </div>
+
+    <!-- 총계 카드 -->
+    <div class="overview-grid" id="overview-grid">
+        <div class="ov-card">
+            <div class="ov-card__label">총 조회수</div>
+            <div class="ov-card__value ov-card__value--views" id="ov-views">-</div>
+        </div>
+        <div class="ov-card">
+            <div class="ov-card__label">오늘 조회수</div>
+            <div class="ov-card__value ov-card__value--today" id="ov-today">-</div>
+        </div>
+        <div class="ov-card">
+            <div class="ov-card__label">총 좋아요</div>
+            <div class="ov-card__value ov-card__value--likes" id="ov-likes">-</div>
+        </div>
+        <div class="ov-card">
+            <div class="ov-card__label">총 댓글수</div>
+            <div class="ov-card__value ov-card__value--comments" id="ov-comments">-</div>
+        </div>
+        <div class="ov-card">
+            <div class="ov-card__label">총 결제수</div>
+            <div class="ov-card__value ov-card__value--pays" id="ov-pays">-</div>
+        </div>
+    </div>
+
+    <!-- 선택 회차 상세 -->
+    <div class="ep-detail-panel" id="ep-detail-panel">
+        <div class="ep-detail-header">
+            <span class="ep-detail-num" id="detail-num"></span>
+            <span class="ep-detail-title" id="detail-title"></span>
+        </div>
+        <div class="ep-detail-grid">
+            <div class="ep-detail-stat">
+                <div class="ep-detail-stat__label">오늘 조회수</div>
+                <div class="ep-detail-stat__value stat-today" id="detail-today">-</div>
+            </div>
+            <div class="ep-detail-stat">
+                <div class="ep-detail-stat__label">좋아요</div>
+                <div class="ep-detail-stat__value stat-likes" id="detail-likes">-</div>
+            </div>
+            <div class="ep-detail-stat">
+                <div class="ep-detail-stat__label">댓글수</div>
+                <div class="ep-detail-stat__value stat-cmts" id="detail-cmts">-</div>
+            </div>
+            <div class="ep-detail-stat">
+                <div class="ep-detail-stat__label">결제수</div>
+                <div class="ep-detail-stat__value stat-pays" id="detail-pays">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 회차 목록 -->
+    <div class="section">
+        <div class="section__title">
+            회차별 통계
+            <div class="sort-bar" id="sort-bar">
+                <button class="sort-btn active" data-sort="ep" onclick="setSort('ep')">회차순</button>
+                <button class="sort-btn" data-sort="today" onclick="setSort('today')">오늘 조회↓</button>
+                <button class="sort-btn" data-sort="likes" onclick="setSort('likes')">좋아요↓</button>
+                <button class="sort-btn" data-sort="comments" onclick="setSort('comments')">댓글↓</button>
+                <button class="sort-btn" data-sort="pays" onclick="setSort('pays')">결제↓</button>
+            </div>
+        </div>
+        <div id="ep-table-wrap">
+            <div class="loading-box"><div class="nc-spinner"></div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const params   = new URLSearchParams(location.search);
+    const novelId  = params.get('novelId');
+
+    let allStats    = [];
+    let currentSort = 'ep';
+    let selectedEp  = null;
+
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmt(n) {
+        if (!n && n !== 0) return '0';
+        if (n >= 100000000) return (n / 100000000).toFixed(1) + '억';
+        if (n >= 10000)     return (n / 10000).toFixed(1) + '만';
+        return Number(n).toLocaleString();
+    }
+
+    /* ── 소설 정보 로드 ── */
+    async function loadNovelInfo() {
+        try {
+            const data = await api.get('/novels/' + novelId, false);
+            document.getElementById('novel-title').textContent = data?.title || '회차 통계';
+            document.title = (data?.title || '회차 통계') + ' - 통계';
+            // 총 조회수는 novel detail의 viewCount (DB+Redis 합산값)
+            document.getElementById('ov-views').textContent = fmt(data?.viewCount ?? 0);
+        } catch (_) {}
+    }
+
+    /* ── 회차 통계 로드 ── */
+    async function loadStats() {
+        const wrap = document.getElementById('ep-table-wrap');
+        wrap.innerHTML = '<div class="loading-box"><div class="nc-spinner"></div></div>';
+        try {
+            const data = await api.get('/novels/' + novelId + '/episodes/stats', true);
+            allStats = Array.isArray(data) ? data : (data?.data || []);
+
+            if (!allStats.length) {
+                wrap.innerHTML = '<div class="empty-box">등록된 회차가 없습니다.</div>';
+                updateOverview([]);
+                return;
+            }
+
+            document.getElementById('novel-ep-count').textContent = `총 ${allStats.length}화`;
+            updateOverview(allStats);
+            renderTable();
+        } catch (e) {
+            wrap.innerHTML = '<div class="empty-box">통계를 불러오지 못했습니다.</div>';
+        }
+    }
+
+    /* ── 총계 집계 ── */
+    function updateOverview(stats) {
+        const todayTotal    = stats.reduce((s, e) => s + (e.todayViewCount  || 0), 0);
+        const likesTotal    = stats.reduce((s, e) => s + (e.likeCount       || 0), 0);
+        const commentsTotal = stats.reduce((s, e) => s + (e.commentCount    || 0), 0);
+        const paysTotal     = stats.reduce((s, e) => s + (e.purchaseCount   || 0), 0);
+        document.getElementById('ov-today').textContent    = fmt(todayTotal);
+        document.getElementById('ov-likes').textContent    = fmt(likesTotal);
+        document.getElementById('ov-comments').textContent = fmt(commentsTotal);
+        document.getElementById('ov-pays').textContent     = fmt(paysTotal);
+    }
+
+    /* ── 정렬 ── */
+    function getSorted() {
+        const arr = [...allStats];
+        switch (currentSort) {
+            case 'today':    return arr.sort((a, b) => (b.todayViewCount  || 0) - (a.todayViewCount  || 0));
+            case 'likes':    return arr.sort((a, b) => (b.likeCount       || 0) - (a.likeCount       || 0));
+            case 'comments': return arr.sort((a, b) => (b.commentCount    || 0) - (a.commentCount    || 0));
+            case 'pays':     return arr.sort((a, b) => (b.purchaseCount   || 0) - (a.purchaseCount   || 0));
+            default:         return arr.sort((a, b) => (a.episodeNumber   || 0) - (b.episodeNumber   || 0));
+        }
+    }
+
+    function setSort(sort) {
+        currentSort = sort;
+        document.querySelectorAll('.sort-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.sort === sort)
+        );
+        renderTable();
+    }
+
+    /* ── 테이블 렌더 ── */
+    function renderTable() {
+        const sorted = getSorted();
+        const wrap   = document.getElementById('ep-table-wrap');
+        wrap.innerHTML = `
+        <div class="ep-table-wrap">
+          <table class="ep-table">
+            <thead>
+              <tr>
+                <th class="num">회차</th>
+                <th>제목</th>
+                <th class="right stat-today">오늘 조회</th>
+                <th class="right stat-likes">좋아요</th>
+                <th class="right stat-cmts hide-sm">댓글</th>
+                <th class="right stat-pays">결제수</th>
+              </tr>
+            </thead>
+            <tbody id="ep-tbody">
+              ${sorted.map(ep => `
+              <tr data-ep-id="${ep.episodeId}" class="${selectedEp === ep.episodeId ? 'selected' : ''}"
+                  onclick="selectEp(${ep.episodeId})">
+                <td class="num"><span class="ep-num-badge">${ep.episodeNumber}화</span></td>
+                <td><div class="ep-title">${esc(ep.title)}</div></td>
+                <td class="right stat-today">${fmt(ep.todayViewCount)}</td>
+                <td class="right stat-likes">${fmt(ep.likeCount)}</td>
+                <td class="right stat-cmts hide-sm">${fmt(ep.commentCount)}</td>
+                <td class="right stat-pays">${fmt(ep.purchaseCount)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    /* ── 회차 선택 ── */
+    function selectEp(epId) {
+        const ep = allStats.find(e => e.episodeId === epId);
+        if (!ep) return;
+
+        selectedEp = epId;
+        // 선택 하이라이트 갱신
+        document.querySelectorAll('#ep-tbody tr').forEach(tr =>
+            tr.classList.toggle('selected', Number(tr.dataset.epId) === epId)
+        );
+
+        // 상세 패널 업데이트
+        document.getElementById('detail-num').textContent   = ep.episodeNumber + '화';
+        document.getElementById('detail-title').textContent = ep.title || '';
+        document.getElementById('detail-today').textContent = fmt(ep.todayViewCount);
+        document.getElementById('detail-likes').textContent = fmt(ep.likeCount);
+        document.getElementById('detail-cmts').textContent  = fmt(ep.commentCount);
+        document.getElementById('detail-pays').textContent  = fmt(ep.purchaseCount);
+
+        const panel = document.getElementById('ep-detail-panel');
+        panel.classList.add('show');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    /* ── 초기화 ── */
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        if (!novelId) { window.location.href = '/author-dashboard.html'; return; }
+        loadNovelInfo();
+        loadStats();
+    });
+
+    window.setSort  = setSort;
+    window.selectEp = selectEp;
+})();
+</script>
+</body>
+</html>

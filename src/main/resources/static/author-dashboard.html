@@ -72,6 +72,13 @@
         .filter-tab:hover:not(.active) { border-color: var(--primary-light); color: var(--primary-light); }
 
         /* ── 소설 카드 ── */
+        #novel-list-wrap {
+            max-height: 540px; overflow-y: auto;
+            padding-right: 4px; scroll-behavior: smooth;
+        }
+        #novel-list-wrap::-webkit-scrollbar { width: 4px; }
+        #novel-list-wrap::-webkit-scrollbar-track { background: transparent; }
+        #novel-list-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
         .novel-list { display: flex; flex-direction: column; gap: 10px; }
         .novel-card {
             background: var(--surface2); border: 1px solid var(--border);
@@ -119,6 +126,11 @@
             color: var(--primary-light);
         }
         .btn-action--edit:hover { background: var(--primary); border-color: var(--primary); color: white; }
+        .btn-action--stats {
+            background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.28);
+            color: #10b981;
+        }
+        .btn-action--stats:hover { background: #10b981; border-color: #10b981; color: white; }
         .btn-action--new {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             border: none; color: white; padding: 7px 16px;
@@ -348,8 +360,9 @@
                     <span class="badge ${badgeClass}">${statusLabel}</span>
                 </div>
                 <div class="novel-card__actions">
-                    <button class="btn-action btn-action--danger" onclick="deleteNovel(${n.id}, '${esc(n.title).replace(/'/g,"\\'")}')">삭제</button>
+                    <button class="btn-action btn-action--stats" onclick="goStats(${n.id})">회차통계</button>
                     <button class="btn-action btn-action--edit" onclick="editNovel(${n.id})">편집</button>
+                    <button class="btn-action btn-action--danger" onclick="deleteNovel(${n.id}, '${esc(n.title).replace(/'/g,"\\'")}')">삭제</button>
                 </div>
             </div>`;
         }).join('') + '</div>';
@@ -404,6 +417,10 @@
         window.location.href = '/novel-editor.html?id=' + novelId;
     }
 
+    function goStats(novelId) {
+        window.location.href = '/episode-stats.html?novelId=' + novelId;
+    }
+
     function goNewEpisode() {
         const sel = document.getElementById('serial-select');
         if (sel?.value) window.location.href = '/episode-editor.html?novelId=' + sel.value;
@@ -430,6 +447,7 @@
     window.setFilter   = setFilter;
     window.goNewNovel  = goNewNovel;
     window.editNovel   = editNovel;
+    window.goStats     = goStats;
     window.goNewEpisode = goNewEpisode;
     window.deleteNovel = deleteNovel;
     window.onSerialChange = onSerialChange;
