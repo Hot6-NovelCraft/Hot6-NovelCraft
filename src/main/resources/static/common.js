@@ -33,8 +33,8 @@ const Auth = {
 const api = {
     request: async (method, path, body = null, auth = false) => {
         const headers = { 'Content-Type': 'application/json' };
-        if (auth || Auth.isLoggedIn()) {
-            const token = Auth.getToken();
+        const token = Auth.getToken();
+        if ((auth || Auth.isLoggedIn()) && token) {
             headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
         }
         const opts = { method, headers };
@@ -47,12 +47,13 @@ const api = {
             const refreshToken = localStorage.getItem('refreshToken');
             if (!refreshToken) {
                 Auth.removeToken(); Auth.removeUser();
-                window.location.href = '/login.html';
+                window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
                 return;
             }
             // Refresh-Token 헤더로 재요청
+            const currentToken = Auth.getToken();
             const retryHeaders = { 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${Auth.getToken()}`,
+                ...(currentToken && { 'Authorization': `Bearer ${currentToken}` }),
                 'Refresh-Token': `Bearer ${refreshToken}`
             };
             const retryOpts = { method, headers: retryHeaders };
@@ -69,7 +70,7 @@ const api = {
             if (!retryRes.ok) {
                 // Refresh도 만료 → 로그아웃
                 Auth.removeToken(); Auth.removeUser();
-                window.location.href = '/login.html';
+                window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
                 return;
             }
             return retryData.data;
