@@ -53,7 +53,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = NoResourceFoundException.class)
     public ResponseEntity<BaseResponse<Void>> NoResourceFoundExceptionHandler(NoResourceFoundException e) {
-        log.error("리소스 찾기 실패 : ", e);
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(BaseResponse.fail(HttpStatus.NOT_FOUND.name(), "주소를 다시 한번 확인해주세요"));
     }
 
