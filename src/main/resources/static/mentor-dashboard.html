@@ -993,8 +993,8 @@
   /* ─────────────────── 채팅 ─────────────────── */
   async function openChat(mentoringId) {
     try {
-      const res = await api.post(`/api/chatrooms?mentorshipId=${mentoringId}`, {}, true);
-      const roomId = res?.data?.id || res?.id;
+      const res = await api.post(`/chatrooms?mentorshipId=${mentoringId}`, {});
+      const roomId = res?.id;
       if (!roomId) { Toast.error('채팅방을 열 수 없습니다'); return; }
       window.location.href = `/chat.html?roomId=${roomId}`;
     } catch (e) {
