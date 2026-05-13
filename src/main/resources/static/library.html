@@ -369,12 +369,13 @@
                 <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
               ` : ''}
               <div class="nc-user-menu" id="user-menu">
-                <div class="nc-nav__avatar" onclick="toggleUserMenu()" style="cursor:pointer;user-select:none">
-                  ${user?.nickname?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
+                <button class="nc-nav__btn" onclick="toggleUserMenu()"
+                        style="font-weight:600;user-select:none">
+                  ${user?.nickname || '내 프로필'} ▾
+                </button>
                 <div class="nc-user-dropdown" id="user-dropdown">
                   <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
-                  ${isAuthorOrMentor ? `<a href="/editor.html" class="nc-user-dropdown__item">에디터</a>` : ''}
+                  <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
                   <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="Auth.logout()">로그아웃</button>
                 </div>
               </div>
