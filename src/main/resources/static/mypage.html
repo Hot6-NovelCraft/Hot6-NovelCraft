@@ -848,7 +848,7 @@
       if (!el) return;
       el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
       try {
-        const res = await api.get(`/libraries/me?libraryType=${libType}&page=0&size=20&sort=recentRead`, true);
+        const res = await api.get(`/libraries/me?libraryType=${libType}&page=1&size=20&sort=recentRead`, true);
         const list = res?.content || [];
         if (!list.length) {
           el.innerHTML = `<div class="empty-state"><div class="empty-state__icon">📚</div><div class="empty-state__text">서재가 비어 있습니다</div></div>`;
@@ -882,7 +882,7 @@
       const inner = el.querySelector('.loading-row') ? el : el;
       inner.innerHTML = '<div style="font-weight:700;margin-bottom:14px;font-size:0.95rem">받은 알림</div><div class="loading-row"><div class="nc-spinner"></div></div>';
       try {
-        const res = await api.get('/notifications?page=0&size=20', true);
+        const res = await api.get('/notifications?page=1&size=20', true);
         const list = res?.content || res || [];
         const listHtml = list.length
           ? list.map(n => `
@@ -898,27 +898,34 @@
     }
 
     /* ── 결제 내역 ── */
+    const PAYMENT_METHOD = { CARD: '카드', VIRTUAL_ACCOUNT: '가상계좌', EASY_PAY: '간편결제' };
+    const PAYMENT_STATUS = { PAID: '충전 완료', CANCELLED: '환불', PENDING: '처리 중' };
+
     async function loadPayments() {
       const el = document.getElementById('payment-list');
       if (!el) return;
       el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
       try {
-        const res = await api.get('/payments?page=0&size=20', true);
+        const res = await api.get('/payments?page=1&size=20', true);
         const list = res?.content || [];
         if (!list.length) {
           el.innerHTML = '<div class="empty-state"><div class="empty-state__icon">💳</div><div class="empty-state__text">결제 내역이 없습니다</div></div>';
           return;
         }
-        el.innerHTML = list.map(p => `
+        el.innerHTML = list.map(p => {
+          const cancelled = p.status === 'CANCELLED';
+          const label = (PAYMENT_METHOD[p.method] || '결제') + ' · ' + (PAYMENT_STATUS[p.status] || p.status || '');
+          return `
           <div class="point-history-item">
             <div>
-              <div style="font-size:0.875rem">${escHtml(p.productName || '결제')}</div>
+              <div style="font-size:0.875rem">${escHtml(label)}</div>
               <div style="font-size:0.75rem;color:var(--text3)">${formatDate(p.createdAt)}</div>
             </div>
-            <span class="${p.amount > 0 ? 'point-plus' : 'point-minus'}">
-              ${p.amount > 0 ? '+' : ''}${p.amount?.toLocaleString()}P
+            <span class="${cancelled ? 'point-minus' : 'point-plus'}">
+              ${cancelled ? '-' : '+'}${p.amount?.toLocaleString()}P
             </span>
-          </div>`).join('');
+          </div>`;
+        }).join('');
       } catch {
         el.innerHTML = '<div class="empty-state"><div class="empty-state__text">결제 내역을 불러오지 못했습니다</div></div>';
       }
