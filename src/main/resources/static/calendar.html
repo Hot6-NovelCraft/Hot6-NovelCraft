@@ -92,8 +92,13 @@
       max-width: 1100px; margin: 0 auto; padding: 28px 20px;
       display: grid; grid-template-columns: 1fr 260px; gap: 24px;
     }
-    .page-left {}
-    .page-right { display: flex; flex-direction: column; gap: 16px; }
+    .page-left { min-width: 0; }
+    .page-right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+    /* 검색 영역 — 그리드 밖 전체 너비 */
+    .lib-search-section {
+      max-width: 1100px; margin: 0 auto; padding: 0 20px 32px;
+    }
 
     /* ── 캘린더 카드 ── */
     .cal-card {
@@ -201,7 +206,7 @@
     .lib-search-input {
       flex: 1; padding: 10px 14px; border-radius: 8px;
       background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); font-size: 0.875rem; font-family: inherit;
+      color: var(--text); font-size: 16px; font-family: inherit;
       transition: border-color 0.2s; outline: none;
     }
     .lib-search-input:focus { border-color: var(--primary); }
@@ -212,13 +217,14 @@
     }
     .lib-search-btn:hover { background: var(--primary-light); }
     .lib-results { display: none; }
+    .lib-results.visible { display: block; }
     .lib-result-item {
       background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
       padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 12px;
     }
     .lib-result-info { flex: 1; min-width: 0; }
     .lib-result-title { font-size: 0.875rem; font-weight: 600; color: var(--text); margin-bottom: 3px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      word-break: break-word; }
     .lib-result-meta { font-size: 0.75rem; color: var(--text3); }
     .lib-add-btn {
       padding: 5px 12px; border-radius: 6px; border: 1px solid var(--primary);
@@ -300,7 +306,7 @@
     .form-input {
       width: 100%; padding: 9px 12px; border-radius: 8px;
       background: var(--surface); border: 1px solid var(--border);
-      color: var(--text); font-size: 0.875rem; font-family: inherit;
+      color: var(--text); font-size: 16px; font-family: inherit;
       outline: none; box-sizing: border-box; transition: border-color 0.2s;
     }
     .form-input:focus { border-color: var(--primary); }
@@ -434,16 +440,6 @@
         <div id="records-list"></div>
       </div>
 
-      <!-- 국립도서관 검색 -->
-      <div>
-        <div class="lib-search-wrap">
-          <input type="text" id="lib-search-input" class="lib-search-input"
-                 placeholder="도서 검색 (국립중앙도서관 연동)..."
-                 onkeydown="if(event.key==='Enter')searchLibrary()">
-          <button class="lib-search-btn" onclick="searchLibrary()">검색</button>
-        </div>
-        <div id="lib-results" class="lib-results"></div>
-      </div>
     </div>
 
     <!-- ── 오른쪽 사이드바 ── -->
@@ -473,6 +469,17 @@
         챌린지 중 리스트
       </button>
     </div>
+  </div>
+
+  <!-- 국립도서관 검색 — 그리드 밖 전체 너비 영역 -->
+  <div class="lib-search-section">
+    <div class="lib-search-wrap">
+      <input type="text" id="lib-search-input" class="lib-search-input"
+             placeholder="도서 검색 (국립중앙도서관 연동)..."
+             onkeydown="if(event.key==='Enter')searchLibrary()">
+      <button class="lib-search-btn" onclick="searchLibrary()">검색</button>
+    </div>
+    <div id="lib-results" class="lib-results"></div>
   </div>
 </div>
 
@@ -936,29 +943,31 @@
   /* ──────────────────────────────────
      국립도서관 검색
   ────────────────────────────────── */
+  let libSearchResults = [];
+
   async function searchLibrary() {
     const q = document.getElementById('lib-search-input').value.trim();
     if (!q) { Toast.error('검색어를 입력하세요'); return; }
 
     const resultsEl = document.getElementById('lib-results');
-    resultsEl.style.display = 'block';
+    resultsEl.classList.add('visible');
     resultsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">검색 중...</div>';
 
     try {
       const res = await api.get(`/v1/national-library/books/search?query=${encodeURIComponent(q)}&page=1&size=10`);
-      const items = res?.data?.content || res?.content || [];
-      if (!items.length) {
+      libSearchResults = res?.data?.content || res?.content || [];
+      if (!libSearchResults.length) {
         resultsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">검색 결과가 없습니다</div>';
         return;
       }
-      resultsEl.innerHTML = items.map(b => `
+      resultsEl.innerHTML = libSearchResults.map((b, i) => `
         <div class="lib-result-item">
           <div class="lib-result-info">
             <div class="lib-result-title">${b.title || ''}</div>
             <div class="lib-result-meta">${[b.author, b.publisher, b.publishYear].filter(Boolean).join(' · ')}</div>
           </div>
           ${Auth.isLoggedIn() ? `
-            <button class="lib-add-btn" onclick="addToShelf(this,'${(b.isbn||'').replace(/'/g,"\\'")}','${(b.title||'').replace(/'/g,"\\'")}','${(b.author||'').replace(/'/g,"\\'")}','${(b.publisher||'').replace(/'/g,"\\'")}','${(b.publishYear||'').replace(/'/g,"\\'")}')">
+            <button class="lib-add-btn" data-idx="${i}" onclick="addToShelf(this)">
               서재에 추가
             </button>
           ` : ''}
@@ -969,15 +978,32 @@
     }
   }
 
-  async function addToShelf(btn, isbn, title, author, publisher, publishYear) {
+  async function addToShelf(btn) {
     if (!Auth.isLoggedIn()) {
       window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
       return;
     }
+    const idx = parseInt(btn.dataset.idx);
+    const b = libSearchResults[idx];
+    if (!b) return;
+
+    // isbn 없는 책은 title+author 기반 고유 pseudo-isbn 생성
+    const title = b.title?.trim() || '제목 없음';
+    const author = b.author?.trim() || '미상';
+    const publisher = b.publisher?.trim() || '미상';
+    const publishYear = b.publishYear?.trim() || '미상';
+    // 국립도서관 isbn은 "9788901234567 9788901234560" 또는 "9788901234567(세트)" 등 20자 초과 가능
+    // 첫 번째 10~13자리 숫자열만 추출 (컬럼 length=20)
+    const rawIsbn = b.isbn?.trim() || '';
+    const cleanIsbn = (rawIsbn.match(/\d{10,13}/) || [''])[0];
+    const isbn = cleanIsbn || 'NC-' + btoa(encodeURIComponent(title + '|' + author)).replace(/[^a-zA-Z0-9]/g, '').slice(0, 17);
+
     btn.disabled = true;
     btn.textContent = '추가 중...';
     try {
-      await api.post('/v1/national-library/books/shelf', { isbn, title, author, publisher, publishYear, coverImageUrl: null }, true);
+      await api.post('/v1/national-library/books/shelf', {
+        isbn, title, author, publisher, publishYear, coverImageUrl: null,
+      }, true);
       Toast.success(`"${title}"을(를) 서재에 추가했습니다`);
       btn.textContent = '추가됨';
     } catch (e) {

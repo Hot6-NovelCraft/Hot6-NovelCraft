@@ -269,7 +269,7 @@
 
   <div class="page-wrap">
     <!-- 왼쪽: 서재 목록 -->
-    <div>
+    <div style="min-width:0;overflow:hidden">
       <!-- 탭 -->
       <div class="lib-tabs" id="lib-tabs">
         <button class="lib-tab active" data-type="ALL">전체</button>
@@ -277,6 +277,7 @@
         <button class="lib-tab" data-type="COMPLETED">완독</button>
         <button class="lib-tab" data-type="BOOKMARK">찜 목록</button>
         <button class="lib-tab" data-type="PURCHASED">구매 내역</button>
+        <button class="lib-tab" data-type="EXTERNAL">외부 도서</button>
       </div>
 
       <!-- 콘텐츠 영역 -->
@@ -286,7 +287,7 @@
     </div>
 
     <!-- 오른쪽: 통계 + 구독 -->
-    <div>
+    <div style="min-width:0">
       <!-- 독서 통계 -->
       <div class="side-panel">
         <div class="side-panel__title">📊 독서 통계</div>
@@ -633,6 +634,68 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    /* 외부 도서 탭 로드 */
+    async function loadExternal() {
+      const el = document.getElementById('lib-content');
+      el.innerHTML = '<div class="loading-state"><div class="nc-spinner"></div></div>';
+      try {
+        const res = await api.get('/v1/national-library/books/shelf', true);
+        const list = res?.data || res || [];
+        if (!list.length) {
+          el.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state__icon">📚</div>
+              <div class="empty-state__text">저장된 외부 도서가 없습니다</div>
+              <button class="nc-btn nc-btn--primary nc-btn--sm" onclick="window.location.href='/calendar.html'">캘린더에서 검색</button>
+            </div>`;
+          return;
+        }
+        el.innerHTML = `
+          <div class="lib-section-title" style="margin-bottom:16px">
+            📖 외부 도서 <span class="lib-section-count">(${list.length})</span>
+          </div>` +
+          list.map(b => `
+            <div class="novel-item" id="ext-book-${b.userBookId}" style="display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;transition:border-color 0.2s">
+              <div style="width:48px;height:64px;border-radius:7px;background:linear-gradient(135deg,var(--surface2),var(--border));display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;overflow:hidden;border:1px solid var(--border)">
+                ${b.coverImageUrl ? `<img src="${b.coverImageUrl}" style="width:100%;height:100%;object-fit:cover">` : '📖'}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:0.92rem;font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-word">${b.title || '제목 없음'}</div>
+                <div style="font-size:0.78rem;color:var(--text3)">${b.author || ''}</div>
+                <div style="margin-top:6px">
+                  <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:500;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3)">외부 도서</span>
+                </div>
+              </div>
+              <button onclick="deleteExternalBook(${b.userBookId}, this)"
+                      style="flex-shrink:0;padding:6px 12px;border-radius:7px;border:1px solid rgba(239,68,68,0.4);background:transparent;color:#f87171;font-size:0.78rem;cursor:pointer;font-family:inherit;transition:all 0.2s;white-space:nowrap"
+                      onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">
+                삭제
+              </button>
+            </div>
+          `).join('');
+      } catch (e) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-state__text">${e.message || '목록을 불러오지 못했습니다'}</div></div>`;
+      }
+    }
+
+    async function deleteExternalBook(userBookId, btn) {
+      if (!confirm('이 도서를 서재에서 삭제하시겠습니까?')) return;
+      btn.disabled = true;
+      btn.textContent = '삭제 중...';
+      try {
+        await api.delete(`/v1/national-library/books/shelf/${userBookId}`, true);
+        Toast.success('도서가 삭제되었습니다');
+        document.getElementById(`ext-book-${userBookId}`)?.remove();
+        // 남은 항목이 없으면 빈 상태 표시
+        const remaining = document.querySelectorAll('[id^="ext-book-"]');
+        if (!remaining.length) loadExternal();
+      } catch (e) {
+        Toast.error(e.message || '삭제 실패');
+        btn.disabled = false;
+        btn.textContent = '삭제';
+      }
+    }
+
     function gotoRead(novelId, type, lastEpisodeTitle) {
       if (type === 'READING' && lastEpisodeTitle) {
         window.location.href = `/episode-read.html?novelId=${novelId}`;
@@ -755,13 +818,14 @@
           currentTab = btn.dataset.type;
           currentPage = 1;
           if (currentTab === 'ALL') loadAll();
+          else if (currentTab === 'EXTERNAL') loadExternal();
           else loadByType(currentTab, 1);
         });
       });
 
       // URL 파라미터로 탭 초기화
       const urlTab = new URLSearchParams(location.search).get('tab');
-      const validTabs = ['READING', 'COMPLETED', 'BOOKMARK', 'PURCHASED'];
+      const validTabs = ['READING', 'COMPLETED', 'BOOKMARK', 'PURCHASED', 'EXTERNAL'];
       if (urlTab && validTabs.includes(urlTab.toUpperCase())) {
         const target = document.querySelector(`.lib-tab[data-type="${urlTab.toUpperCase()}"]`);
         if (target) target.click();
