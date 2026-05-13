@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>마이페이지 - NovelCraft</title>
+  <script src="/common.js"></script>
+  <style>
+    /* ── 네비 커스텀 ── */
+    .nc-nav__inner { height: 62px; }
+    .nc-point-btn {
+      padding: 5px 14px; border-radius: 20px;
+      background: linear-gradient(135deg, rgba(240,200,66,0.18), rgba(240,200,66,0.08));
+      border: 1px solid rgba(240,200,66,0.4); color: var(--accent);
+      font-size: 0.82rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap; font-family: inherit;
+    }
+    .nc-point-btn:hover { background: rgba(240,200,66,0.25); }
+    .nc-user-menu { position: relative; }
+    .nc-user-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); min-width: 160px;
+      box-shadow: var(--shadow-lg); z-index: 300; display: none; overflow: hidden;
+    }
+    .nc-user-menu.open .nc-user-dropdown { display: block; }
+    .nc-user-dropdown__item {
+      display: block; width: 100%; padding: 11px 16px; text-align: left;
+      background: none; border: none; color: var(--text2); font-size: 0.875rem;
+      cursor: pointer; transition: background 0.15s; font-family: inherit; text-decoration: none;
+    }
+    .nc-user-dropdown__item:hover { background: var(--surface); color: var(--text); }
+    .nc-user-dropdown__item--danger { color: #f87171; }
+    .nc-user-dropdown__item--danger:hover { background: rgba(239,68,68,0.08); }
+
+    /* ── 레이아웃 ── */
+    .mypage-layout {
+      max-width: 1100px; margin: 0 auto; padding: 32px 24px;
+      display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: start;
+    }
+
+    /* ── 사이드바 ── */
+    .sidebar {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden; position: sticky; top: 80px;
+    }
+    .sidebar-avatar-wrap {
+      padding: 28px 20px 20px; text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; font-weight: 700; color: white;
+      margin: 0 auto 12px;
+    }
+    .sidebar-nickname { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+    .sidebar-role {
+      font-size: 0.78rem; color: var(--text3);
+      padding: 2px 10px; border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      display: inline-block;
+    }
+    .sidebar-nav { padding: 8px 0; }
+    .sidebar-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 20px; cursor: pointer; transition: all 0.15s;
+      color: var(--text2); font-size: 0.875rem; border: none;
+      background: none; width: 100%; text-align: left; font-family: inherit;
+    }
+    .sidebar-nav-item:hover { background: var(--surface); color: var(--text); }
+    .sidebar-nav-item.active {
+      background: rgba(124,90,240,0.1); color: var(--primary-light);
+      font-weight: 600; border-right: 3px solid var(--primary);
+    }
+    .sidebar-nav-item .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    /* ── 메인 콘텐츠 ── */
+    .main-content { min-width: 0; }
+    .content-section {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px; margin-bottom: 20px;
+    }
+    .section-title {
+      font-family: 'Noto Serif KR', serif; font-size: 1.05rem; font-weight: 700;
+      margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── 폼 그리드 ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-grid.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label {
+      font-size: 0.8rem; font-weight: 600; color: var(--text3);
+    }
+    .form-label .opt { font-size: 0.72rem; color: var(--text3); font-weight: 400; margin-left: 4px; }
+    .form-label .readonly { font-size: 0.72rem; color: var(--text3); font-weight: 400; margin-left: 4px; }
+    .form-input {
+      padding: 10px 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 0.9rem; font-family: inherit;
+      outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--primary); }
+    .form-input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .form-input-row { display: flex; gap: 8px; }
+    .form-input-row .form-input { flex: 1; }
+    .form-input-row .nc-btn { flex-shrink: 0; padding: 10px 14px; font-size: 0.82rem; }
+
+    /* ── 성별 선택 ── */
+    .gender-btns { display: flex; gap: 8px; }
+    .gender-btn {
+      padding: 9px 20px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 0.875rem; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .gender-btn:hover { border-color: var(--primary); color: var(--primary-light); }
+    .gender-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+    /* ── 장르 태그 ── */
+    .genre-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .genre-tag {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 0.8rem; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .genre-tag:hover { border-color: var(--primary); color: var(--primary-light); }
+    .genre-tag.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+    /* ── 독서 목표 ── */
+    .reading-goals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .reading-goal-btn {
+      padding: 12px 8px; border-radius: 10px; text-align: center;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .reading-goal-btn:hover { border-color: var(--primary); }
+    .reading-goal-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+    .reading-goal-btn .goal-label { font-size: 0.875rem; font-weight: 700; }
+    .reading-goal-btn .goal-sub { font-size: 0.72rem; margin-top: 3px; opacity: 0.7; }
+
+    /* ── 토글 스위치 ── */
+    .notif-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-label { font-size: 0.875rem; }
+    .toggle-switch {
+      position: relative; width: 44px; height: 24px;
+      display: inline-block; flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; background: var(--border);
+      border-radius: 24px; cursor: pointer; transition: 0.3s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute;
+      width: 18px; height: 18px; left: 3px; bottom: 3px;
+      background: white; border-radius: 50%; transition: 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--primary); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* ── 구독/결제 ── */
+    .sub-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .sub-status { font-weight: 700; font-size: 0.95rem; }
+    .sub-meta { font-size: 0.8rem; color: var(--text3); margin-top: 4px; }
+
+    /* ── 포인트 내역 ── */
+    .point-history-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .point-history-item:last-child { border-bottom: none; }
+    .point-plus { color: var(--success); font-weight: 700; }
+    .point-minus { color: var(--error); font-weight: 700; }
+
+    /* ── 작가 전용 ── */
+    .author-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .career-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .career-btn {
+      padding: 7px 16px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 0.8rem; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .career-btn:hover { border-color: var(--primary); color: var(--primary-light); }
+    .career-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+    /* ── 계정 탈퇴 ── */
+    .danger-box {
+      border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 20px;
+      background: rgba(239,68,68,0.04);
+    }
+    .danger-box-title { font-weight: 700; color: #f87171; margin-bottom: 6px; font-size: 0.95rem; }
+    .danger-box-desc { font-size: 0.82rem; color: var(--text3); margin-bottom: 16px; }
+
+    /* ── 비밀번호 변경 ── */
+    .pw-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+    /* ── 서재 ── */
+    .lib-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .lib-tab {
+      padding: 6px 16px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 0.8rem; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .lib-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+    /* ── 빈 상태 ── */
+    .empty-state { padding: 48px 20px; text-align: center; color: var(--text3); }
+    .empty-state__icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .empty-state__text { font-size: 0.875rem; }
+
+    /* ── 로딩 ── */
+    .loading-row { padding: 32px; display: flex; align-items: center; justify-content: center; }
+
+    /* ── 서재 아이템 ── */
+    .lib-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      cursor: pointer; transition: all 0.2s; margin-bottom: 10px;
+    }
+    .lib-item:hover { border-color: rgba(124,90,240,0.35); }
+    .lib-cover {
+      width: 40px; height: 56px; border-radius: 6px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--surface2), var(--bg3));
+      border: 1px solid var(--border); display: flex; align-items: center;
+      justify-content: center; font-size: 1rem; overflow: hidden;
+    }
+    .lib-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .lib-info { flex: 1; min-width: 0; }
+    .lib-title { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lib-meta { font-size: 0.75rem; color: var(--text3); margin-top: 3px; }
+
+    /* ── 반응형 ── */
+    @media (max-width: 860px) {
+      .mypage-layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .sidebar-nav { display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px; }
+      .sidebar-nav-item { border-right: none !important; border-radius: 8px; white-space: nowrap; padding: 8px 14px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .reading-goals { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav id="nc-nav"></nav>
+
+  <div class="mypage-layout">
+
+    <!-- ── 사이드바 ── -->
+    <aside class="sidebar">
+      <div class="sidebar-avatar-wrap">
+        <div class="sidebar-avatar" id="sb-avatar">홍</div>
+        <div class="sidebar-nickname" id="sb-nickname">로딩 중...</div>
+        <div class="sidebar-role" id="sb-role">독자</div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="sidebar-nav-item active" data-tab="profile">
+          <span class="nav-icon">👤</span> 프로필 수정
+        </button>
+        <button class="sidebar-nav-item" data-tab="library">
+          <span class="nav-icon">📚</span> 내 서재
+        </button>
+        <button class="sidebar-nav-item" data-tab="notification">
+          <span class="nav-icon">🔔</span> 알림 설정
+        </button>
+        <button class="sidebar-nav-item" data-tab="payment">
+          <span class="nav-icon">💎</span> 포인트 내역
+        </button>
+        <button class="sidebar-nav-item" data-tab="subscription">
+          <span class="nav-icon">🌟</span> 구독/결제
+        </button>
+        <button class="sidebar-nav-item" id="leave-btn" style="margin-top:auto">
+          <span class="nav-icon" style="color:var(--text3)">🚪</span>
+          <span style="color:var(--text3)">탈퇴하기</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- ── 메인 콘텐츠 ── -->
+    <div class="main-content">
+
+      <!-- ────── 프로필 탭 ────── -->
+      <div class="tab-content active" id="tab-profile">
+
+        <!-- 기본 정보 -->
+        <div class="content-section">
+          <div class="section-title">
+            기본 정보
+            <button class="nc-btn nc-btn--primary nc-btn--sm" onclick="saveProfile()">저장</button>
+          </div>
+
+          <div class="form-grid">
+            <!-- 닉네임 -->
+            <div class="form-group">
+              <label class="form-label">닉네임</label>
+              <div class="form-input-row">
+                <input class="form-input" id="input-nickname" placeholder="닉네임">
+                <button class="nc-btn nc-btn--outline nc-btn--sm" onclick="checkNickname()">중복확인</button>
+              </div>
+            </div>
+            <!-- 이메일 -->
+            <div class="form-group">
+              <label class="form-label">이메일 <span class="readonly">변경 불가</span></label>
+              <input class="form-input" id="input-email" disabled>
+            </div>
+            <!-- 성별 -->
+            <div class="form-group">
+              <label class="form-label">성별 <span class="opt">(선택)</span></label>
+              <div class="gender-btns">
+                <button class="gender-btn" data-gender="MALE" onclick="selectGender(this)">남성</button>
+                <button class="gender-btn" data-gender="FEMALE" onclick="selectGender(this)">여성</button>
+                <button class="gender-btn active" data-gender="" onclick="selectGender(this)">선택 안 함</button>
+              </div>
+            </div>
+            <!-- 생년월일 -->
+            <div class="form-group">
+              <label class="form-label">생년월일</label>
+              <input type="date" class="form-input" id="input-birthday" required>
+            </div>
+          </div>
+
+          <!-- 비밀번호 변경 -->
+          <div class="pw-section">
+            <div class="form-label" style="margin-bottom:12px;font-size:0.9rem;color:var(--text2);font-weight:700">비밀번호 변경</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">현재 비밀번호</label>
+                <input type="password" class="form-input" id="input-old-pw" placeholder="현재 비밀번호">
+              </div>
+              <div class="form-group">
+                <label class="form-label">새 비밀번호</label>
+                <input type="password" class="form-input" id="input-new-pw" placeholder="새 비밀번호 (8자 이상)">
+              </div>
+            </div>
+            <button class="nc-btn nc-btn--outline nc-btn--sm" style="margin-top:12px" onclick="changePassword()">비밀번호 변경</button>
+          </div>
+        </div>
+
+        <!-- 독자 전용: 독서 설정 -->
+        <div class="content-section" id="reader-settings" style="display:none">
+          <div class="section-title">독서 설정</div>
+          <div class="form-group" style="margin-bottom:20px">
+            <label class="form-label" style="margin-bottom:10px;font-size:0.875rem">선호 장르</label>
+            <div class="genre-tags" id="genre-tags">
+              <button class="genre-tag" data-genre="FANTASY">판타지</button>
+              <button class="genre-tag" data-genre="ROMANCE_FANTASY">로판</button>
+              <button class="genre-tag" data-genre="MODERN">현대</button>
+              <button class="genre-tag" data-genre="CHIVALROUS">무협</button>
+              <button class="genre-tag" data-genre="BL">BL</button>
+              <button class="genre-tag" data-genre="SF">SF</button>
+              <button class="genre-tag" data-genre="HORROR">공포</button>
+              <button class="genre-tag" data-genre="DAILY_LIFE">일상</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="margin-bottom:10px;font-size:0.875rem">독서 목표</label>
+            <div class="reading-goals">
+              <button class="reading-goal-btn" data-goal="LIGHT" onclick="selectGoal(this)">
+                <div class="goal-label">가볍게</div>
+                <div class="goal-sub">주 1~2번</div>
+              </button>
+              <button class="reading-goal-btn" data-goal="STEADY" onclick="selectGoal(this)">
+                <div class="goal-label">꾸준히</div>
+                <div class="goal-sub">주 3~5번</div>
+              </button>
+              <button class="reading-goal-btn" data-goal="DAILY" onclick="selectGoal(this)">
+                <div class="goal-label">열독가</div>
+                <div class="goal-sub">매일</div>
+              </button>
+              <button class="reading-goal-btn" data-goal="FREE" onclick="selectGoal(this)">
+                <div class="goal-label">자유롭게</div>
+                <div class="goal-sub">제한없음</div>
+              </button>
+            </div>
+          </div>
+          <button class="nc-btn nc-btn--primary nc-btn--sm" style="margin-top:16px" onclick="saveReaderSettings()">저장</button>
+        </div>
+
+        <!-- 작가 전용: 작가 프로필 -->
+        <div class="content-section" id="author-settings" style="display:none">
+          <div class="section-title">
+            작가 프로필
+            <button class="nc-btn nc-btn--primary nc-btn--sm" onclick="saveAuthorProfile()">저장</button>
+          </div>
+          <div class="form-group" style="margin-bottom:16px">
+            <label class="form-label">작가 소개</label>
+            <textarea class="form-input nc-textarea" id="input-author-bio" rows="3" placeholder="작가 소개를 입력해주세요" style="resize:vertical;min-height:80px"></textarea>
+          </div>
+          <div class="form-group" style="margin-bottom:16px">
+            <label class="form-label" style="margin-bottom:10px">주력 장르</label>
+            <div class="genre-tags" id="author-genre-tags">
+              <button class="genre-tag" data-genre="FANTASY">판타지</button>
+              <button class="genre-tag" data-genre="ROMANCE_FANTASY">로판</button>
+              <button class="genre-tag" data-genre="MODERN">현대</button>
+              <button class="genre-tag" data-genre="CHIVALROUS">무협</button>
+              <button class="genre-tag" data-genre="BL">BL</button>
+              <button class="genre-tag" data-genre="SF">SF</button>
+              <button class="genre-tag" data-genre="HORROR">공포</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="margin-bottom:10px">경력 등급</label>
+            <div class="career-btns">
+              <button class="career-btn" data-level="INTRODUCTION" onclick="selectCareer(this)">입문</button>
+              <button class="career-btn" data-level="ELEMENTARY" onclick="selectCareer(this)">초보</button>
+              <button class="career-btn" data-level="INTERMEDIATE" onclick="selectCareer(this)">중급</button>
+              <button class="career-btn" data-level="PROFICIENT" onclick="selectCareer(this)">숙련</button>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:16px">
+            <label class="form-label" style="margin-bottom:8px">멘티 신청 허용</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="allow-mentee">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <a href="/editor.html" class="nc-btn nc-btn--outline" style="display:inline-flex;margin-top:16px;gap:6px;text-decoration:none">
+            ✍️ 에디터 이동
+          </a>
+        </div>
+
+        <!-- 계정 탈퇴 -->
+        <div class="content-section">
+          <div class="danger-box">
+            <div class="danger-box-title">계정 탈퇴</div>
+            <div class="danger-box-desc">탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다</div>
+            <button class="nc-btn nc-btn--danger nc-btn--sm" onclick="confirmDelete()">탈퇴하기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────── 내 서재 탭 ────── -->
+      <div class="tab-content" id="tab-library">
+        <div class="content-section">
+          <div class="section-title">내 서재</div>
+          <div class="lib-tabs">
+            <button class="lib-tab active" data-lib="READING" onclick="switchLibTab(this)">읽는 중</button>
+            <button class="lib-tab" data-lib="BOOKMARK" onclick="switchLibTab(this)">즐겨찾기</button>
+            <button class="lib-tab" data-lib="COMPLETED" onclick="switchLibTab(this)">완독</button>
+            <button class="lib-tab" data-lib="PURCHASED" onclick="switchLibTab(this)">구매한 작품</button>
+          </div>
+          <div id="lib-list">
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────── 알림 설정 탭 ────── -->
+      <div class="tab-content" id="tab-notification">
+        <div class="content-section">
+          <div class="section-title">알림 설정</div>
+          <div class="notif-item">
+            <span class="notif-label">팔로우 작가 신규 연재</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="notif-follow" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="notif-item">
+            <span class="notif-label">이벤트/프로모션 알림</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="notif-event" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="notif-item">
+            <span class="notif-label">AI 추천 소설 알림</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="notif-ai">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="notif-item">
+            <span class="notif-label">이메일 뉴스레터</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="notif-email">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div id="notif-list" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+            <div style="font-weight:700;margin-bottom:14px;font-size:0.95rem">받은 알림</div>
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────── 포인트 내역 탭 ────── -->
+      <div class="tab-content" id="tab-payment">
+        <div class="content-section">
+          <div class="section-title">
+            포인트 잔액
+          </div>
+          <div style="text-align:center;padding:20px 0">
+            <div style="font-size:2.2rem;font-weight:900;color:var(--accent)" id="point-balance">···P</div>
+            <div style="font-size:0.82rem;color:var(--text3);margin-top:6px">현재 보유 포인트</div>
+            <button class="nc-btn nc-btn--primary" style="margin-top:16px" onclick="openChargeModal()">💎 포인트 충전</button>
+          </div>
+        </div>
+        <div class="content-section">
+          <div class="section-title">결제 내역</div>
+          <div id="payment-list">
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ────── 구독 탭 ────── -->
+      <div class="tab-content" id="tab-subscription">
+        <div class="content-section">
+          <div class="section-title">구독 현황</div>
+          <div id="sub-status">
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── 포인트 충전 모달 ── -->
+  <div class="nc-modal" id="modal-point">
+    <div class="nc-modal__backdrop" onclick="Modal.close('modal-point')"></div>
+    <div class="nc-modal__box">
+      <button class="nc-modal__close" onclick="Modal.close('modal-point')">✕</button>
+      <div class="nc-modal__title">💎 포인트 충전</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <button class="point-opt selected" data-amount="1000" onclick="selectPoint(this)">
+          <div style="font-size:1rem;font-weight:700">1,000P</div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:3px">₩1,000</div>
+        </button>
+        <button class="point-opt" data-amount="5000" onclick="selectPoint(this)">
+          <div style="font-size:1rem;font-weight:700">5,000P</div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:3px">₩5,000</div>
+        </button>
+        <button class="point-opt" data-amount="10000" onclick="selectPoint(this)">
+          <div style="font-size:1rem;font-weight:700">10,000P</div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:3px">₩10,000</div>
+        </button>
+        <button class="point-opt" data-amount="30000" onclick="selectPoint(this)">
+          <div style="font-size:1rem;font-weight:700">30,000P</div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:3px">₩30,000</div>
+        </button>
+      </div>
+      <button class="nc-btn nc-btn--primary nc-btn--full" onclick="chargePoint()">충전하기</button>
+    </div>
+  </div>
+
+  <style>
+    .point-opt {
+      padding: 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: transparent; cursor: pointer; transition: all 0.2s;
+      text-align: center; font-family: inherit; color: var(--text2);
+    }
+    .point-opt.selected { border-color: var(--primary); background: rgba(124,90,240,0.1); color: var(--primary-light); }
+  </style>
+
+  <script>
+    /* ── 상수 ── */
+    const GENRE_LABEL = {
+      FANTASY:'판타지', ROMANCE_FANTASY:'로판', MODERN:'현대',
+      CHIVALROUS:'무협', BL:'BL', SF:'SF', HORROR:'공포', DAILY_LIFE:'일상'
+    };
+    const CAREER_LABEL = {
+      INTRODUCTION:'입문', ELEMENTARY:'초보', INTERMEDIATE:'중급', PROFICIENT:'숙련'
+    };
+
+    /* ── 상태 ── */
+    let currentUser = null;
+    let currentTab = 'profile';
+    let nicknameChecked = false;
+    let selectedPointAmt = 1000;
+    let currentLibType = 'READING';
+
+    /* ── 네비 ── */
+    function initNav() {
+      const nav = document.getElementById('nc-nav');
+      if (!nav) return;
+      const user = Auth.getUser();
+      const isLoggedIn = Auth.isLoggedIn();
+      const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
+
+      nav.innerHTML = `
+        <div class="nc-nav__inner">
+          <a href="/index.html" class="nc-nav__logo">
+            <span class="logo-icon">✦</span>NovelCraft
+          </a>
+          <div class="nc-nav__search-wrap" id="nav-search-wrap">
+            <input type="text" class="nc-nav__search" id="nav-search" placeholder="소설, 작가, 태그 검색...">
+            <div class="nc-search-dropdown" id="search-dropdown"></div>
+          </div>
+          <div class="nc-nav__right">
+            ${isLoggedIn ? `
+              <button class="nc-point-btn" id="nav-point" onclick="openChargeModal()">···P</button>
+              <button class="nc-nav__btn" onclick="window.location.href='/mypage.html?tab=library'">내 서재</button>
+              <div class="nc-user-menu" id="user-menu">
+                <div class="nc-nav__avatar" onclick="toggleUserMenu()" style="cursor:pointer;user-select:none">
+                  ${user?.nickname?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <div class="nc-user-dropdown" id="user-dropdown">
+                  <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
+                  ${isAuthorOrMentor ? `<a href="/editor.html" class="nc-user-dropdown__item">에디터</a>` : ''}
+                  <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="Auth.logout()">로그아웃</button>
+                </div>
+              </div>
+            ` : `
+              <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
+              <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
+            `}
+          </div>
+        </div>`;
+
+      if (isLoggedIn) {
+        api.get('/points/balance', true).then(d => {
+          const el = document.getElementById('nav-point');
+          if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+        }).catch(() => {});
+      }
+
+      initSearch();
+
+      document.addEventListener('click', e => {
+        const menu = document.getElementById('user-menu');
+        if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+      });
+    }
+
+    function toggleUserMenu() {
+      document.getElementById('user-menu')?.classList.toggle('open');
+    }
+
+    /* ── 탭 전환 ── */
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.sidebar-nav-item[data-tab]').forEach(btn => btn.classList.remove('active'));
+
+      const content = document.getElementById(`tab-${tab}`);
+      if (content) content.classList.add('active');
+      const navBtn = document.querySelector(`.sidebar-nav-item[data-tab="${tab}"]`);
+      if (navBtn) navBtn.classList.add('active');
+
+      history.replaceState({}, '', `?tab=${tab}`);
+
+      /* 탭별 데이터 로드 */
+      if (tab === 'library') loadLibrary(currentLibType);
+      if (tab === 'notification') loadNotifications();
+      if (tab === 'payment') loadPayments();
+      if (tab === 'subscription') loadSubscription();
+    }
+
+    /* ── 사용자 정보 로드 ── */
+    async function loadUserInfo() {
+      if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+      try {
+        const user = await api.get('/auth/users/me', true);
+        currentUser = user;
+
+        const role = user.role;
+        const nickname = user.nickname || '';
+        const initial = nickname.charAt(0)?.toUpperCase() || 'U';
+
+        /* 사이드바 업데이트 */
+        document.getElementById('sb-avatar').textContent = initial;
+        document.getElementById('sb-nickname').textContent = nickname;
+        document.getElementById('sb-role').textContent =
+          role === 'AUTHOR' ? '작가' : role === 'MENTOR' ? '멘토' : '독자';
+
+        /* 기본 정보 폼 채우기 */
+        document.getElementById('input-nickname').value = nickname;
+        document.getElementById('input-email').value = user.email || '';
+        if (user.birthday) document.getElementById('input-birthday').value = user.birthday;
+
+        /* 성별 */
+        if (user.gender) {
+          document.querySelectorAll('.gender-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.gender === user.gender);
+          });
+        }
+
+        /* 역할별 섹션 표시 */
+        if (role === 'READER') {
+          document.getElementById('reader-settings').style.display = 'block';
+          /* 선호 장르 */
+          if (user.preferredGenres?.length) {
+            user.preferredGenres.forEach(g => {
+              const btn = document.querySelector(`.genre-tag[data-genre="${g}"]`);
+              if (btn) btn.classList.add('active');
+            });
+          }
+        } else if (role === 'AUTHOR' || role === 'MENTOR') {
+          document.getElementById('author-settings').style.display = 'block';
+          if (user.bio || user.authorBio) document.getElementById('input-author-bio').value = user.bio || user.authorBio || '';
+          /* mainGenre는 "FANTASY,ROMANCE_FANTASY" 형태로 저장 → 개별 태그 활성화 */
+          if (user.mainGenre) {
+            user.mainGenre.split(',').forEach(g => {
+              const btn = document.querySelector(`#author-genre-tags .genre-tag[data-genre="${g.trim()}"]`);
+              if (btn) btn.classList.add('active');
+            });
+          }
+          if (user.careerLevel) {
+            const btn = document.querySelector(`.career-btn[data-level="${user.careerLevel}"]`);
+            if (btn) btn.classList.add('active');
+          }
+          if (user.allowMenteeRequest !== undefined) {
+            document.getElementById('allow-mentee').checked = user.allowMenteeRequest;
+          }
+        }
+
+        /* 포인트 잔액 */
+        api.get('/points/balance', true).then(d => {
+          const el = document.getElementById('point-balance');
+          if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+        }).catch(() => {});
+
+      } catch (e) {
+        Toast.error('사용자 정보를 불러오지 못했습니다');
+      }
+    }
+
+    /* ── 프로필 저장 ── */
+    async function saveProfile() {
+      const nickname = document.getElementById('input-nickname').value.trim();
+      const birthday = document.getElementById('input-birthday').value || null;
+      const genderBtn = document.querySelector('.gender-btn.active');
+      const gender = genderBtn?.dataset.gender || null;
+
+      if (!nickname) { Toast.error('닉네임을 입력해주세요'); return; }
+      if (!birthday) { Toast.error('생년월일을 입력해주세요'); return; }
+
+      try {
+        await api.patch('/auth/users/me', { nickname, birthday, gender }, true);
+        Toast.success('프로필이 저장되었습니다');
+        /* localStorage user 업데이트 */
+        const stored = Auth.getUser();
+        if (stored) { stored.nickname = nickname; Auth.setUser(stored); }
+        document.getElementById('sb-nickname').textContent = nickname;
+        document.getElementById('sb-avatar').textContent = nickname.charAt(0)?.toUpperCase() || 'U';
+        nicknameChecked = false;
+      } catch (e) {
+        Toast.error(e.message || '저장 실패');
+      }
+    }
+
+    /* ── 닉네임 중복 확인 ── */
+    async function checkNickname() {
+      const nick = document.getElementById('input-nickname').value.trim();
+      if (!nick) { Toast.error('닉네임을 입력해주세요'); return; }
+      try {
+        await api.get(`/auth/nickname/check?nickname=${encodeURIComponent(nick)}`);
+        Toast.success('사용 가능한 닉네임입니다');
+        nicknameChecked = true;
+      } catch (e) {
+        Toast.error(e.message || '이미 사용 중인 닉네임입니다');
+        nicknameChecked = false;
+      }
+    }
+
+    /* ── 비밀번호 변경 ── */
+    async function changePassword() {
+      const oldPw = document.getElementById('input-old-pw').value;
+      const newPw = document.getElementById('input-new-pw').value;
+      if (!oldPw || !newPw) { Toast.error('비밀번호를 모두 입력해주세요'); return; }
+      if (newPw.length < 8) { Toast.error('새 비밀번호는 8자 이상이어야 합니다'); return; }
+      try {
+        await api.patch('/auth/users/me/password', { oldPassword: oldPw, newPassword: newPw }, true);
+        Toast.success('비밀번호가 변경되었습니다');
+        document.getElementById('input-old-pw').value = '';
+        document.getElementById('input-new-pw').value = '';
+      } catch (e) {
+        Toast.error(e.message || '변경 실패');
+      }
+    }
+
+    /* ── 독자 설정 저장 ── */
+    async function saveReaderSettings() {
+      const genres = [...document.querySelectorAll('.genre-tag.active')].map(b => b.dataset.genre);
+      const goalBtn = document.querySelector('.reading-goal-btn.active');
+      const goal = goalBtn?.dataset.goal || null;
+      try {
+        await api.patch('/auth/users/me', { preferredGenres: genres, readingGoal: goal }, true);
+        Toast.success('독서 설정이 저장되었습니다');
+      } catch (e) {
+        Toast.error(e.message || '저장 실패');
+      }
+    }
+
+    /* ── 작가 프로필 저장 ── */
+    async function saveAuthorProfile() {
+      const bio = document.getElementById('input-author-bio').value.trim();
+      const genres = [...document.querySelectorAll('#author-genre-tags .genre-tag.active')]
+        .map(b => b.dataset.genre);
+      const careerBtn = document.querySelector('.career-btn.active');
+      const careerLevel = careerBtn?.dataset.level || null;
+      const allowMentee = document.getElementById('allow-mentee').checked;
+
+      if (!genres.length) { Toast.error('주력 장르를 1개 이상 선택해주세요'); return; }
+      if (bio.length < 10) { Toast.error('작가 소개는 10자 이상 입력해주세요'); return; }
+      if (!careerLevel) { Toast.error('경력 등급을 선택해주세요'); return; }
+
+      try {
+        await api.patch('/auth/users/me/author', { genres, bio, careerLevel, allowMenteeRequest: allowMentee }, true);
+        Toast.success('작가 프로필이 저장되었습니다');
+      } catch (e) {
+        Toast.error(e.message || '저장 실패');
+      }
+    }
+
+    /* ── UI 헬퍼 ── */
+    function selectGender(btn) {
+      document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    function selectGoal(btn) {
+      document.querySelectorAll('.reading-goal-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    function selectCareer(btn) {
+      document.querySelectorAll('.career-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    /* 장르 태그 토글 (독자) */
+    document.addEventListener('click', e => {
+      if (e.target.classList.contains('genre-tag')) {
+        e.target.classList.toggle('active');
+      }
+    });
+
+    /* ── 서재 ── */
+    async function loadLibrary(libType) {
+      currentLibType = libType;
+      const el = document.getElementById('lib-list');
+      if (!el) return;
+      el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+      try {
+        const res = await api.get(`/libraries/me?libraryType=${libType}&page=0&size=20&sort=recentRead`, true);
+        const list = res?.content || [];
+        if (!list.length) {
+          el.innerHTML = `<div class="empty-state"><div class="empty-state__icon">📚</div><div class="empty-state__text">서재가 비어 있습니다</div></div>`;
+          return;
+        }
+        el.innerHTML = list.map(n => `
+          <div class="lib-item" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
+            <div class="lib-cover">
+              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${escHtml(n.novelTitle || n.title || '')}" onerror="this.parentElement.innerHTML='📖'">` : '📖'}
+            </div>
+            <div class="lib-info">
+              <div class="lib-title">${escHtml(n.novelTitle || n.title || '제목 없음')}</div>
+              <div class="lib-meta">${escHtml(n.authorNickname || n.authorName || '')} · ${n.episodeCount || 0}화</div>
+            </div>
+          </div>`).join('');
+      } catch {
+        el.innerHTML = '<div class="empty-state"><div class="empty-state__text">서재를 불러오지 못했습니다</div></div>';
+      }
+    }
+
+    function switchLibTab(btn) {
+      document.querySelectorAll('.lib-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadLibrary(btn.dataset.lib);
+    }
+
+    /* ── 알림 목록 ── */
+    async function loadNotifications() {
+      const el = document.getElementById('notif-list');
+      if (!el) return;
+      const inner = el.querySelector('.loading-row') ? el : el;
+      inner.innerHTML = '<div style="font-weight:700;margin-bottom:14px;font-size:0.95rem">받은 알림</div><div class="loading-row"><div class="nc-spinner"></div></div>';
+      try {
+        const res = await api.get('/notifications?page=0&size=20', true);
+        const list = res?.content || res || [];
+        const listHtml = list.length
+          ? list.map(n => `
+              <div class="point-history-item">
+                <span style="color:var(--text2)">${escHtml(n.message || n.content || '알림')}</span>
+                <span style="color:var(--text3);font-size:0.75rem">${formatDate(n.createdAt)}</span>
+              </div>`).join('')
+          : '<div class="empty-state"><div class="empty-state__text">알림이 없습니다</div></div>';
+        el.innerHTML = `<div style="font-weight:700;margin-bottom:14px;font-size:0.95rem">받은 알림</div>${listHtml}`;
+      } catch {
+        el.innerHTML = '<div style="font-weight:700;margin-bottom:14px;font-size:0.95rem">받은 알림</div><div class="empty-state"><div class="empty-state__text">알림을 불러오지 못했습니다</div></div>';
+      }
+    }
+
+    /* ── 결제 내역 ── */
+    async function loadPayments() {
+      const el = document.getElementById('payment-list');
+      if (!el) return;
+      el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+      try {
+        const res = await api.get('/payments?page=0&size=20', true);
+        const list = res?.content || [];
+        if (!list.length) {
+          el.innerHTML = '<div class="empty-state"><div class="empty-state__icon">💳</div><div class="empty-state__text">결제 내역이 없습니다</div></div>';
+          return;
+        }
+        el.innerHTML = list.map(p => `
+          <div class="point-history-item">
+            <div>
+              <div style="font-size:0.875rem">${escHtml(p.productName || '결제')}</div>
+              <div style="font-size:0.75rem;color:var(--text3)">${formatDate(p.createdAt)}</div>
+            </div>
+            <span class="${p.amount > 0 ? 'point-plus' : 'point-minus'}">
+              ${p.amount > 0 ? '+' : ''}${p.amount?.toLocaleString()}P
+            </span>
+          </div>`).join('');
+      } catch {
+        el.innerHTML = '<div class="empty-state"><div class="empty-state__text">결제 내역을 불러오지 못했습니다</div></div>';
+      }
+    }
+
+    /* ── 구독 현황 ── */
+    async function loadSubscription() {
+      const el = document.getElementById('sub-status');
+      if (!el) return;
+      el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+      try {
+        const sub = await api.get('/subscriptions/me', true);
+        if (!sub) {
+          el.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state__icon">🌟</div>
+              <div class="empty-state__text">구독 중인 플랜이 없습니다</div>
+              <button class="nc-btn nc-btn--primary" style="margin-top:16px" onclick="window.location.href='/payment.html'">구독 시작</button>
+            </div>`;
+          return;
+        }
+        el.innerHTML = `
+          <div class="sub-card">
+            <div>
+              <div class="sub-status">${escHtml(sub.planName || '구독 플랜')}</div>
+              <div class="sub-meta">
+                ${sub.status === 'ACTIVE' ? '구독 중' : sub.status === 'CANCELLED' ? '해지됨' : '일시정지'}
+                ${sub.nextBillingDate ? ` · 다음 결제: ${formatDate(sub.nextBillingDate)}` : ''}
+              </div>
+            </div>
+            ${sub.status === 'ACTIVE' ? `<button class="nc-btn nc-btn--outline nc-btn--sm" onclick="cancelSubscription(${sub.id})">해지</button>` : ''}
+          </div>`;
+      } catch {
+        el.innerHTML = '<div class="empty-state"><div class="empty-state__text">구독 정보를 불러오지 못했습니다</div></div>';
+      }
+    }
+
+    async function cancelSubscription(id) {
+      if (!confirm('구독을 해지하시겠습니까?')) return;
+      try {
+        await api.delete(`/subscriptions/${id}`, true);
+        Toast.success('구독이 해지되었습니다');
+        loadSubscription();
+      } catch (e) {
+        Toast.error(e.message || '해지 실패');
+      }
+    }
+
+    /* ── 포인트 충전 ── */
+    function openChargeModal() {
+      api.get('/points/balance', true).then(d => {
+        document.getElementById('point-balance').textContent = `${(d?.balance || 0).toLocaleString()}P`;
+        const navPt = document.getElementById('nav-point');
+        if (navPt) navPt.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+      }).catch(() => {});
+      Modal.open('modal-point');
+    }
+    function selectPoint(btn) {
+      document.querySelectorAll('.point-opt').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedPointAmt = parseInt(btn.dataset.amount);
+    }
+    async function chargePoint() {
+      try {
+        const res = await api.post('/payments/prepare', {
+          amount: selectedPointAmt,
+          productName: `포인트 ${selectedPointAmt.toLocaleString()}P`,
+          productType: 'POINT',
+        }, true);
+        Modal.close('modal-point');
+        Toast.info('결제창을 준비 중입니다...');
+        await api.post('/payments/confirm', { paymentId: res?.paymentId, impUid: res?.merchantUid }, true);
+        Toast.success(`${selectedPointAmt.toLocaleString()}P가 충전되었습니다!`);
+        api.get('/points/balance', true).then(d => {
+          const el = document.getElementById('point-balance');
+          if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+          const navPt = document.getElementById('nav-point');
+          if (navPt) navPt.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+        }).catch(() => {});
+        loadPayments();
+      } catch (e) {
+        Toast.error(e.message || '충전 실패');
+      }
+    }
+
+    /* ── 계정 탈퇴 ── */
+    async function confirmDelete() {
+      if (!confirm('정말 탈퇴하시겠습니까?\n탈퇴 후 30일 이내에 복구 신청이 가능합니다.')) return;
+      try {
+        await api.delete('/auth/users/delete', true);
+        Auth.removeToken();
+        Auth.removeUser();
+        Toast.success('탈퇴가 완료되었습니다');
+        setTimeout(() => window.location.href = '/index.html', 1500);
+      } catch (e) {
+        Toast.error(e.message || '탈퇴 실패');
+      }
+    }
+
+    /* ── 유틸 ── */
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ── 초기화 ── */
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+
+      /* URL 탭 파라미터 처리 */
+      const urlTab = new URLSearchParams(location.search).get('tab') || 'profile';
+
+      /* 탭 버튼 이벤트 */
+      document.querySelectorAll('.sidebar-nav-item[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
+      /* 탈퇴 버튼 */
+      document.getElementById('leave-btn')?.addEventListener('click', confirmDelete);
+
+      /* 데이터 로드 */
+      loadUserInfo();
+
+      /* 탭 진입 */
+      switchTab(urlTab);
+    });
+  </script>
+</body>
+</html>
