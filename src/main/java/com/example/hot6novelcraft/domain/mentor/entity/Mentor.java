@@ -61,7 +61,7 @@ public class Mentor extends BaseEntity {
     private String rejectReason;
 
     @Version
-    private Long version;
+    private long version;
 
     public void approve() {
 
