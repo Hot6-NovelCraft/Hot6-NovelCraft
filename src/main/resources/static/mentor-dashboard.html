@@ -822,8 +822,8 @@
             ${renderMenteeCards(mentees)}
           </div>
 
-          <!-- 대기 신청 박스 -->
-          ${pendingCount > 0 ? `
+          <!-- 대기 신청 박스 (수동승인일 때만 노출) -->
+          ${pendingCount > 0 && !allowInstantState ? `
             <div class="pending-box">
               <div class="pending-box__count">슬롯 ${remaining}개 남음</div>
               <div class="pending-box__msg">대기 중인 신청 ${pendingCount}건이 있어요</div>
