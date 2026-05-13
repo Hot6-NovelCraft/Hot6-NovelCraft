@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovelCraft - 구독</title>
+    <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+    <script src="/common.js"></script>
+    <style>
+        .page-wrap {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        /* ── 헤더 ── */
+        .sub-hero {
+            text-align: center;
+            padding: 48px 24px 40px;
+        }
+        .sub-hero__badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            background: rgba(124,90,240,0.15);
+            border: 1px solid rgba(124,90,240,0.35);
+            color: var(--primary-light);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .sub-hero__title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+        .sub-hero__desc {
+            font-size: 0.9rem;
+            color: var(--text3);
+            line-height: 1.7;
+        }
+
+        /* ── 현재 구독 상태 카드 ── */
+        .sub-status-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px 28px;
+            margin-bottom: 32px;
+            display: none;
+        }
+        .sub-status-card.visible { display: block; }
+        .sub-status-card__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .sub-status-card__title {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .sub-status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .sub-status-badge--active {
+            background: rgba(16,185,129,0.15);
+            color: #10b981;
+            border: 1px solid rgba(16,185,129,0.3);
+        }
+        .sub-status-badge--cancelled {
+            background: rgba(239,68,68,0.1);
+            color: #f87171;
+            border: 1px solid rgba(239,68,68,0.25);
+        }
+        .sub-status-badge--pending {
+            background: rgba(240,200,66,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(240,200,66,0.3);
+        }
+        .sub-status-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .sub-info-item__label {
+            font-size: 0.72rem;
+            color: var(--text3);
+            margin-bottom: 4px;
+        }
+        .sub-info-item__value {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .btn-cancel-sub {
+            padding: 9px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(239,68,68,0.4);
+            background: transparent;
+            color: #f87171;
+            font-size: 0.85rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-cancel-sub:hover {
+            background: rgba(239,68,68,0.08);
+            border-color: #f87171;
+        }
+
+        /* ── 플랜 카드 ── */
+        .plan-section__title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+        .plan-card {
+            background: linear-gradient(135deg, rgba(124,90,240,0.12), rgba(240,104,66,0.06));
+            border: 1px solid rgba(124,90,240,0.35);
+            border-radius: 20px;
+            padding: 36px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+        .plan-card::before {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(124,90,240,0.08), transparent 70%);
+            pointer-events: none;
+        }
+        .plan-card__top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .plan-card__name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--primary-light);
+            margin-bottom: 8px;
+        }
+        .plan-card__price {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+        }
+        .plan-card__price span {
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--text3);
+            margin-left: 4px;
+        }
+        .plan-card__yearly {
+            font-size: 0.78rem;
+            color: var(--text3);
+            margin-top: 6px;
+        }
+        .plan-card__yearly strong { color: #10b981; }
+        .plan-card__benefits {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.875rem;
+            color: var(--text2);
+        }
+        .benefit-item__icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: rgba(124,90,240,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .btn-subscribe {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), #a855f7);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.02em;
+        }
+        .btn-subscribe:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-subscribe:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-subscribe--subscribed {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text3);
+            cursor: default;
+        }
+        .btn-subscribe--subscribed:hover { opacity: 1; transform: none; }
+
+        /* ── FAQ ── */
+        .faq-section {
+            margin-top: 40px;
+        }
+        .faq-section__title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+        .faq-item {
+            border-bottom: 1px solid var(--border);
+        }
+        .faq-item:first-of-type { border-top: 1px solid var(--border); }
+        .faq-question {
+            width: 100%;
+            text-align: left;
+            padding: 16px 4px;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 0.875rem;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .faq-question:hover { color: var(--primary-light); }
+        .faq-chevron { font-size: 0.7rem; color: var(--text3); transition: transform 0.2s; flex-shrink: 0; }
+        .faq-item.open .faq-chevron { transform: rotate(180deg); }
+        .faq-answer {
+            display: none;
+            padding: 0 4px 16px;
+            font-size: 0.825rem;
+            color: var(--text3);
+            line-height: 1.7;
+        }
+        .faq-item.open .faq-answer { display: block; }
+
+        /* ── 취소 확인 모달 ── */
+        #modal-cancel-confirm .nc-modal__box {
+            max-width: 420px;
+        }
+        .confirm-body {
+            padding: 8px 0 20px;
+            font-size: 0.875rem;
+            color: var(--text2);
+            line-height: 1.7;
+        }
+        .confirm-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-confirm-cancel {
+            flex: 1;
+            padding: 11px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(239,68,68,0.15);
+            color: #f87171;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-confirm-cancel:hover { background: rgba(239,68,68,0.25); }
+        .btn-confirm-keep {
+            flex: 1;
+            padding: 11px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text2);
+            font-family: inherit;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-confirm-keep:hover { background: var(--surface); }
+
+        @media (max-width: 600px) {
+            .sub-hero__title { font-size: 1.5rem; }
+            .plan-card__benefits { grid-template-columns: 1fr; }
+            .sub-status-info { grid-template-columns: 1fr 1fr; }
+            .plan-card { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 취소 확인 모달 -->
+<div class="nc-modal" id="modal-cancel-confirm">
+    <div class="nc-modal__backdrop" onclick="Modal.close('modal-cancel-confirm')"></div>
+    <div class="nc-modal__box">
+        <button class="nc-modal__close" onclick="Modal.close('modal-cancel-confirm')">✕</button>
+        <div class="nc-modal__title">구독을 취소하시겠어요?</div>
+        <div class="confirm-body">
+            구독을 취소하면 <strong style="color:var(--text)">현재 구독 기간이 끝날 때까지</strong> 혜택이 유지됩니다.<br>
+            다음 결제일부터는 자동 갱신되지 않습니다.
+        </div>
+        <div class="confirm-actions">
+            <button class="btn-confirm-cancel" onclick="confirmCancel()">구독 취소</button>
+            <button class="btn-confirm-keep" onclick="Modal.close('modal-cancel-confirm')">유지하기</button>
+        </div>
+    </div>
+</div>
+
+<div class="page-wrap">
+
+    <!-- 히어로 -->
+    <div class="sub-hero">
+        <div class="sub-hero__badge">🌟 Premium</div>
+        <h1 class="sub-hero__title">더 많은 이야기를,<br>더 자유롭게</h1>
+        <p class="sub-hero__desc">NovelCraft 프리미엄 구독으로 무제한 독서를 경험하세요.<br>매달 구독 포인트로 원하는 에피소드를 자유롭게 읽을 수 있습니다.</p>
+    </div>
+
+    <!-- 현재 구독 상태 -->
+    <div class="sub-status-card" id="sub-status-card">
+        <div class="sub-status-card__header">
+            <div class="sub-status-card__title">내 구독 현황</div>
+            <span class="sub-status-badge" id="sub-status-badge"></span>
+        </div>
+        <div class="sub-status-info">
+            <div class="sub-info-item">
+                <div class="sub-info-item__label">플랜</div>
+                <div class="sub-info-item__value" id="sub-info-plan">-</div>
+            </div>
+            <div class="sub-info-item">
+                <div class="sub-info-item__label">구독 시작일</div>
+                <div class="sub-info-item__value" id="sub-info-started">-</div>
+            </div>
+            <div class="sub-info-item">
+                <div class="sub-info-item__label">다음 결제일</div>
+                <div class="sub-info-item__value" id="sub-info-next">-</div>
+            </div>
+        </div>
+        <button class="btn-cancel-sub" id="btn-cancel-sub" onclick="openCancelConfirm()">구독 취소</button>
+    </div>
+
+    <!-- 플랜 카드 -->
+    <div class="plan-section__title">구독 플랜</div>
+    <div class="plan-card">
+        <div class="plan-card__top">
+            <div>
+                <div class="plan-card__name">Premium 월간</div>
+                <div class="plan-card__price">₩9,900<span>/ 월</span></div>
+                <div class="plan-card__yearly">연간 구독 시 <strong>₩95,040</strong> (약 20% 할인)</div>
+            </div>
+        </div>
+        <div class="plan-card__benefits">
+            <div class="benefit-item">
+                <div class="benefit-item__icon">💎</div>
+                <span>매달 구독 포인트 지급</span>
+            </div>
+            <div class="benefit-item">
+                <div class="benefit-item__icon">📖</div>
+                <span>에피소드 무제한 구매</span>
+            </div>
+            <div class="benefit-item">
+                <div class="benefit-item__icon">🔔</div>
+                <span>신작 에피소드 우선 열람</span>
+            </div>
+            <div class="benefit-item">
+                <div class="benefit-item__icon">🚫</div>
+                <span>광고 없는 독서 환경</span>
+            </div>
+            <div class="benefit-item">
+                <div class="benefit-item__icon">⭐</div>
+                <span>프리미엄 전용 콘텐츠</span>
+            </div>
+            <div class="benefit-item">
+                <div class="benefit-item__icon">🎯</div>
+                <span>AI 맞춤 소설 추천</span>
+            </div>
+        </div>
+        <button class="btn-subscribe" id="btn-subscribe" onclick="startSubscription()">지금 구독 시작하기</button>
+    </div>
+
+    <!-- FAQ -->
+    <div class="faq-section">
+        <div class="faq-section__title">자주 묻는 질문</div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>구독하면 어떤 혜택이 있나요?</span>
+                <span class="faq-chevron">▼</span>
+            </button>
+            <div class="faq-answer">구독자는 매달 지급되는 구독 포인트로 에피소드를 자유롭게 읽을 수 있습니다. 또한 신작 에피소드 우선 열람, 광고 제거 혜택이 제공됩니다.</div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>구독 기간 중 플랜 변경이 가능한가요?</span>
+                <span class="faq-chevron">▼</span>
+            </button>
+            <div class="faq-answer">현재 구독 기간이 종료된 후 다음 결제 시 플랜을 변경할 수 있습니다. 마이페이지 &gt; 구독 관리에서 변경 신청이 가능합니다.</div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>구독 해지는 어떻게 하나요?</span>
+                <span class="faq-chevron">▼</span>
+            </button>
+            <div class="faq-answer">이 페이지 상단 '구독 취소' 버튼을 통해 언제든지 해지할 수 있습니다. 해지해도 현재 구독 기간이 끝날 때까지 혜택이 유지됩니다.</div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>구독을 해지하면 즉시 서비스가 중단되나요?</span>
+                <span class="faq-chevron">▼</span>
+            </button>
+            <div class="faq-answer">아닙니다. 해지를 신청해도 남은 구독 기간 동안은 정상적으로 이용할 수 있습니다. 다음 결제일부터 갱신되지 않습니다.</div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>구독 결제 후 환불이 가능한가요?</span>
+                <span class="faq-chevron">▼</span>
+            </button>
+            <div class="faq-answer">구독 결제 후 7일 이내이고 구독 포인트를 사용하지 않은 경우에만 전액 환불이 가능합니다. 구독 포인트를 일부 사용한 경우 환불이 제한될 수 있습니다.</div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                <span>자동 갱신 결제가 되었는데 환불 받을 수 있나요?</span>
+                <span class="faq-chevron">▼</span>
+            </button>
+            <div class="faq-answer">자동 갱신일로부터 24시간 이내에 고객센터로 문의하시면 환불 처리가 가능합니다.</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const STORE_ID    = 'store-6dd586c4-bbae-4fc5-a1b1-920f1850b300';
+    const CHANNEL_KEY = 'channel-key-c03d6f4b-9ca1-4554-944b-60f0b81848ea';
+
+    let currentSubscription = null;
+
+    /* ── 초기화 ── */
+    (async function init() {
+        if (Auth.isLoggedIn()) {
+            await loadSubscription();
+        }
+    })();
+
+    /* ── 내 구독 조회 ── */
+    async function loadSubscription() {
+        try {
+            const res = await api.get('/subscriptions/me', true);
+            currentSubscription = res;
+            renderSubscriptionStatus(res);
+        } catch {
+            // 구독 없음 → 구독 버튼 활성
+        }
+    }
+
+    /* ── 구독 상태 렌더 ── */
+    function renderSubscriptionStatus(sub) {
+        const card = document.getElementById('sub-status-card');
+        const badge = document.getElementById('sub-status-badge');
+        const btnSub = document.getElementById('btn-subscribe');
+        const btnCancel = document.getElementById('btn-cancel-sub');
+
+        card.classList.add('visible');
+
+        const statusMap = {
+            ACTIVE:    { label: '구독 중', cls: 'sub-status-badge--active' },
+            PENDING:   { label: '처리 중', cls: 'sub-status-badge--pending' },
+            CANCELLED: { label: '취소됨',  cls: 'sub-status-badge--cancelled' },
+        };
+        const s = statusMap[sub.status] || { label: sub.status, cls: '' };
+        badge.textContent = s.label;
+        badge.className = 'sub-status-badge ' + s.cls;
+
+        document.getElementById('sub-info-plan').textContent =
+            sub.planType === 'PREMIUM' ? 'PREMIUM ₩9,900/월' : sub.planType;
+        document.getElementById('sub-info-started').textContent =
+            sub.startedAt ? fmtDate(sub.startedAt) : '-';
+        document.getElementById('sub-info-next').textContent =
+            sub.nextBillingAt ? fmtDate(sub.nextBillingAt) : (sub.endedAt ? fmtDate(sub.endedAt) + ' 종료' : '-');
+
+        if (sub.status === 'ACTIVE') {
+            btnSub.textContent = '✓ 현재 구독 중';
+            btnSub.classList.add('btn-subscribe--subscribed');
+            btnSub.disabled = true;
+            btnCancel.style.display = 'inline-block';
+        } else if (sub.status === 'CANCELLED') {
+            btnSub.textContent = '다시 구독하기';
+            btnSub.classList.remove('btn-subscribe--subscribed');
+            btnSub.disabled = false;
+            btnCancel.style.display = 'none';
+        } else {
+            btnCancel.style.display = 'none';
+        }
+    }
+
+    /* ── 구독 시작 ── */
+    async function startSubscription() {
+        if (!Auth.isLoggedIn()) {
+            window.location.href = '/login.html?redirect=/subscription.html';
+            return;
+        }
+
+        const btn = document.getElementById('btn-subscribe');
+        btn.disabled = true;
+        btn.textContent = '처리 중...';
+
+        try {
+            // Step 1: 서버에 구독 준비 (subscriptionKey 발급)
+            let prepare;
+            try {
+                prepare = await api.post('/subscriptions/prepare', { planType: 'PREMIUM', amount: 9900 }, true);
+            } catch (prepareErr) {
+                const msg = prepareErr.message || '';
+                if (msg.includes('이미') || msg.includes('존재') || msg.includes('활성')) {
+                    Toast.error('이미 처리 중인 구독이 있습니다. 잠시 후 다시 시도하거나 고객센터에 문의해 주세요.');
+                } else {
+                    Toast.error(msg || '구독 준비 중 오류가 발생했습니다.');
+                }
+                return;
+            }
+
+            // Step 2: PortOne 빌링키 발급창 오픈
+            const meInfo = await api.get('/auth/users/me', true);
+            const me = Auth.getUser();
+            const phoneNo = meInfo.phoneNo?.replace(/-/g, '') || '';
+
+            const issueRes = await PortOne.requestIssueBillingKey({
+                storeId: STORE_ID,
+                channelKey: CHANNEL_KEY,
+                isTestChannel: true,
+                billingKeyMethod: 'CARD',
+                issueId: prepare.subscriptionKey,
+                issueName: 'NovelCraft 프리미엄 구독',
+                customer: {
+                    customerId: prepare.subscriptionKey,
+                    fullName: me?.nickname || '구독자',
+                    phoneNumber: phoneNo,
+                    ...(me?.email ? { email: me.email } : {}),
+                },
+            });
+
+            if (issueRes.code) {
+                Toast.error(`빌링키 발급 실패: ${issueRes.message}`);
+                return;
+            }
+
+            // Step 3: 서버 구독 완료 (첫 결제 + 활성화)
+            await api.post('/subscriptions/complete', {
+                subscriptionKey: prepare.subscriptionKey,
+                billingKey: issueRes.billingKey,
+            }, true);
+
+            Toast.success('구독이 시작되었습니다! 🎉');
+            await loadSubscription();
+
+        } catch (e) {
+            Toast.error(e.message || '구독 처리 중 오류가 발생했습니다.');
+        } finally {
+            const b = document.getElementById('btn-subscribe');
+            if (!currentSubscription || currentSubscription.status !== 'ACTIVE') {
+                b.disabled = false;
+                b.textContent = '지금 구독 시작하기';
+            }
+        }
+    }
+
+    /* ── 구독 취소 확인 모달 ── */
+    function openCancelConfirm() {
+        Modal.open('modal-cancel-confirm');
+    }
+
+    /* ── 구독 취소 실행 ── */
+    async function confirmCancel() {
+        if (!currentSubscription) return;
+        try {
+            await api.delete(`/subscriptions/${currentSubscription.id}`, true);
+            Modal.close('modal-cancel-confirm');
+            Toast.success('구독이 취소되었습니다. 현재 기간 종료 시까지 이용 가능합니다.');
+            currentSubscription = null;
+            await loadSubscription().catch(() => {});
+        } catch (e) {
+            Toast.error(e.message || '구독 취소 중 오류가 발생했습니다.');
+        }
+    }
+
+    /* ── FAQ 토글 ── */
+    function toggleFaq(btn) {
+        const item = btn.closest('.faq-item');
+        item.classList.toggle('open');
+    }
+
+    /* ── 날짜 포맷 ── */
+    function fmtDate(dt) {
+        if (!dt) return '-';
+        return new Date(dt).toLocaleDateString('ko-KR', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+    }
+</script>
+</body>
+</html>
