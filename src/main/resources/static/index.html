@@ -679,7 +679,7 @@
         }
         el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
         try {
-            const res = await api.get('/notifications?page=0&size=30', true);
+            const res = await api.get('/notifications?page=1&size=30', true);
             const list = res?.content || res || [];
             if (!list.length) {
                 el.innerHTML = '<div class="notif-empty"><div class="notif-empty__icon">🔔</div><div>새 알림이 없습니다</div></div>';
@@ -772,8 +772,7 @@
         const el = document.getElementById('ranking-list');
         el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
         try {
-            const endpoint = type === 'realtime' ? '/novels/ranking/realtime' : '/novels/ranking/weekly';
-            const list = await api.get(endpoint);
+            const list = await api.get(`/novels/ranking?type=${type}`);
             if (!list?.length) {
                 el.innerHTML = '<div class="empty-row">랭킹 데이터가 없습니다</div>';
                 return;
@@ -804,7 +803,7 @@
     async function loadRealtimeTop5() {
         const el = document.getElementById('realtime-list');
         try {
-            const list = await api.get('/novels/ranking/realtime');
+            const list = await api.get('/novels/ranking?type=realtime');
             if (!list?.length) {
                 el.innerHTML = '<div class="empty-row" style="padding:16px;font-size:0.8rem">데이터 없음</div>';
                 return;
