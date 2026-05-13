@@ -686,9 +686,9 @@
                 return;
             }
             el.innerHTML = list.map(n => `
-          <div class="notif-item ${!n.read ? 'unread' : ''}" onclick="markRead(${n.notificationId || n.id}, this)">
+          <div class="notif-item ${!n.isRead ? 'unread' : ''}" onclick="markRead(${n.notificationId || n.id}, this)">
             <div class="notif-item__row">
-              <div class="notif-item__dot ${n.read ? 'read' : ''}"></div>
+              <div class="notif-item__dot ${n.isRead ? 'read' : ''}"></div>
               <div>
                 <div class="notif-item__content">${n.message || n.content || '알림'}</div>
                 <div class="notif-item__time">${formatDate(n.createdAt)}</div>
