@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>멘토 승인 확인 - NovelCraft</title>
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+  <script src="/common.js"></script>
+  <style>
+    /* ── 네비게이션 ── */
+    .nc-point-btn {
+      padding: 5px 14px; border-radius: 20px;
+      background: linear-gradient(135deg, rgba(240,200,66,0.18), rgba(240,200,66,0.08));
+      border: 1px solid rgba(240,200,66,0.4); color: var(--accent);
+      font-size: 0.82rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap; font-family: inherit;
+    }
+    .nc-point-btn:hover { background: rgba(240,200,66,0.25); border-color: var(--accent); }
+    .nc-alarm-btn {
+      position: relative; padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 1rem; cursor: pointer; transition: all 0.2s;
+    }
+    .nc-alarm-btn:hover { background: var(--surface); }
+    .nc-user-menu { position: relative; }
+    .nc-user-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 6px; min-width: 140px; z-index: 200;
+      display: none; flex-direction: column; gap: 2px;
+    }
+    .nc-user-dropdown.open { display: flex; }
+    .nc-user-dropdown button {
+      background: none; border: none; color: var(--text2); font-size: 0.85rem;
+      padding: 8px 12px; text-align: left; border-radius: 6px; cursor: pointer; font-family: inherit;
+    }
+    .nc-user-dropdown button:hover { background: var(--surface); color: var(--text1); }
+
+    /* ── 포인트 모달 ── */
+    .point-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .point-opt {
+      padding: 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: transparent; cursor: pointer; transition: all 0.2s;
+      text-align: center; font-family: inherit; color: var(--text2);
+    }
+    .point-opt:hover { border-color: var(--primary); }
+    .point-opt.selected { border-color: var(--primary); background: rgba(124,90,240,0.1); color: var(--primary-light); }
+    .point-opt__amount { font-size: 1rem; font-weight: 700; }
+    .point-opt__price { font-size: 0.78rem; color: var(--text3); margin-top: 3px; }
+    .point-opt.selected .point-opt__price { color: var(--primary-light); opacity: 0.8; }
+
+    /* ── 페이지 전체 ── */
+    body { background: var(--bg); color: var(--text1); font-family: var(--font-sans); }
+
+    .page-wrap {
+      min-height: 100vh;
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 96px 20px 60px;
+    }
+
+    /* ── 카드 컨테이너 ── */
+    .approval-card {
+      width: 100%; max-width: 480px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px 32px 36px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* ── 로딩 / 에러 ── */
+    .loading-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 16px; padding: 60px 0; color: var(--text3);
+    }
+    .loading-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border); border-top-color: var(--primary);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 승인 아이콘 ── */
+    .status-icon-wrap {
+      width: 72px; height: 72px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 22px;
+    }
+    .status-icon-wrap--approved {
+      background: rgba(163,207,107,0.18);
+      border: 2px solid rgba(163,207,107,0.4);
+    }
+    .status-icon-wrap--pending {
+      background: rgba(251,191,36,0.15);
+      border: 2px solid rgba(251,191,36,0.3);
+    }
+    .status-icon-wrap--rejected {
+      background: rgba(248,113,113,0.12);
+      border: 2px solid rgba(248,113,113,0.3);
+    }
+    .status-icon { font-size: 2rem; line-height: 1; }
+    /* 승인 체크 SVG */
+    .check-svg {
+      width: 36px; height: 36px;
+    }
+
+    /* ── 타이틀 ── */
+    .approval-title {
+      font-family: 'Noto Serif KR', serif;
+      font-size: 1.55rem; font-weight: 700;
+      text-align: center; margin-bottom: 6px;
+    }
+    .approval-subtitle {
+      font-size: 0.875rem; color: var(--text3);
+      text-align: center; margin-bottom: 28px;
+    }
+
+    /* ── 섹션 카드 ── */
+    .info-block {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+    .info-block__header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .info-block__label {
+      font-size: 0.875rem; font-weight: 700; color: var(--text1);
+    }
+
+    /* 등급 뱃지 */
+    .level-badge {
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 0.78rem; font-weight: 700;
+      background: var(--surface2); color: var(--text1);
+      border: 1px solid var(--border);
+    }
+    .level-badge--proficient  { background: rgba(124,90,240,0.15); color: var(--primary-light); border-color: rgba(124,90,240,0.3); }
+    .level-badge--intermediate{ background: rgba(59,130,246,0.12); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
+    .level-badge--elementary  { background: rgba(52,211,153,0.12); color: #34d399; border-color: rgba(52,211,153,0.3); }
+    .level-badge--introduction { background: rgba(148,163,184,0.12); color: #94a3b8; border-color: rgba(148,163,184,0.3); }
+
+    /* 관리자 코멘트 박스 */
+    .admin-comment-label {
+      font-size: 0.75rem; color: var(--text3); margin-bottom: 8px;
+    }
+    .admin-comment-box {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.85rem; color: var(--text2);
+      line-height: 1.65;
+      font-style: italic;
+    }
+    .admin-comment-box::before { content: '"'; }
+    .admin-comment-box::after  { content: '"'; }
+
+    /* 거절 사유 박스 */
+    .reject-box {
+      background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px; padding: 12px 16px;
+      font-size: 0.85rem; color: #fca5a5; line-height: 1.6;
+    }
+
+    /* ── 날짜 행 ── */
+    .date-row {
+      display: flex; justify-content: center; gap: 24px;
+      margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .date-item {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .date-item__label {
+      font-size: 0.72rem; color: var(--text3); font-weight: 500;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .date-item__value {
+      font-size: 0.88rem; font-weight: 600; color: var(--text1);
+    }
+    .date-divider { width: 1px; background: var(--border); align-self: stretch; }
+
+    /* ── 할 수 있는 것들 (클릭 비활성화) ── */
+    .todo-list {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .todo-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.855rem; color: var(--text2);
+      padding: 2px 0;
+      pointer-events: none; cursor: default;
+      text-decoration: none;
+    }
+    .todo-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--primary-light); flex-shrink: 0;
+    }
+    .todo-badge {
+      margin-left: auto;
+      padding: 2px 8px; border-radius: 10px;
+      background: rgba(124,90,240,0.18); color: var(--primary-light);
+      font-size: 0.72rem; font-weight: 700;
+    }
+    .todo-badge--on {
+      background: rgba(52,211,153,0.15); color: #34d399;
+    }
+    .todo-badge--off {
+      background: rgba(248,113,113,0.12); color: #f87171;
+    }
+
+    /* ── 하단 버튼 ── */
+    .action-btns {
+      width: 100%; display: flex; flex-direction: column; gap: 10px;
+      margin-top: 8px;
+    }
+    .action-btn-lg {
+      width: 100%; padding: 14px;
+      border-radius: 12px; border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text1); font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .action-btn-lg:hover {
+      border-color: var(--primary); background: rgba(124,90,240,0.06);
+      color: var(--primary-light);
+    }
+    .action-btn-lg--primary {
+      background: var(--primary); border-color: var(--primary); color: white;
+    }
+    .action-btn-lg--primary:hover { opacity: 0.88; }
+
+    /* ── 뒤로가기 링크 ── */
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.82rem; color: var(--text3); cursor: pointer;
+      background: none; border: none; font-family: inherit;
+      padding: 0; margin-bottom: 20px; transition: color 0.15s;
+      align-self: flex-start;
+    }
+    .back-link:hover { color: var(--text1); }
+
+    /* ── 대기/거절 상태 ── */
+    .status-desc {
+      text-align: center; font-size: 0.875rem; color: var(--text2);
+      line-height: 1.7; margin-bottom: 24px;
+    }
+
+    @media (max-width: 540px) {
+      .approval-card { padding: 32px 20px 28px; }
+    }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="page-wrap">
+  <div class="approval-card" id="content">
+    <div class="loading-wrap">
+      <div class="loading-spinner"></div>
+      <span>정보를 불러오는 중...</span>
+    </div>
+  </div>
+</div>
+
+<!-- 포인트 충전 모달 -->
+<div class="nc-modal" id="modal-point">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-point')"></div>
+  <div class="nc-modal__box">
+    <button class="nc-modal__close" onclick="Modal.close('modal-point')">✕</button>
+    <div class="nc-modal__title">💎 포인트 충전</div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:0.82rem;color:var(--text3);margin-bottom:12px">충전할 포인트를 선택하세요</div>
+      <div class="point-options" id="point-options">
+        <button class="point-opt selected" data-amount="1000"><div class="point-opt__amount">1,000P</div><div class="point-opt__price">₩1,000</div></button>
+        <button class="point-opt" data-amount="5000"><div class="point-opt__amount">5,000P</div><div class="point-opt__price">₩5,000</div></button>
+        <button class="point-opt" data-amount="10000"><div class="point-opt__amount">10,000P</div><div class="point-opt__price">₩10,000</div></button>
+        <button class="point-opt" data-amount="30000"><div class="point-opt__amount">30,000P</div><div class="point-opt__price">₩30,000</div></button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 14px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+      <span style="font-size:0.85rem;color:var(--text3)">현재 잔여 포인트</span>
+      <span style="font-weight:700;color:var(--accent)" id="modal-current-point">-</span>
+    </div>
+    <button class="nc-btn nc-btn--primary nc-btn--full" onclick="chargePoint()">충전하기</button>
+  </div>
+</div>
+
+<script>
+  /* ─── 경력 등급 한글 매핑 ─── */
+  const CAREER_LABEL = {
+    PROFICIENT:   { text: '전문 멘토',  cls: 'level-badge--proficient'  },
+    INTERMEDIATE: { text: '중급 멘토',  cls: 'level-badge--intermediate' },
+    ELEMENTARY:   { text: '초보 멘토',  cls: 'level-badge--elementary'  },
+    INTRODUCTION: { text: '입문 멘토',  cls: 'level-badge--introduction' },
+  };
+
+  /* ─── 초기화 ─── */
+  async function init() {
+    if (!Auth.isLoggedIn()) {
+      window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+      return;
+    }
+    initNav();
+    await loadApprovalInfo();
+  }
+
+  /* ─── 네비 ─── */
+  function initNav() {
+    const nav  = document.getElementById('nc-nav');
+    const user = Auth.getUser();
+    if (!nav) return;
+    nav.innerHTML = `
+      <div class="nc-nav__inner">
+        <a href="/index.html" class="nc-nav__logo"><span class="logo-icon">✦</span>NovelCraft</a>
+        <div class="nc-nav__right">
+          ${user ? `
+            <button class="nc-point-btn" id="nav-point" onclick="openPointModal()">···P</button>
+            <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+            <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
+            <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+            <div class="nc-user-menu">
+              <button class="nc-nav__btn" onclick="toggleUserMenu()" style="font-weight:600;user-select:none">
+                ${escHtml(user.nickname || '내 계정')} ▾
+              </button>
+              <div class="nc-user-dropdown" id="user-dropdown">
+                <button onclick="window.location.href='/mypage.html'">마이페이지</button>
+                <button onclick="doLogout()">로그아웃</button>
+              </div>
+            </div>
+          ` : `
+            <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
+            <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
+          `}
+        </div>
+      </div>`;
+    loadPoint();
+  }
+
+  function toggleUserMenu() {
+    document.getElementById('user-dropdown')?.classList.toggle('open');
+  }
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('user-dropdown');
+    if (menu?.classList.contains('open') && !e.target.closest('.nc-user-menu')) {
+      menu.classList.remove('open');
+    }
+  });
+  async function doLogout() {
+    try { await api.post('/auth/logout', {}, true); } catch {}
+    Auth.logout();
+    window.location.href = '/index.html';
+  }
+  async function loadPoint() {
+    try {
+      const d = await api.get('/points/balance', true);
+      const el = document.getElementById('nav-point');
+      if (el) el.textContent = `${(d?.data?.balance ?? d?.balance ?? 0).toLocaleString()}P`;
+    } catch {}
+  }
+
+  /* ─── 승인 정보 로드 ─── */
+  async function loadApprovalInfo() {
+    const card = document.getElementById('content');
+    try {
+      const [statusRes, profileRes, statsRes] = await Promise.allSettled([
+        api.get('/mentors/me/status',     true),
+        api.get('/mentors/me',            true),
+        api.get('/mentors/me/statistics', true),
+      ]);
+
+      const status  = statusRes.status  === 'fulfilled' ? (statusRes.value?.data  || statusRes.value)  : null;
+      const profile = profileRes.status === 'fulfilled' ? (profileRes.value?.data || profileRes.value) : null;
+      const stats   = statsRes.status   === 'fulfilled' ? (statsRes.value?.data   || statsRes.value)   : null;
+
+      const mentorStatus  = status?.status  || profile?.status || 'UNKNOWN';
+      const rejectReason  = status?.rejectReason || null;
+      const careerLevel   = profile?.careerLevel || null;
+      const allowInstant  = profile?.allowInstant ?? false;
+      const pendingCount  = stats?.pendingCount ?? 0;
+      const mentorId      = status?.mentorId || profile?.mentorId || null;
+      const appliedAt     = status?.appliedAt || null;
+      const approvedAt    = status?.approvedAt || null;
+
+      renderContent(card, { mentorStatus, rejectReason, careerLevel, allowInstant, pendingCount, mentorId, appliedAt, approvedAt });
+    } catch (e) {
+      card.innerHTML = `
+        <div style="text-align:center;padding:40px 0;color:var(--text3)">
+          <div style="font-size:2rem;margin-bottom:12px">⚠️</div>
+          <div>정보를 불러올 수 없습니다</div>
+          <button onclick="location.reload()" class="nc-btn nc-btn--primary" style="margin-top:16px">다시 시도</button>
+        </div>`;
+    }
+  }
+
+  /* ─── 상태별 렌더 ─── */
+  function renderContent(card, { mentorStatus, rejectReason, careerLevel, allowInstant, pendingCount, mentorId, appliedAt, approvedAt }) {
+    if (mentorStatus === 'APPROVED') {
+      renderApproved(card, { careerLevel, allowInstant, pendingCount, mentorId, appliedAt, approvedAt });
+    } else if (mentorStatus === 'PENDING') {
+      renderPending(card);
+    } else if (mentorStatus === 'REJECTED') {
+      renderRejected(card, rejectReason);
+    } else {
+      renderNoApplication(card);
+    }
+  }
+
+  /* ─── APPROVED ─── */
+  function renderApproved(card, { careerLevel, allowInstant, pendingCount, mentorId, appliedAt, approvedAt }) {
+    const career   = CAREER_LABEL[careerLevel] || { text: '멘토', cls: '' };
+    const badgeCls = career.cls;
+    const badgeTxt = career.text;
+
+    card.innerHTML = `
+      <button class="back-link" onclick="window.location.href='/mentor-dashboard.html'">← 멘토 대시보드로</button>
+
+      <!-- 체크 아이콘 -->
+      <div class="status-icon-wrap status-icon-wrap--approved">
+        <svg class="check-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 18.5L15.5 25L27 12" stroke="#7eb356" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <h1 class="approval-title">멘토 등록 완료</h1>
+      <p class="approval-subtitle">이제 멘토로 활동할 수 있어요</p>
+
+      <!-- 신청일 / 승인일 -->
+      <div class="date-row">
+        <div class="date-item">
+          <span class="date-item__label">신청일</span>
+          <span class="date-item__value">${fmtFullDate(appliedAt)}</span>
+        </div>
+        <div class="date-divider"></div>
+        <div class="date-item">
+          <span class="date-item__label">승인일</span>
+          <span class="date-item__value">${fmtFullDate(approvedAt)}</span>
+        </div>
+      </div>
+
+      <!-- 승인 등급 + 관리자 코멘트 -->
+      <div class="info-block">
+        <div class="info-block__header">
+          <span class="info-block__label">승인된 등급</span>
+          <span class="level-badge ${badgeCls}">${badgeTxt}</span>
+        </div>
+        <div class="admin-comment-label">관리자 코멘트</div>
+        <div class="admin-comment-box">
+          멘토 등록이 승인되었습니다. 멘티들과 함께 성장하는 멘토 활동을 응원합니다.
+        </div>
+      </div>
+
+      <!-- 지금 바로 할 수 있는 것들 (클릭 비활성화, 텍스트 안내만) -->
+      <div class="info-block">
+        <div class="info-block__header" style="margin-bottom:14px">
+          <span class="info-block__label">지금 바로 할 수 있는 것들</span>
+        </div>
+        <div class="todo-list">
+          <div class="todo-item">
+            <div class="todo-dot"></div>
+            <span>멘티 신청 허용 설정</span>
+            <span class="todo-badge ${allowInstant ? 'todo-badge--on' : 'todo-badge--off'}">${allowInstant ? 'ON (자동)' : 'OFF (수동)'}</span>
+          </div>
+          <div class="todo-item">
+            <div class="todo-dot"></div>
+            <span>멘토 프로필 공개 페이지 확인</span>
+          </div>
+          <div class="todo-item">
+            <div class="todo-dot"></div>
+            <span>신청 대기 목록 확인</span>
+            ${pendingCount > 0 ? `<span class="todo-badge">${pendingCount}건</span>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단 버튼 1개 -->
+      <div class="action-btns">
+        <button class="action-btn-lg action-btn-lg--primary"
+                onclick="window.location.href='/mentor-dashboard.html'">
+          멘토링 현황 페이지로 돌아가기
+        </button>
+      </div>`;
+  }
+
+  /* ─── PENDING ─── */
+  function renderPending(card) {
+    card.innerHTML = `
+      <button class="back-link" onclick="window.location.href='/mentor-dashboard.html'">← 멘토 대시보드로</button>
+
+      <div class="status-icon-wrap status-icon-wrap--pending">
+        <span class="status-icon">⏳</span>
+      </div>
+      <h1 class="approval-title">검토 중</h1>
+      <p class="approval-subtitle">멘토 신청이 접수되었습니다</p>
+
+      <div class="info-block">
+        <div class="info-block__label" style="margin-bottom:10px">신청 현황</div>
+        <p class="status-desc" style="margin:0;text-align:left">
+          관리자가 신청 내용을 검토하고 있습니다.<br>
+          승인 또는 거절 시 알림으로 안내해 드립니다.<br>
+          보통 1~3 영업일 내에 처리됩니다.
+        </p>
+      </div>
+
+      <div class="action-btns">
+        <button class="action-btn-lg" onclick="window.location.href='/mentor-dashboard.html'">
+          대시보드로 돌아가기
+        </button>
+      </div>`;
+  }
+
+  /* ─── REJECTED ─── */
+  function renderRejected(card, reason) {
+    card.innerHTML = `
+      <button class="back-link" onclick="window.location.href='/mentor-dashboard.html'">← 멘토 대시보드로</button>
+
+      <div class="status-icon-wrap status-icon-wrap--rejected">
+        <span class="status-icon">✕</span>
+      </div>
+      <h1 class="approval-title">신청 반려</h1>
+      <p class="approval-subtitle">아래 사유를 확인하고 다시 신청해 주세요</p>
+
+      <div class="info-block">
+        <div class="info-block__label" style="margin-bottom:10px">반려 사유</div>
+        <div class="reject-box">${escHtml(reason || '별도 사유 없음')}</div>
+      </div>
+
+      <div class="action-btns">
+        <button class="action-btn-lg action-btn-lg--primary"
+                onclick="window.location.href='/mentor-dashboard.html'">
+          다시 신청하기
+        </button>
+        <button class="action-btn-lg" onclick="window.location.href='/index.html'">
+          홈으로
+        </button>
+      </div>`;
+  }
+
+  /* ─── 신청 없음 ─── */
+  function renderNoApplication(card) {
+    card.innerHTML = `
+      <button class="back-link" onclick="window.location.href='/mentor-dashboard.html'">← 멘토 대시보드로</button>
+
+      <div class="status-icon-wrap status-icon-wrap--pending">
+        <span class="status-icon">📝</span>
+      </div>
+      <h1 class="approval-title">신청 내역 없음</h1>
+      <p class="approval-subtitle">아직 멘토 신청을 하지 않으셨어요</p>
+
+      <div class="action-btns">
+        <button class="action-btn-lg action-btn-lg--primary"
+                onclick="window.location.href='/mentor-dashboard.html'">
+          멘토 신청하기
+        </button>
+      </div>`;
+  }
+
+  /* ─── 유틸 ─── */
+  function escHtml(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtFullDate(dt) {
+    if (!dt) return '-';
+    const d = new Date(dt);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  /* ─── 포인트 충전 ─── */
+  const PORTONE_STORE_ID    = 'store-6dd586c4-bbae-4fc5-a1b1-920f1850b300';
+  const PORTONE_CHANNEL_KEY = 'channel-key-70f0f4c2-74c5-4c38-b275-c2c01e2c3660';
+  let selectedPointAmt = 1000;
+
+  function initPointOptions() {
+    document.querySelectorAll('.point-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.point-opt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedPointAmt = parseInt(btn.dataset.amount);
+      });
+    });
+  }
+  function openPointModal() {
+    api.get('/points/balance', true).then(d => {
+      const el = document.getElementById('modal-current-point');
+      if (el) el.textContent = `${(d?.data?.balance ?? d?.balance ?? 0).toLocaleString()}P`;
+    }).catch(() => {});
+    initPointOptions();
+    Modal.open('modal-point');
+  }
+  async function chargePoint() {
+    if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+    try {
+      const [prepare, meInfo] = await Promise.all([
+        api.post('/payments/prepare', { amount: selectedPointAmt }, true),
+        api.get('/auth/users/me', true),
+      ]);
+      const paymentKey = prepare?.data?.paymentKey ?? prepare?.paymentKey;
+      const phoneNo = (meInfo?.data?.phoneNo ?? meInfo?.phoneNo ?? '').replace(/-/g,'');
+      Modal.close('modal-point');
+      Toast.info('결제창을 불러오는 중...');
+      const me = Auth.getUser();
+      const portoneRes = await PortOne.requestPayment({
+        storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+        paymentId: paymentKey,
+        orderName: `NovelCraft ${selectedPointAmt.toLocaleString()}P 포인트 충전`,
+        totalAmount: selectedPointAmt, currency: 'CURRENCY_KRW', payMethod: 'CARD',
+        customer: { fullName: me?.nickname || '구매자', phoneNumber: phoneNo,
+                    ...(me?.email ? { email: me.email } : {}) },
+      });
+      if (portoneRes.code) { Toast.error(`결제 실패: ${portoneRes.message}`); return; }
+      await api.post('/payments/confirm', { paymentId: portoneRes.paymentId, amount: selectedPointAmt }, true);
+      Toast.success(`${selectedPointAmt.toLocaleString()}P가 충전되었습니다!`);
+      loadPoint();
+    } catch (e) { Toast.error(e?.message || '충전 중 오류가 발생했습니다.'); }
+  }
+
+  /* ─── 시작 ─── */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
+</body>
+</html>

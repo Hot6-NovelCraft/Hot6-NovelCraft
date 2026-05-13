@@ -862,6 +862,20 @@
             <div class="side-row"><span class="side-row__label">완료 세션</span><span class="side-row__value">${completedSess}회</span></div>
             <div class="side-row"><span class="side-row__label">만족도</span><span class="side-row__value accent">★ ${avgSatisfaction.toFixed(1)}</span></div>
           </div>
+
+          <!-- 마이 멘토 승인 확인 -->
+          <button class="nc-btn nc-btn--secondary nc-btn--full nc-btn--sm"
+                  style="margin-top:4px"
+                  onclick="window.location.href='/mentor-approval.html'">
+            ✓ 마이 멘토 승인 확인
+          </button>
+
+          <!-- 나의 멘토 프로필 -->
+          <button class="nc-btn nc-btn--secondary nc-btn--full nc-btn--sm"
+                  style="margin-top:6px"
+                  onclick="window.location.href='/my-mentor-profile.html'">
+            👤 나의 멘토 프로필
+          </button>
         </div>
       </div>`;
   }
