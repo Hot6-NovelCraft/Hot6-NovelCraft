@@ -572,7 +572,7 @@
 
         <!-- AI 고객센터 -->
         <button class="side-btn side-btn--ai" id="ai-support-side-btn" style="display:none"
-                onclick="window.location.href='/mypage.html?tab=ai'">
+                onclick="Modal.open('modal-ai');setTimeout(()=>document.getElementById('ai-msg-input')?.focus(),300)">
             🤖 AI 고객센터<br><span style="font-size:0.72rem;font-weight:400;opacity:0.8">AI를 활용하여 고객센터 구현 (채팅)</span>
         </button>
     </div>
@@ -1091,18 +1091,8 @@
     ────────────────────────────────── */
     let aiBubbleTimer;
     function toggleAiBubble() {
-        const bubble = document.getElementById('ai-bubble');
-        if (!bubble) return;
-        const isShown = bubble.classList.contains('show');
-        if (isShown) {
-            bubble.classList.remove('show');
-            Modal.open('modal-ai');
-            setTimeout(() => document.getElementById('ai-msg-input')?.focus(), 300);
-        } else {
-            bubble.classList.add('show');
-            clearTimeout(aiBubbleTimer);
-            aiBubbleTimer = setTimeout(() => bubble.classList.remove('show'), 4000);
-        }
+        Modal.open('modal-ai');
+        setTimeout(() => document.getElementById('ai-msg-input')?.focus(), 300);
     }
 
     /* ──────────────────────────────────
