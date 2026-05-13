@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>작가 대시보드 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        .page-wrap { max-width: 960px; margin: 0 auto; padding: 32px 24px 60px; }
+
+        /* ── 헤더 ── */
+        .dash-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 28px; flex-wrap: wrap;
+        }
+        .dash-header__title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.35rem; font-weight: 900; flex: 1;
+        }
+        .btn-header {
+            padding: 9px 18px; border-radius: 10px; font-size: 0.82rem;
+            font-weight: 700; cursor: pointer; font-family: inherit;
+            transition: all 0.18s; white-space: nowrap;
+        }
+        .btn-header--primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white;
+        }
+        .btn-header--primary:hover { opacity: 0.88; }
+        .btn-header--outline {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2);
+        }
+        .btn-header--outline:hover { border-color: var(--primary-light); color: var(--primary-light); }
+
+        /* ── 통계 카드 ── */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px 22px;
+        }
+        .stat-card__label { font-size: 0.78rem; color: var(--text3); margin-bottom: 8px; }
+        .stat-card__value {
+            font-size: 1.55rem; font-weight: 900; color: var(--text1);
+            font-family: 'Noto Serif KR', serif; letter-spacing: -0.02em;
+        }
+
+        /* ── 섹션 ── */
+        .section { margin-bottom: 32px; }
+        .section__head {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 16px;
+        }
+        .section__title {
+            font-size: 1rem; font-weight: 700; flex: 1;
+        }
+
+        /* ── 필터 탭 ── */
+        .filter-tabs { display: flex; gap: 6px; }
+        .filter-tab {
+            padding: 6px 16px; border-radius: 20px; font-size: 0.78rem;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text3); transition: all 0.18s;
+        }
+        .filter-tab.active {
+            background: var(--primary); border-color: var(--primary); color: white;
+        }
+        .filter-tab:hover:not(.active) { border-color: var(--primary-light); color: var(--primary-light); }
+
+        /* ── 소설 카드 ── */
+        .novel-list { display: flex; flex-direction: column; gap: 10px; }
+        .novel-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 16px 18px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .novel-card__cover {
+            width: 52px; height: 72px; border-radius: 8px; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--surface2), var(--bg3));
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; overflow: hidden;
+        }
+        .novel-card__cover img { width: 100%; height: 100%; object-fit: cover; }
+        .novel-card__info { flex: 1; min-width: 0; }
+        .novel-card__title {
+            font-weight: 700; font-size: 0.95rem; margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .novel-card__meta {
+            font-size: 0.75rem; color: var(--text3); margin-bottom: 6px;
+        }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 20px;
+            font-size: 0.68rem; font-weight: 600;
+        }
+        .badge--ongoing { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge--completed { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+        .badge--hiatus { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .badge--pending { background: rgba(156,163,175,0.15); color: #9ca3af; border: 1px solid rgba(156,163,175,0.3); }
+
+        .novel-card__actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .btn-action {
+            padding: 7px 14px; border-radius: 8px; font-size: 0.78rem;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            transition: all 0.18s; white-space: nowrap;
+        }
+        .btn-action--danger {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+            color: #f87171;
+        }
+        .btn-action--danger:hover { background: #ef4444; border-color: #ef4444; color: white; }
+        .btn-action--edit {
+            background: rgba(124,90,240,0.1); border: 1px solid rgba(124,90,240,0.28);
+            color: var(--primary-light);
+        }
+        .btn-action--edit:hover { background: var(--primary); border-color: var(--primary); color: white; }
+        .btn-action--new {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white; padding: 7px 16px;
+        }
+        .btn-action--new:hover { opacity: 0.88; }
+
+        /* ── 연재 현황 ── */
+        .serial-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px;
+        }
+        .serial-card__head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px; gap: 12px;
+        }
+        .serial-card__novel-title {
+            font-size: 1rem; font-weight: 700; flex: 1;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .serial-select {
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text2); font-size: 0.8rem; padding: 5px 10px;
+            font-family: inherit; cursor: pointer; max-width: 180px;
+        }
+        .serial-stats {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+        }
+        .serial-stat {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 14px 16px; text-align: center;
+        }
+        .serial-stat__label { font-size: 0.72rem; color: var(--text3); margin-bottom: 6px; }
+        .serial-stat__value { font-size: 1.1rem; font-weight: 800; color: var(--text1); }
+
+        /* ── 소설 추가 버튼 ── */
+        .btn-new-novel {
+            width: 100%; padding: 14px; border-radius: 14px;
+            background: transparent; border: 1.5px dashed var(--border);
+            color: var(--text3); font-size: 0.875rem; font-weight: 600;
+            cursor: pointer; font-family: inherit; transition: all 0.18s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-new-novel:hover { border-color: var(--primary-light); color: var(--primary-light); }
+
+        /* ── 빈 상태 / 로딩 ── */
+        .empty-box { padding: 40px; text-align: center; color: var(--text3); font-size: 0.875rem; }
+        .loading-box { padding: 40px; display: flex; align-items: center; justify-content: center; }
+
+        @media (max-width: 640px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .serial-stats { grid-template-columns: 1fr; }
+            .novel-card { flex-wrap: wrap; }
+            .novel-card__actions { width: 100%; justify-content: flex-end; }
+        }
+    </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="page-wrap">
+    <!-- 헤더 -->
+    <div class="dash-header">
+        <div class="dash-header__title">작가 대시보드</div>
+        <button class="btn-header btn-header--primary" onclick="window.location.href='/settlement.html'">환전 신청</button>
+        <button class="btn-header btn-header--outline" onclick="window.location.href='/my-page.html'">회원정보 수정</button>
+    </div>
+
+    <!-- 통계 카드 -->
+    <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card__label">총 조회수</div>
+            <div class="stat-card__value" id="stat-views">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__label">팔로워</div>
+            <div class="stat-card__value" id="stat-followers">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__label">총 찜 수</div>
+            <div class="stat-card__value" id="stat-bookmarks">-</div>
+        </div>
+    </div>
+
+    <!-- 내 소설 목록 -->
+    <div class="section">
+        <div class="section__head">
+            <div class="section__title">내 소설</div>
+            <div class="filter-tabs" id="filter-tabs">
+                <button class="filter-tab active" data-status="ONGOING" onclick="setFilter('ONGOING')">연재중</button>
+                <button class="filter-tab" data-status="COMPLETED" onclick="setFilter('COMPLETED')">완결</button>
+                <button class="filter-tab" data-status="ALL" onclick="setFilter('ALL')">전체</button>
+            </div>
+        </div>
+        <div id="novel-list-wrap">
+            <div class="loading-box"><div class="nc-spinner"></div></div>
+        </div>
+        <button class="btn-new-novel" style="margin-top:12px" onclick="goNewNovel()">＋ 새 소설 등록</button>
+    </div>
+
+    <!-- 연재 현황 -->
+    <div class="section" id="serial-section" style="display:none">
+        <div class="section__head">
+            <div class="section__title">연재 현황</div>
+            <select class="serial-select" id="serial-select" onchange="onSerialChange()"></select>
+        </div>
+        <div class="serial-card">
+            <div class="serial-card__head">
+                <div class="serial-card__novel-title" id="serial-title"></div>
+                <button class="btn-action btn-action--new" onclick="goNewEpisode()">＋ 새 회차 쓰기</button>
+            </div>
+            <div class="serial-stats">
+                <div class="serial-stat">
+                    <div class="serial-stat__label">최신화</div>
+                    <div class="serial-stat__value" id="serial-latest">-</div>
+                </div>
+                <div class="serial-stat">
+                    <div class="serial-stat__label">총 회차</div>
+                    <div class="serial-stat__value" id="serial-ep-count">-</div>
+                </div>
+                <div class="serial-stat">
+                    <div class="serial-stat__label">총 조회수</div>
+                    <div class="serial-stat__value" id="serial-views">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const STATUS_LABEL = {
+        ONGOING: '연재중', COMPLETED: '완결', HIATUS: '중단', PENDING: '보류', PUBLISHED: '공개'
+    };
+    const STATUS_BADGE = {
+        ONGOING: 'badge--ongoing', COMPLETED: 'badge--completed',
+        HIATUS: 'badge--hiatus', PENDING: 'badge--pending', PUBLISHED: 'badge--ongoing'
+    };
+    const GENRE_MAP = {
+        FANTASY: '판타지', ROMANCE_FANTASY: '로판', MODERN: '현대',
+        CHIVALROUS: '무협', BL: 'BL', SF: 'SF', HORROR: '공포',
+        CLASSIC: '고전', DAILY_LIFE: '일상물',
+    };
+
+    let allNovels = [];
+    let currentFilter = 'ONGOING';
+    let serialNovels = []; // 연재 현황에 보여줄 소설 목록
+
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtNum(n) {
+        if (!n && n !== 0) return '0';
+        if (n >= 100000000) return (n / 100000000).toFixed(1) + '억';
+        if (n >= 10000) return (n / 10000).toFixed(1) + '만';
+        return Number(n).toLocaleString();
+    }
+    function authHeaders() {
+        const token = localStorage.getItem('accessToken');
+        const h = { 'Content-Type': 'application/json' };
+        if (token) h['Authorization'] = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
+        return h;
+    }
+
+    // ── 통계 로드 ──
+    async function loadStats() {
+        // 팔로워 수
+        try {
+            const res = await fetch('/api/authors/me/follower-count', { headers: authHeaders() });
+            if (res.ok) {
+                const json = await res.json();
+                document.getElementById('stat-followers').textContent = fmtNum(json.data ?? 0);
+            }
+        } catch (_) {}
+    }
+
+    function updateStatsFromNovels(novels) {
+        const totalViews = novels.reduce((s, n) => s + (n.viewCount || 0), 0);
+        const totalBookmarks = novels.reduce((s, n) => s + (n.bookmarkCount || 0), 0);
+        document.getElementById('stat-views').textContent = fmtNum(totalViews);
+        document.getElementById('stat-bookmarks').textContent = fmtNum(totalBookmarks);
+    }
+
+    // ── 소설 목록 로드 ──
+    async function loadNovels() {
+        const wrap = document.getElementById('novel-list-wrap');
+        wrap.innerHTML = '<div class="loading-box"><div class="nc-spinner"></div></div>';
+        try {
+            // 전체 로드 (최대 200개)
+            const res = await fetch('/api/author/novels?page=0&size=200', { headers: authHeaders() });
+            if (res.status === 401) { window.location.href = '/login.html'; return; }
+            const json = await res.json();
+            allNovels = json.data?.content || [];
+
+            updateStatsFromNovels(allNovels);
+            renderNovels();
+            buildSerialSection();
+        } catch (err) {
+            wrap.innerHTML = '<div class="empty-box">소설 목록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderNovels() {
+        const wrap = document.getElementById('novel-list-wrap');
+        const filtered = currentFilter === 'ALL'
+            ? allNovels
+            : allNovels.filter(n => n.status === currentFilter);
+
+        if (!filtered.length) {
+            wrap.innerHTML = '<div class="empty-box">해당하는 소설이 없습니다.</div>';
+            return;
+        }
+
+        wrap.innerHTML = '<div class="novel-list">' + filtered.map(n => {
+            const genreLabel = GENRE_MAP[n.genre] || n.genre || '';
+            const badgeClass = STATUS_BADGE[n.status] || 'badge--pending';
+            const statusLabel = STATUS_LABEL[n.status] || n.status;
+            const coverHtml = n.coverImageUrl
+                ? `<img src="${esc(n.coverImageUrl)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='📖'">`
+                : '📖';
+            return `
+            <div class="novel-card">
+                <div class="novel-card__cover">${coverHtml}</div>
+                <div class="novel-card__info">
+                    <div class="novel-card__title">${esc(n.title)}</div>
+                    <div class="novel-card__meta">${n.episodeCount}화 · 조회 ${fmtNum(n.viewCount)} · 찜 ${fmtNum(n.bookmarkCount)}${genreLabel ? ' · ' + genreLabel : ''}</div>
+                    <span class="badge ${badgeClass}">${statusLabel}</span>
+                </div>
+                <div class="novel-card__actions">
+                    <button class="btn-action btn-action--danger" onclick="deleteNovel(${n.id}, '${esc(n.title).replace(/'/g,"\\'")}')">삭제</button>
+                    <button class="btn-action btn-action--edit" onclick="editNovel(${n.id})">편집</button>
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    }
+
+    // ── 필터 ──
+    function setFilter(status) {
+        currentFilter = status;
+        document.querySelectorAll('.filter-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.status === status);
+        });
+        renderNovels();
+    }
+
+    // ── 연재 현황 ──
+    function buildSerialSection() {
+        // 연재중인 소설만
+        serialNovels = allNovels.filter(n => n.status === 'ONGOING' || n.status === 'PUBLISHED');
+        if (!serialNovels.length) {
+            document.getElementById('serial-section').style.display = 'none';
+            return;
+        }
+        document.getElementById('serial-section').style.display = '';
+        const sel = document.getElementById('serial-select');
+        sel.innerHTML = serialNovels.map(n =>
+            `<option value="${n.id}">${esc(n.title)}</option>`
+        ).join('');
+        renderSerialCard(serialNovels[0]);
+    }
+
+    function onSerialChange() {
+        const id = document.getElementById('serial-select').value;
+        const novel = serialNovels.find(n => String(n.id) === String(id));
+        if (novel) renderSerialCard(novel);
+    }
+
+    function renderSerialCard(n) {
+        document.getElementById('serial-title').textContent = n.title;
+        document.getElementById('serial-ep-count').textContent = n.episodeCount + '화';
+        document.getElementById('serial-views').textContent = fmtNum(n.viewCount);
+        // 최신화: updatedAt 기준으로 간단 표시 (회차 API 호출 없이)
+        document.getElementById('serial-latest').textContent =
+            n.episodeCount > 0 ? n.episodeCount + '화' : '없음';
+    }
+
+    // ── 액션 ──
+    function goNewNovel() {
+        window.location.href = '/novel-editor.html';
+    }
+
+    function editNovel(novelId) {
+        window.location.href = '/novel-editor.html?id=' + novelId;
+    }
+
+    function goNewEpisode() {
+        const sel = document.getElementById('serial-select');
+        if (sel?.value) window.location.href = '/episode-editor.html?novelId=' + sel.value;
+    }
+
+    async function deleteNovel(novelId, title) {
+        if (!confirm(`"${title}" 소설을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+        try {
+            await api.delete('/novels/' + novelId, true);
+            Toast.success('삭제됐습니다.');
+            loadNovels();
+        } catch (e) {
+            Toast.error(e.message || '삭제 실패');
+        }
+    }
+
+    // ── 초기화 ──
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        loadNovels();
+        loadStats();
+    });
+
+    window.setFilter   = setFilter;
+    window.goNewNovel  = goNewNovel;
+    window.editNovel   = editNovel;
+    window.goNewEpisode = goNewEpisode;
+    window.deleteNovel = deleteNovel;
+    window.onSerialChange = onSerialChange;
+
+})();
+</script>
+</body>
+</html>
