@@ -114,6 +114,7 @@ public class SecurityConfig {
                                 , "/api/novels/*/episodes"
                                 , "/api/novels/*/episodes/*"
                                 , "/api/episodes/*/comments"
+                                , "/api/v2/episodes/*"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/calendars/**").hasAnyAuthority("READER", "AUTHOR")

@@ -8,9 +8,13 @@ import com.example.hot6novelcraft.domain.episode.dto.response.NovelBulkPurchaseR
 import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
 import com.example.hot6novelcraft.domain.notification.producer.NotificationProducer;
 import com.example.hot6novelcraft.domain.novel.repository.NovelRepository;
+import com.example.hot6novelcraft.domain.point.entity.enums.PointHistoryType;
+import com.example.hot6novelcraft.domain.point.repository.PointHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * 회차 구매 Facade
@@ -25,6 +29,7 @@ public class EpisodePurchaseFacade {
     private final RedisUtil redisUtil;
     private final NotificationProducer notificationProducer;
     private final NovelRepository novelRepository;
+    private final PointHistoryRepository pointHistoryRepository;
 
     /**
      * 회차 단건 구매 (락 관리)
@@ -69,5 +74,12 @@ public class EpisodePurchaseFacade {
         } finally {
             redisUtil.releaseLock(lockKey);
         }
+    }
+
+    /**
+     * 해당 소설에서 유저가 구매한 회차 ID 목록 조회
+     */
+    public List<Long> getPurchasedEpisodeIds(Long userId, Long novelId) {
+        return pointHistoryRepository.findPurchasedEpisodeIds(userId, novelId, PointHistoryType.NOVEL);
     }
 }

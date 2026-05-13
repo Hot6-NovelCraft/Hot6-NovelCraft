@@ -11,6 +11,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @Validated
@@ -32,6 +34,21 @@ public class EpisodePurchaseController {
 
         return ResponseEntity.ok(
                 BaseResponse.success("200", "회차 구매 성공", response)
+        );
+    }
+
+    /**
+     * 로그인한 유저가 해당 소설에서 구매한 회차 ID 목록 조회
+     */
+    @GetMapping("/novels/{novelId}/episodes/purchased")
+    public ResponseEntity<BaseResponse<List<Long>>> getPurchasedEpisodeIds(
+            @PathVariable Long novelId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        List<Long> purchasedIds =
+                purchaseFacade.getPurchasedEpisodeIds(userDetails.getUser().getId(), novelId);
+        return ResponseEntity.ok(
+                BaseResponse.success("200", "구매한 회차 목록 조회 성공", purchasedIds)
         );
     }
 

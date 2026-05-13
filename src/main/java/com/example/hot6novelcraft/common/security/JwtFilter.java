@@ -49,7 +49,8 @@ public class JwtFilter extends OncePerRequestFilter {
             "/api/novels/*/episodes",
             "/api/novels/*/episodes/*",
             "/api/episodes/*/comments",
-            "/api/novels/ranking/**"
+            "/api/novels/ranking/**",
+            "/api/v2/episodes/*"
     );
 
     // 토큰 없이 통과 가능한 URL

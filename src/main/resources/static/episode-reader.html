@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소설 읽기 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        :root {
+            --header-h: 52px;
+            --footer-h: 58px;
+            --sidebar-w: 300px;
+            --reader-bg: #14141c;
+            --reader-text: #e4e2de;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--reader-bg); color: var(--reader-text); font-family: 'Noto Serif KR', serif, sans-serif; min-height: 100vh; }
+
+        /* ── Header ── */
+        .r-header {
+            position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); z-index: 200;
+            background: rgba(10,10,16,0.97); backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            display: flex; align-items: center; padding: 0 16px; gap: 10px;
+        }
+        .r-header__title {
+            flex: 1; font-size: 0.92rem; font-weight: 700; color: rgba(255,255,255,0.85);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            cursor: pointer; min-width: 0;
+        }
+        .r-header__title:hover { color: var(--primary-light); }
+        .r-header__ep {
+            font-size: 0.78rem; color: rgba(255,255,255,0.38); flex-shrink: 0; white-space: nowrap;
+        }
+        .r-hbtn {
+            padding: 5px 13px; border-radius: 7px; flex-shrink: 0;
+            background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.11);
+            color: rgba(255,255,255,0.65); font-size: 0.78rem; cursor: pointer;
+            font-family: inherit; transition: all 0.18s; white-space: nowrap;
+        }
+        .r-hbtn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+        /* ── Layout ── */
+        .r-layout {
+            display: flex; padding-top: var(--header-h); padding-bottom: var(--footer-h);
+            min-height: 100vh;
+        }
+
+        /* ── Content ── */
+        .r-main { flex: 1; min-width: 0; }
+        .r-content { max-width: 680px; margin: 0 auto; padding: 52px 28px 72px; }
+        .r-ep-title {
+            font-family: 'Noto Serif KR', serif; font-size: 1.3rem; font-weight: 900;
+            text-align: center; color: rgba(255,255,255,0.88); margin-bottom: 44px;
+            padding-bottom: 22px; border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .r-body { font-size: 1.05rem; line-height: 2; color: var(--reader-text); }
+        .r-body p { margin-bottom: 0; }
+        .r-body p.br { height: 1em; }
+        .r-end {
+            text-align: center; color: rgba(255,255,255,0.28); font-size: 0.82rem;
+            margin-top: 56px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.07);
+            letter-spacing: 0.15em;
+        }
+
+        /* ── Sidebar ── */
+        .r-sidebar {
+            width: var(--sidebar-w); flex-shrink: 0;
+            position: sticky; top: var(--header-h);
+            height: calc(100vh - var(--header-h) - var(--footer-h));
+            overflow: hidden;                       /* 사이드바 자체는 스크롤 없음 */
+            background: rgba(255,255,255,0.025);
+            border-left: 1px solid rgba(255,255,255,0.06);
+            display: flex; flex-direction: column; padding: 18px 14px; gap: 14px;
+        }
+
+        /* Like */
+        .like-box {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 11px; padding: 13px 14px; flex-shrink: 0;
+        }
+        .like-label { font-size: 0.82rem; color: rgba(255,255,255,0.5); }
+        .like-label strong { font-size: 1rem; color: rgba(255,255,255,0.85); margin-left: 4px; }
+        .btn-like {
+            padding: 7px 16px; border-radius: 7px;
+            background: rgba(239,68,68,0.09); border: 1px solid rgba(239,68,68,0.28);
+            color: #f87171; font-size: 0.82rem; font-weight: 700;
+            cursor: pointer; font-family: inherit; transition: all 0.18s;
+        }
+        .btn-like:hover { background: rgba(239,68,68,0.22); }
+        .btn-like.active { background: #ef4444; border-color: #ef4444; color: #fff; }
+        .btn-like:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* Comments */
+        .cmts-head {
+            font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.75);
+            flex-shrink: 0; padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .cmts-list {
+            flex: 1; min-height: 0;          /* flex 자식 스크롤의 핵심 */
+            display: flex; flex-direction: column;
+            overflow-y: auto;
+        }
+        .cmts-list::-webkit-scrollbar { width: 3px; }
+        .cmts-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+        .cmt-item {
+            padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.045);
+        }
+        .cmt-item:last-child { border-bottom: none; }
+        .cmt-nick { font-size: 0.72rem; color: var(--primary-light); font-weight: 700; margin-bottom: 4px; }
+        .cmt-body { font-size: 0.8rem; color: rgba(255,255,255,0.72); line-height: 1.55; word-break: break-all; }
+        .cmt-date { font-size: 0.68rem; color: rgba(255,255,255,0.28); margin-top: 4px; }
+        .cmts-empty { font-size: 0.8rem; color: rgba(255,255,255,0.28); padding: 18px 0; text-align: center; }
+        .cmts-more {
+            width: 100%; padding: 7px; border-radius: 7px; margin-top: 8px;
+            background: transparent; border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.5); font-size: 0.78rem; cursor: pointer;
+            font-family: inherit; transition: all 0.18s;
+        }
+        .cmts-more:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); }
+
+        /* Comment input */
+        .cmt-input-wrap {
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 10px; overflow: hidden; flex-shrink: 0;
+        }
+        .cmt-input-wrap textarea {
+            width: 100%; background: transparent; border: none; outline: none;
+            color: rgba(255,255,255,0.82); font-size: 0.8rem; font-family: inherit;
+            resize: none; padding: 10px 12px; line-height: 1.5; min-height: 68px;
+        }
+        .cmt-input-wrap textarea::placeholder { color: rgba(255,255,255,0.28); }
+        .btn-cmt-submit {
+            width: 100%; padding: 9px; background: var(--primary); border: none;
+            color: #fff; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+            font-family: inherit; transition: background 0.18s;
+        }
+        .btn-cmt-submit:hover:not(:disabled) { background: var(--primary-dark); }
+        .btn-cmt-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+        .cmt-login-hint {
+            font-size: 0.76rem; color: rgba(255,255,255,0.3); text-align: center; padding: 8px 0;
+            flex-shrink: 0;
+        }
+        .cmt-login-hint span { color: var(--primary-light); cursor: pointer; }
+
+        /* ── Footer ── */
+        .r-footer {
+            position: fixed; bottom: 0; left: 0; right: 0; height: var(--footer-h); z-index: 200;
+            background: rgba(10,10,16,0.97); backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(255,255,255,0.07);
+            display: flex; align-items: center; padding: 0 20px; gap: 12px;
+        }
+        .r-footer__mid { flex: 1; text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.35); }
+        .btn-nav {
+            padding: 9px 20px; border-radius: 9px; flex-shrink: 0;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.8); font-size: 0.875rem; font-weight: 600;
+            cursor: pointer; font-family: inherit; transition: all 0.18s; white-space: nowrap;
+        }
+        .btn-nav:hover:not(:disabled) { background: rgba(255,255,255,0.16); color: #fff; }
+        .btn-nav:disabled { opacity: 0.28; cursor: not-allowed; }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.78); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: #1c1c28; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; padding: 26px; max-width: 380px; width: 90%;
+        }
+        .modal-title {
+            font-family: 'Noto Serif KR', serif; font-size: 1rem; font-weight: 700;
+            color: rgba(255,255,255,0.9); margin-bottom: 14px;
+            padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.09);
+        }
+        .modal-body { font-size: 0.87rem; color: rgba(255,255,255,0.6); margin-bottom: 18px; line-height: 1.7; }
+        .modal-body .price { color: #f0c842; font-weight: 700; font-size: 1rem; }
+        .modal-actions { display: flex; gap: 10px; }
+        .btn-cancel {
+            flex: 1; padding: 10px; border-radius: 9px;
+            background: transparent; border: 1px solid rgba(255,255,255,0.14);
+            color: rgba(255,255,255,0.55); font-size: 0.875rem; cursor: pointer; font-family: inherit;
+        }
+        .btn-confirm {
+            flex: 2; padding: 10px; border-radius: 9px; background: var(--primary); border: none;
+            color: #fff; font-size: 0.875rem; font-weight: 700; cursor: pointer;
+            font-family: inherit; transition: background 0.18s;
+        }
+        .btn-confirm:hover:not(:disabled) { background: var(--primary-dark); }
+        .btn-confirm:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ── Utils ── */
+        .loading-c { display: flex; align-items: center; justify-content: center; padding: 60px; }
+        .error-box { padding: 60px 24px; text-align: center; color: rgba(255,255,255,0.4); }
+        .error-box .err-buy {
+            margin-top: 20px; display: inline-block; padding: 10px 26px;
+            background: var(--primary); border: none; color: #fff; border-radius: 10px;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 820px) {
+            .r-sidebar { display: none; }
+            .r-content { max-width: 100%; padding: 36px 18px 56px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="r-header">
+    <div class="r-header__title" id="header-novel-title" onclick="goToDetail()"></div>
+    <div class="r-header__ep" id="header-ep-counter"></div>
+    <button class="r-hbtn" onclick="goToDetail()">목차</button>
+</header>
+
+<div class="r-layout">
+    <div class="r-main">
+        <div class="r-content" id="r-content">
+            <div class="loading-c"><div class="nc-spinner"></div></div>
+        </div>
+    </div>
+
+    <aside class="r-sidebar">
+        <!-- Like -->
+        <div class="like-box">
+            <div class="like-label">좋아요 <strong id="like-count">0</strong></div>
+            <button class="btn-like" id="btn-like" onclick="toggleLike()">♡ 좋아요</button>
+        </div>
+
+        <!-- Comments -->
+        <div class="cmts-head" id="cmts-head">댓글</div>
+        <div class="cmts-list" id="cmts-list">
+            <div class="loading-c" style="padding:16px"><div class="nc-spinner" style="width:18px;height:18px"></div></div>
+        </div>
+        <button class="cmts-more" id="cmts-more" style="display:none" onclick="loadMoreComments()">더보기</button>
+        <div class="cmt-input-wrap" id="cmt-input-wrap" style="display:none">
+            <textarea id="cmt-text" placeholder="댓글 작성..." maxlength="500"></textarea>
+            <button class="btn-cmt-submit" id="btn-cmt-submit" onclick="postComment()">등록</button>
+        </div>
+        <div class="cmt-login-hint" id="cmt-login-hint" style="display:none">
+            <span onclick="window.location.href='/login.html'">로그인</span> 후 댓글 작성 가능
+        </div>
+    </aside>
+</div>
+
+<footer class="r-footer">
+    <button class="btn-nav" id="btn-prev" onclick="goPrev()" disabled>이전화</button>
+    <div class="r-footer__mid" id="footer-counter"></div>
+    <button class="btn-nav" id="btn-next" onclick="goNext()" disabled>다음화</button>
+</footer>
+
+<!-- Purchase Modal -->
+<div class="modal-overlay" id="purchase-modal">
+    <div class="modal-box">
+        <div class="modal-title" id="modal-title">회차 구매</div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal()">취소</button>
+            <button class="btn-confirm" id="modal-btn">구매하기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    let episodeId = null;
+    let novelId = null;
+    let novelTitle = '';
+    let episodeData = null;
+    let allEpisodes = [];
+    let pendingEp = null;
+    let cmtPage = 0;
+    let cmtTotalPages = 0;
+
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtNum(n) {
+        if (!n && n !== 0) return '0';
+        return n >= 10000 ? (n / 10000).toFixed(1) + '만' : Number(n).toLocaleString();
+    }
+    function fmtDate(s) { return s ? s.substring(0, 10) : ''; }
+
+    function authHeaders() {
+        const token = localStorage.getItem('accessToken');
+        const h = { 'Content-Type': 'application/json' };
+        if (token) h['Authorization'] = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
+        return h;
+    }
+
+    function epReaderUrl(id) {
+        return '/episode-reader.html?id=' + id + '&novelId=' + (novelId || '') + '&title=' + encodeURIComponent(novelTitle);
+    }
+
+    // ── Header / Counter ──
+    function updateCounter() {
+        if (!episodeData || !allEpisodes.length) return;
+        const total = allEpisodes.length;
+        const text = episodeData.episodeNumber + ' / ' + total + '화';
+        document.getElementById('header-ep-counter').textContent = text;
+        document.getElementById('footer-counter').textContent = text;
+    }
+
+    function goToDetail() {
+        if (novelId) window.location.href = '/novel-detail.html?id=' + novelId;
+        else history.back();
+    }
+
+    // ── Load Episode ──
+    async function loadEpisode() {
+        const el = document.getElementById('r-content');
+        el.innerHTML = '<div class="loading-c"><div class="nc-spinner"></div></div>';
+        try {
+            const res = await fetch('/api/v2/episodes/' + episodeId, { headers: authHeaders() });
+            if (res.status === 401) {
+                window.location.href = '/login.html';
+                return;
+            }
+            if (res.status === 403) {
+                el.innerHTML = `<div class="error-box">
+                    <p style="font-size:1rem;margin-bottom:4px;color:rgba(255,255,255,0.7)">이 회차는 구매 후 읽을 수 있습니다.</p>
+                    <button class="err-buy" onclick="showBuyModal()">구매하기</button>
+                </div>`;
+                return;
+            }
+            if (!res.ok) throw new Error('에피소드를 불러오지 못했습니다.');
+            const json = await res.json();
+            episodeData = json.data;
+            // 유료 회차 접근 성공 → 구매 상태 기록 (novel-detail 목록 뱃지 동기화)
+            if (!episodeData.isFree) {
+                localStorage.setItem('ep_purchased_' + episodeId, '1');
+            }
+            renderEpisode(episodeData);
+        } catch (err) {
+            el.innerHTML = `<div class="error-box">${esc(err.message)}</div>`;
+        }
+    }
+
+    function renderEpisode(ep) {
+        document.title = ep.title + ' - NovelCraft';
+
+        const bodyHtml = (ep.content || '')
+            .split('\n')
+            .map(line => line.trim() ? `<p>${esc(line)}</p>` : '<p class="br"></p>')
+            .join('');
+
+        document.getElementById('r-content').innerHTML = `
+            <div class="r-ep-title">${esc(ep.title)}</div>
+            <div class="r-body">${bodyHtml}</div>
+            <div class="r-end">— ${ep.episodeNumber}화 끝 —</div>`;
+
+        // Like state from localStorage
+        const savedLike = localStorage.getItem('ep_like_' + episodeId);
+        const savedCount = parseInt(localStorage.getItem('ep_like_count_' + episodeId) || '0', 10);
+        // episode_likes COUNT는 정확하지만 Episode.likeCount 컬럼은 비동기 업데이트될 수 있어
+        // 사용자가 좋아요한 경우 localStorage에 저장된 카운트(실시간)와 비교해 큰 값 표시
+        const displayCount = (savedLike === '1' && savedCount > 0)
+            ? Math.max(ep.likeCount || 0, savedCount)
+            : (ep.likeCount || 0);
+        document.getElementById('like-count').textContent = fmtNum(displayCount);
+        const likeBtn = document.getElementById('btn-like');
+        if (savedLike === '1') {
+            likeBtn.textContent = '❤ 좋아요'; likeBtn.classList.add('active');
+        } else {
+            likeBtn.textContent = '♡ 좋아요'; likeBtn.classList.remove('active');
+        }
+
+        // Comment input
+        if (Auth.isLoggedIn()) {
+            document.getElementById('cmt-input-wrap').style.display = '';
+        } else {
+            document.getElementById('cmt-login-hint').style.display = '';
+        }
+
+        updateCounter();
+        updateNavBtns();
+    }
+
+    // ── Episode List ──
+    async function loadEpisodeList() {
+        if (!novelId) return;
+        try {
+            const res = await fetch('/api/novels/' + novelId + '/episodes?page=0&size=500&sort=episodeNumber,asc');
+            if (!res.ok) return;
+            const json = await res.json();
+            allEpisodes = json.data?.content || [];
+            updateCounter();
+            updateNavBtns();
+        } catch (_) {}
+    }
+
+    function updateNavBtns() {
+        const idx = allEpisodes.findIndex(e => String(e.id) === String(episodeId));
+        document.getElementById('btn-prev').disabled = idx <= 0;
+        document.getElementById('btn-next').disabled = idx < 0 || idx >= allEpisodes.length - 1;
+    }
+
+    // ── Navigation ──
+    async function goPrev() {
+        const idx = allEpisodes.findIndex(e => String(e.id) === String(episodeId));
+        if (idx <= 0) return;
+        await navigateTo(allEpisodes[idx - 1]);
+    }
+
+    async function goNext() {
+        const idx = allEpisodes.findIndex(e => String(e.id) === String(episodeId));
+        if (idx < 0 || idx >= allEpisodes.length - 1) return;
+        await navigateTo(allEpisodes[idx + 1]);
+    }
+
+    async function navigateTo(ep) {
+        if (ep.isFree) {
+            window.location.href = epReaderUrl(ep.id);
+            return;
+        }
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        try {
+            const res = await fetch('/api/v2/episodes/' + ep.id, { headers: authHeaders() });
+            if (res.ok) { window.location.href = epReaderUrl(ep.id); return; }
+        } catch (_) {}
+        // Need purchase
+        pendingEp = ep;
+        document.getElementById('modal-title').textContent = '회차 구매';
+        document.getElementById('modal-body').innerHTML =
+            `<b>${esc(ep.title)}</b><br><br>이 회차는 유료입니다.<br>구매 가격: <span class="price">${ep.pointPrice}P</span>`;
+        const btn = document.getElementById('modal-btn');
+        btn.textContent = '구매하기'; btn.disabled = false;
+        btn.onclick = doPurchase;
+        document.getElementById('purchase-modal').classList.add('active');
+    }
+
+    function showBuyModal() {
+        if (!episodeData) return;
+        pendingEp = { id: episodeId, title: episodeData.title, pointPrice: episodeData.pointPrice, _reload: true };
+        document.getElementById('modal-title').textContent = '회차 구매';
+        document.getElementById('modal-body').innerHTML =
+            `<b>${esc(episodeData.title)}</b><br><br>이 회차는 유료입니다.<br>구매 가격: <span class="price">${episodeData.pointPrice}P</span>`;
+        const btn = document.getElementById('modal-btn');
+        btn.textContent = '구매하기'; btn.disabled = false;
+        btn.onclick = doPurchase;
+        document.getElementById('purchase-modal').classList.add('active');
+    }
+
+    async function doPurchase() {
+        if (!pendingEp) return;
+        const ep = pendingEp;  // closeModal()이 pendingEp을 null로 만들기 전에 저장
+        const btn = document.getElementById('modal-btn');
+        btn.disabled = true; btn.textContent = '처리 중...';
+        try {
+            await api.post('/episodes/' + ep.id + '/purchase', {}, true);
+            Toast.success('구매 완료!');
+            closeModal();
+            if (ep._reload) location.reload();
+            else window.location.href = epReaderUrl(ep.id);
+        } catch (e) {
+            if (e.message && (e.message.includes('이미') || e.message.toLowerCase().includes('already'))) {
+                closeModal();
+                if (ep._reload) location.reload();
+                else window.location.href = epReaderUrl(ep.id);
+            } else {
+                Toast.error(e.message || '구매 실패');
+                btn.disabled = false; btn.textContent = '구매하기';
+            }
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('purchase-modal').classList.remove('active');
+        pendingEp = null;
+    }
+
+    // ── Like ──
+    async function toggleLike() {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        const btn = document.getElementById('btn-like');
+        btn.disabled = true;
+        try {
+            const data = await api.post('/episodes/' + episodeId + '/like', {}, true);
+            const liked = data?.isLiked ?? data?.liked ?? false;
+            const count = data?.likeCount ?? data?.count ?? 0;
+            btn.textContent = liked ? '❤ 좋아요' : '♡ 좋아요';
+            btn.classList.toggle('active', liked);
+            document.getElementById('like-count').textContent = fmtNum(count);
+            localStorage.setItem('ep_like_' + episodeId, liked ? '1' : '0');
+            // 토글 직후 카운트 저장 (episode_likes 테이블 COUNT 기준, 정확한 값)
+            localStorage.setItem('ep_like_count_' + episodeId, String(count));
+        } catch (e) {
+            Toast.error(e.message || '요청 실패');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ── Comments ──
+    async function loadComments(append = false) {
+        const listEl = document.getElementById('cmts-list');
+        if (!append) {
+            listEl.innerHTML = '<div style="padding:14px;text-align:center"><div class="nc-spinner" style="width:16px;height:16px;margin:0 auto"></div></div>';
+        }
+        try {
+            const res = await fetch('/api/episodes/' + episodeId + '/comments?page=' + cmtPage + '&size=20');
+            const json = await res.json();
+            if (!res.ok) throw new Error();
+            const page = json.data;
+            const list = page?.content || [];
+            cmtTotalPages = page?.totalPages || 0;
+            const total = page?.totalElements || 0;
+            document.getElementById('cmts-head').textContent = '댓글 ' + total.toLocaleString();
+            if (!append) listEl.innerHTML = '';
+            if (!list.length && !append) {
+                listEl.innerHTML = '<div class="cmts-empty">아직 댓글이 없습니다.</div>';
+            } else {
+                list.forEach(c => {
+                    const item = document.createElement('div');
+                    item.className = 'cmt-item';
+                    item.innerHTML = `
+                        <div class="cmt-nick">${esc(c.userNickname || '익명')}</div>
+                        <div class="cmt-body">${esc(c.content)}</div>
+                        <div class="cmt-date">${fmtDate(c.createdAt)}</div>`;
+                    listEl.appendChild(item);
+                });
+            }
+            document.getElementById('cmts-more').style.display =
+                cmtPage < cmtTotalPages - 1 ? '' : 'none';
+        } catch (_) {
+            if (!append) listEl.innerHTML = '<div class="cmts-empty">댓글을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function loadMoreComments() {
+        cmtPage++;
+        loadComments(true);
+    }
+
+    async function postComment() {
+        const ta = document.getElementById('cmt-text');
+        const content = ta.value.trim();
+        if (!content) { Toast.error('댓글 내용을 입력해주세요.'); return; }
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        const btn = document.getElementById('btn-cmt-submit');
+        btn.disabled = true; btn.textContent = '등록 중...';
+        try {
+            await api.post('/episodes/' + episodeId + '/comments', { content }, true);
+            ta.value = '';
+            Toast.success('댓글이 등록됐습니다!');
+            cmtPage = 0;
+            loadComments(false);
+        } catch (e) {
+            Toast.error(e.message || '댓글 등록 실패');
+        } finally {
+            btn.disabled = false; btn.textContent = '등록';
+        }
+    }
+
+    // ── Init ──
+    document.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(location.search);
+        episodeId = params.get('id');
+        novelId = params.get('novelId');
+        novelTitle = params.get('title') || '';
+
+        document.getElementById('header-novel-title').textContent = novelTitle || 'NovelCraft';
+
+        if (!episodeId) {
+            document.getElementById('r-content').innerHTML = '<div class="error-box">에피소드 ID가 없습니다.</div>';
+            return;
+        }
+
+        loadEpisode();
+        loadEpisodeList();
+        loadComments(false);
+
+        document.getElementById('purchase-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
+    });
+
+    // Global expose
+    window.goToDetail    = goToDetail;
+    window.toggleLike    = toggleLike;
+    window.postComment   = postComment;
+    window.goPrev        = goPrev;
+    window.goNext        = goNext;
+    window.closeModal    = closeModal;
+    window.showBuyModal  = showBuyModal;
+    window.loadMoreComments = loadMoreComments;
+
+})();
+</script>
+</body>
+</html>
