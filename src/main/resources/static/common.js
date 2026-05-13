@@ -157,8 +157,7 @@ function initNav() {
   if (!nav) return;
   const user = Auth.getUser();
   const isLoggedIn = Auth.isLoggedIn();
-
-  const pointBadge = isLoggedIn ? `<span class="nc-point-badge" id="nav-point">···P</span>` : '';
+  const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
 
   nav.innerHTML = `
     <div class="nc-nav__inner">
@@ -170,20 +169,27 @@ function initNav() {
         <div class="nc-search-dropdown" id="search-dropdown"></div>
       </div>
       <div class="nc-nav__right">
-        ${pointBadge}
         ${isLoggedIn ? `
-          <button class="nc-nav__btn" id="nav-alarm" onclick="window.location.href='/mypage.html?tab=notification'">
-            🔔 <span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
+          <button class="nc-point-btn" id="nav-point">···P</button>
+          <button class="nc-alarm-btn" id="nav-alarm" onclick="window.location.href='/mypage.html?tab=notification'">
+            🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
           </button>
-          <button class="nc-nav__btn" onclick="window.location.href='/mypage.html?tab=library'">내 서재</button>
-          ${user?.role === 'AUTHOR' || user?.role === 'MENTOR' ? `
-            <button class="nc-nav__btn nc-nav__btn--active" onclick="window.location.href='/editor.html'">에디터</button>
-          ` : ''}
-          ${user?.role === 'MENTOR' ? `
+          <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+          ${isAuthorOrMentor ? `
+            <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
             <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
           ` : ''}
-          <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
-          <a href="/mypage.html" class="nc-nav__avatar">${user?.nickname?.charAt(0) || 'U'}</a>
+          <div class="nc-user-menu" id="user-menu">
+            <button class="nc-nav__btn" onclick="ncToggleUserMenu()" style="font-weight:600;user-select:none">
+              ${user?.nickname || '내 프로필'} ▾
+            </button>
+            <div class="nc-user-dropdown" id="user-dropdown">
+              ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
+              <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
+              <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
+              <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="Auth.logout()">로그아웃</button>
+            </div>
+          </div>
         ` : `
           <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
           <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
@@ -192,24 +198,28 @@ function initNav() {
     </div>
   `;
 
-  // 포인트 로드
   if (isLoggedIn) {
     api.get('/points/balance', true).then(d => {
       const el = document.getElementById('nav-point');
       if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
     }).catch(() => {});
 
-    // 알림 읽지 않은 수
     api.get('/notifications/unread-count', true).then(d => {
-      if (d?.count > 0) {
-        const dot = document.getElementById('alarm-dot');
-        if (dot) dot.style.display = 'block';
-      }
+      const dot = document.getElementById('alarm-dot');
+      if (dot) dot.style.display = (d?.count > 0) ? 'block' : 'none';
     }).catch(() => {});
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('user-menu');
+      if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+    });
   }
 
-  // 검색 기능
   initSearch();
+}
+
+function ncToggleUserMenu() {
+  document.getElementById('user-menu')?.classList.toggle('open');
 }
 
 function initSearch() {
@@ -386,6 +396,41 @@ function injectCommonStyles() {
       top: -2px; right: -2px;
     }
     #nav-alarm { position: relative; }
+    /* 포인트 버튼 */
+    .nc-point-btn {
+      padding: 5px 14px; border-radius: 20px;
+      background: linear-gradient(135deg, rgba(240,200,66,0.18), rgba(240,200,66,0.08));
+      border: 1px solid rgba(240,200,66,0.4); color: var(--accent);
+      font-size: 0.82rem; font-weight: 700; white-space: nowrap;
+      font-family: inherit; cursor: default;
+    }
+    /* 알람 버튼 */
+    .nc-alarm-btn {
+      position: relative; padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 1rem; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .nc-alarm-btn:hover { background: var(--surface); }
+    /* 유저 드롭다운 */
+    .nc-user-menu { position: relative; }
+    .nc-user-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); min-width: 160px;
+      box-shadow: var(--shadow-lg); z-index: 300;
+      display: none; overflow: hidden;
+    }
+    .nc-user-menu.open .nc-user-dropdown { display: block; }
+    .nc-user-dropdown__item {
+      display: block; width: 100%; padding: 11px 16px; text-align: left;
+      background: none; border: none; color: var(--text2); font-size: 0.875rem;
+      cursor: pointer; transition: background 0.15s; font-family: inherit;
+      text-decoration: none;
+    }
+    .nc-user-dropdown__item:hover { background: var(--surface); color: var(--text); }
+    .nc-user-dropdown__item--danger { color: #f87171; }
+    .nc-user-dropdown__item--danger:hover { background: rgba(239,68,68,0.08); }
 
     /* 검색 드롭다운 */
     .nc-search-dropdown {

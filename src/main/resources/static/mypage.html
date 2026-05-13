@@ -15,7 +15,14 @@
       font-size: 0.82rem; font-weight: 700; cursor: pointer;
       transition: all 0.2s; white-space: nowrap; font-family: inherit;
     }
-    .nc-point-btn:hover { background: rgba(240,200,66,0.25); }
+    .nc-point-btn:hover { background: rgba(240,200,66,0.25); border-color: var(--accent); }
+    .nc-alarm-btn {
+      position: relative; padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 1rem; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .nc-alarm-btn:hover { background: var(--surface); }
     .nc-user-menu { position: relative; }
     .nc-user-dropdown {
       position: absolute; top: calc(100% + 10px); right: 0;
@@ -609,13 +616,22 @@
           <div class="nc-nav__right">
             ${isLoggedIn ? `
               <button class="nc-point-btn" id="nav-point" onclick="openChargeModal()">···P</button>
+              <button class="nc-alarm-btn" id="nav-alarm" onclick="switchTab('notification')">
+                🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
+              </button>
+              <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+              ${isAuthorOrMentor ? `
+                <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
+                <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+              ` : ''}
               <div class="nc-user-menu" id="user-menu">
-                <div class="nc-nav__avatar" onclick="toggleUserMenu()" style="cursor:pointer;user-select:none">
-                  ${user?.nickname?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
+                <button class="nc-nav__btn" onclick="toggleUserMenu()" style="font-weight:600;user-select:none">
+                  ${user?.nickname || '내 프로필'} ▾
+                </button>
                 <div class="nc-user-dropdown" id="user-dropdown">
+                  ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
                   <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
-                  ${isAuthorOrMentor ? `<a href="/editor.html" class="nc-user-dropdown__item">에디터</a>` : ''}
+                  <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
                   <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="Auth.logout()">로그아웃</button>
                 </div>
               </div>
@@ -630,6 +646,11 @@
         api.get('/points/balance', true).then(d => {
           const el = document.getElementById('nav-point');
           if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+        }).catch(() => {});
+
+        api.get('/notifications/unread-count', true).then(d => {
+          const dot = document.getElementById('alarm-dot');
+          if (dot) dot.style.display = (d?.count > 0) ? 'block' : 'none';
         }).catch(() => {});
       }
 
