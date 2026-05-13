@@ -45,41 +45,41 @@ public class JwtFilter extends OncePerRequestFilter {
     // 토큰 없이 통과 가능한 URL
     private static final List<String> PUBLIC_URLS
             = List.of(
-            "/api/auth/signup"
-            ,"/api/auth/signup/admin"
-            ,"/api/auth/login"
-            , "/api/auth/email/check"
-            , "/api/auth/nickname/check"
-            , "/api/auth/phone/send"
-            , "/api/auth/phone/verify"
-            , "/api/auth/users/restore"
-            , "/api/auth/users/abandon-recovery"
-            , "/login.html"
-            , "/index.html"
-            , "/signup.html"
-            , "/api/webhooks/portone"
-            , "/favicon.ico"
-            , "/login"          // 구글이 에러 시 여기로 리다이렉트
-            , "/login?error"
-            , "/api/novels/ranking"
-            , "/api/search/v2/novels"
-            , "/api/search/v2/tags"
-            , "/api/search/v2/authors"
-            , "/actuator/prometheus");
+                    "/api/auth/signup"
+                    ,"/api/auth/signup/admin"
+                    ,"/api/auth/login"
+                    , "/api/auth/email/check"
+                    , "/api/auth/nickname/check"
+                    , "/api/auth/phone/send"
+                    , "/api/auth/phone/verify"
+                    , "/api/auth/users/restore"
+                    , "/api/auth/users/abandon-recovery"
+                    , "/api/webhooks/portone"
+                    , "/favicon.ico"
+                    , "/login"          // 구글이 에러 시 여기로 리다이렉트
+                    , "/login?error"
+                    , "/api/novels/ranking"
+                    , "/api/search/v2/novels"
+                    , "/api/search/v2/tags"
+                    , "/api/search/v2/authors"
+                    , "/actuator/prometheus"
+                    , "/api/novels"             // 신작 목록
+                    , "/api/v2/novels"          // 소설 목록
+                    , "/api/ai/recommendation"  // AI 추천
+                    , "/api/search/keywords/popular"   // 인기 검색어
+                    , "/api/search/tags/popular");
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/oauth2/authorize") // 소셜 로그인 시작
+        return path.startsWith("/oauth2/authorize")
                 || path.startsWith("/api/auth/login/oauth2")
                 || path.startsWith("/login/oauth2")
-                || path.equals("/ws-chat") || path.startsWith("/ws-chat/")     // WebSocket (SockJS info 포함) - 인증은 StompChannelInterceptor 처리
-                || path.equals("/login")          // 구글 에러 리다이렉트
+                || path.equals("/ws-chat") || path.startsWith("/ws-chat/")
+                || path.equals("/login")
                 || path.equals("/favicon.ico")
-                || path.equals("/login.html")
-                || path.equals("/index.html")
-                || path.equals("/signup.html")
                 || path.equals("/error")
+                || path.startsWith("/actuator")
                 || path.endsWith(".html")
                 || path.endsWith(".js")
                 || path.endsWith(".css")
@@ -88,7 +88,13 @@ public class JwtFilter extends OncePerRequestFilter {
                 || path.startsWith("/css/")
                 || path.startsWith("/js/")
                 || path.startsWith("/images/")
-                || path.startsWith("/actuator");
+                || path.equals("/.well-known/appspecific/com.chrome.devtools.json")
+                || path.startsWith("/api/novels")
+                || path.startsWith("/api/v2/novels")
+                || path.startsWith("/api/v2/episodes")
+                || (path.startsWith("/api/search/") && !path.equals("/api/search/keywords/recent"))
+                || path.startsWith("/api/mentorships/mentors")
+                || path.startsWith("/api/ai/recommendation");
     }
 
     @Override
@@ -118,7 +124,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
 
                 if (!setAuthentication(response, token, requestURL)) {
-                    return;
+                return;
                 }
             }
 
@@ -170,14 +176,14 @@ public class JwtFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // 인증 실패 시 return
-            if (!setAuthentication(response, accessToken, requestURL)) {
-                return;
-            }
+                // 인증 실패 시 return
+                if (!setAuthentication(response, accessToken, requestURL)) {
+                    return;
+                }
 
-            // AccessToken 인증인가 필터 종료
-            filterChain.doFilter(request, response);
-            return;
+                // AccessToken 인증인가 필터 종료
+                filterChain.doFilter(request, response);
+                return;
 
         }
 

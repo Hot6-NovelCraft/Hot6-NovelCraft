@@ -280,7 +280,7 @@ function initSearch() {
 
 function doSearch(keyword) {
   if (!keyword) return;
-  window.location.href = `/novel-list.html?keyword=${encodeURIComponent(keyword)}`;
+  window.location.href = `/search.html?keyword=${encodeURIComponent(keyword)}`;
 }
 
 // ── 공통 CSS 인젝션 ──
