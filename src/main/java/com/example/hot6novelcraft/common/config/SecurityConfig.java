@@ -78,7 +78,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers(
-                        "/api/auth/login"
+                                "/api/auth/login"
                                 , "/api/auth/signup"
                                 , "/api/auth/signup/admin"
                                 , "/api/auth/signup/reader"
@@ -98,7 +98,6 @@ public class SecurityConfig {
                                 , "/oauth2/authorize/**"
                                 , "/error"
                                 , "/*.html"
-                                , "/**.html"
                                 , "/static/**"
                                 , "/css/**"
                                 , "/js/**"
@@ -109,17 +108,11 @@ public class SecurityConfig {
                                 , "/ws-chat/**"
                                 , "/actuator/**"
                                 , "/api/ai/recommendation"
-                                , "/api/novels"                // 신작 목록 (type=new)
-                                , "/api/novels/*"              // 소설 상세
-                                , "/api/novels/*/episodes"     // 회차 목록
-                                , "/api/v2/novels"             // 소설 목록 필터
-                                , "/api/v2/episodes/**"        // 무료 회차 본문
-                                , "/api/mentorships/mentors"   // 멘토 목록 (비로그인도 볼 수 있게)
                         ).permitAll()
-                                .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "SUPER_ADMIN")
-                                .requestMatchers("/api/calendars/**").hasAnyAuthority("READER", "AUTHOR")
-                                .requestMatchers("/api/ai-support/**").authenticated()
-                .anyRequest().authenticated()
+                        .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/calendars/**").hasAnyAuthority("READER", "AUTHOR")
+                        .requestMatchers("/api/ai-support/**").authenticated()
+                        .anyRequest().authenticated()
                 )
                 .build();
     }
