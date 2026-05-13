@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NovelCraft - 멘토링 현황</title>
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
   <script src="/common.js"></script>
   <style>
     /* ── 네비게이션 커스텀 ── */
@@ -14,7 +15,19 @@
       font-size: 0.82rem; font-weight: 700; cursor: pointer;
       transition: all 0.2s; white-space: nowrap; font-family: inherit;
     }
-    .nc-point-btn:hover { background: rgba(240,200,66,0.25); }
+    .nc-point-btn:hover { background: rgba(240,200,66,0.25); border-color: var(--accent); }
+    /* ── 포인트 충전 모달 ── */
+    .point-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .point-opt {
+      padding: 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: transparent; cursor: pointer; transition: all 0.2s;
+      text-align: center; font-family: inherit; color: var(--text2);
+    }
+    .point-opt:hover { border-color: var(--primary); }
+    .point-opt.selected { border-color: var(--primary); background: rgba(124,90,240,0.1); color: var(--primary-light); }
+    .point-opt__amount { font-size: 1rem; font-weight: 700; }
+    .point-opt__price { font-size: 0.78rem; color: var(--text3); margin-top: 3px; }
+    .point-opt.selected .point-opt__price { color: var(--primary-light); opacity: 0.8; }
     .nc-alarm-btn {
       position: relative; padding: 6px 10px; border-radius: 8px;
       border: 1px solid var(--border); background: transparent;
@@ -159,6 +172,8 @@
     .action-btn--danger:hover { background: rgba(239,68,68,0.1); }
     .action-btn--warn { border-color: rgba(251,146,60,0.4); color: #fb923c; }
     .action-btn--warn:hover { background: rgba(251,146,60,0.1); }
+    .action-btn--chat { border-color: rgba(34,197,94,0.4); color: #4ade80; }
+    .action-btn--chat:hover { background: rgba(34,197,94,0.1); }
 
     /* 상태 배지 */
     .badge {
@@ -413,7 +428,7 @@
         <a href="/index.html" class="nc-nav__logo"><span class="logo-icon">✦</span>NovelCraft</a>
         <div class="nc-nav__right">
           ${isLoggedIn ? `
-            <button class="nc-point-btn" id="nav-point" onclick="loadPoint()">···P</button>
+            <button class="nc-point-btn" id="nav-point" onclick="openPointModal()">···P</button>
             <button class="nc-alarm-btn" id="nav-alarm" onclick="openNotifDrawer()">
               🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
             </button>
@@ -903,6 +918,7 @@
 
         <div class="mentee-footer">
           ${isActive ? `
+            <button class="action-btn action-btn--chat" onclick="openChat(${m.mentoringId})">💬 채팅하기</button>
             <button class="action-btn" onclick="openFeedbackModal(${m.mentoringId})">피드백 작성</button>
             <button class="action-btn action-btn--warn" onclick="reportMentee(${m.mentoringId})">🔔 신고하기</button>
             <button class="action-btn action-btn--danger" onclick="completeMentoring(${m.mentoringId})">멘토링 종료</button>
@@ -958,6 +974,18 @@
       Toast.success('멘토링이 종료되었습니다');
       loadPage();
     } catch (e) { Toast.error(e.message || '종료 실패'); }
+  }
+
+  /* ─────────────────── 채팅 ─────────────────── */
+  async function openChat(mentoringId) {
+    try {
+      const res = await api.post(`/api/chatrooms?mentorshipId=${mentoringId}`, {}, true);
+      const roomId = res?.data?.id || res?.id;
+      if (!roomId) { Toast.error('채팅방을 열 수 없습니다'); return; }
+      window.location.href = `/chat.html?roomId=${roomId}`;
+    } catch (e) {
+      Toast.error('채팅방 생성 중 오류가 발생했습니다');
+    }
   }
 
   /* ─────────────────── 신고 ─────────────────── */
@@ -1060,6 +1088,115 @@
   } else {
     init();
   }
+
+  /* ─────────────────── 포인트 충전 ─────────────────── */
+  const PORTONE_STORE_ID    = 'store-6dd586c4-bbae-4fc5-a1b1-920f1850b300';
+  const PORTONE_CHANNEL_KEY = 'channel-key-70f0f4c2-74c5-4c38-b275-c2c01e2c3660';
+  let selectedPointAmt = 1000;
+
+  function initPointOptions() {
+    document.querySelectorAll('.point-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.point-opt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedPointAmt = parseInt(btn.dataset.amount);
+      });
+    });
+  }
+
+  function openPointModal() {
+    api.get('/points/balance', true).then(d => {
+      const el = document.getElementById('modal-current-point');
+      if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+    }).catch(() => {});
+    initPointOptions();
+    Modal.open('modal-point');
+  }
+
+  async function chargePoint() {
+    if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+    try {
+      const [prepare, meInfo] = await Promise.all([
+        api.post('/payments/prepare', { amount: selectedPointAmt }, true),
+        api.get('/auth/users/me', true),
+      ]);
+      const paymentKey = prepare.paymentKey;
+      const phoneNo = meInfo.phoneNo?.replace(/-/g, '') || '';
+
+      Modal.close('modal-point');
+      Toast.info('결제창을 불러오는 중...');
+
+      const me = Auth.getUser();
+      const portoneRes = await PortOne.requestPayment({
+        storeId: PORTONE_STORE_ID,
+        channelKey: PORTONE_CHANNEL_KEY,
+        paymentId: paymentKey,
+        orderName: `NovelCraft ${selectedPointAmt.toLocaleString()}P 포인트 충전`,
+        totalAmount: selectedPointAmt,
+        currency: 'CURRENCY_KRW',
+        payMethod: 'CARD',
+        customer: {
+          fullName: me?.nickname || '구매자',
+          phoneNumber: phoneNo,
+          ...(me?.email ? { email: me.email } : {}),
+        },
+      });
+
+      if (portoneRes.code) {
+        Toast.error(`결제 실패: ${portoneRes.message}`);
+        return;
+      }
+
+      await api.post('/payments/confirm', {
+        paymentId: portoneRes.paymentId,
+        amount: selectedPointAmt,
+      }, true);
+
+      Toast.success(`${selectedPointAmt.toLocaleString()}P가 충전되었습니다!`);
+
+      api.get('/points/balance', true).then(d => {
+        const el = document.getElementById('nav-point');
+        if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+      }).catch(() => {});
+    } catch (e) {
+      Toast.error(e.message || '충전 중 오류가 발생했습니다.');
+    }
+  }
 </script>
+
+<!-- 포인트 충전 모달 -->
+<div class="nc-modal" id="modal-point">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-point')"></div>
+  <div class="nc-modal__box">
+    <button class="nc-modal__close" onclick="Modal.close('modal-point')">✕</button>
+    <div class="nc-modal__title">💎 포인트 충전</div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:0.82rem;color:var(--text3);margin-bottom:12px">충전할 포인트를 선택하세요</div>
+      <div class="point-options" id="point-options">
+        <button class="point-opt selected" data-amount="1000">
+          <div class="point-opt__amount">1,000P</div>
+          <div class="point-opt__price">₩1,000</div>
+        </button>
+        <button class="point-opt" data-amount="5000">
+          <div class="point-opt__amount">5,000P</div>
+          <div class="point-opt__price">₩5,000</div>
+        </button>
+        <button class="point-opt" data-amount="10000">
+          <div class="point-opt__amount">10,000P</div>
+          <div class="point-opt__price">₩10,000</div>
+        </button>
+        <button class="point-opt" data-amount="30000">
+          <div class="point-opt__amount">30,000P</div>
+          <div class="point-opt__price">₩30,000</div>
+        </button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 14px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+      <span style="font-size:0.85rem;color:var(--text3)">현재 잔여 포인트</span>
+      <span style="font-weight:700;color:var(--accent)" id="modal-current-point">-</span>
+    </div>
+    <button class="nc-btn nc-btn--primary nc-btn--full" onclick="chargePoint()">충전하기</button>
+  </div>
+</div>
 </body>
 </html>
