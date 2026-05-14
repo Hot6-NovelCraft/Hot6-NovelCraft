@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>신고 관리 - NovelCraft Admin</title>
+  <script src="/common.js"></script>
+  <style>
+    .admin-layout { display: flex; min-height: calc(100vh - 60px); }
+
+    /* ── 사이드바 ── */
+    .admin-sidebar {
+      width: 220px; background: var(--bg2);
+      border-right: 1px solid var(--border); flex-shrink: 0;
+      padding: 24px 0; position: sticky; top: 60px;
+      height: calc(100vh - 60px); overflow-y: auto;
+    }
+    .admin-sidebar__logo {
+      padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px;
+    }
+    .admin-sidebar__logo-text { font-weight: 700; font-size: 0.9rem; color: var(--warning); }
+    .admin-sidebar__role { font-size: 0.7rem; color: var(--text3); margin-top: 2px; }
+    .admin-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; color: var(--text2); text-decoration: none;
+      font-size: 0.875rem; transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+    .admin-nav-item:hover { background: var(--surface); color: var(--text); }
+    .admin-nav-item.active {
+      background: rgba(124,90,240,0.1); color: var(--primary-light);
+      border-left-color: var(--primary); font-weight: 600;
+    }
+    .admin-nav-item__icon { font-size: 1rem; width: 20px; text-align: center; }
+    .admin-sidebar__divider { height: 1px; background: var(--border); margin: 10px 20px; }
+    .admin-sidebar__section {
+      padding: 8px 20px 4px; font-size: 0.68rem; font-weight: 700;
+      color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    /* ── 메인 ── */
+    .admin-main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
+    .admin-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+    .admin-title { font-family: 'Noto Serif KR', serif; font-size: 1.5rem; font-weight: 700; }
+    .admin-subtitle { color: var(--text3); font-size: 0.85rem; margin-top: 4px; }
+
+    /* ── 필터 바 ── */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      margin-bottom: 20px; padding: 16px 18px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    }
+    .filter-bar label { font-size: 0.8rem; color: var(--text3); font-weight: 600; }
+
+    /* ── 상태 탭 ── */
+    .status-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+    .status-tab {
+      padding: 7px 18px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text3); font-size: 0.82rem; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .status-tab:hover { border-color: var(--primary); color: var(--primary-light); }
+    .status-tab.active { background: var(--primary); border-color: var(--primary); color: white; font-weight: 600; }
+
+    /* ── 테이블 ── */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .table-header {
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-header-title { font-size: 0.9rem; font-weight: 700; }
+    .table-count {
+      font-size: 0.78rem; color: var(--text3); padding: 3px 10px;
+      background: var(--bg2); border-radius: 20px; border: 1px solid var(--border);
+    }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      padding: 10px 16px; font-size: 0.72rem; font-weight: 700; color: var(--text3);
+      text-align: left; background: var(--bg2);
+      text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+    }
+    .data-table td {
+      padding: 13px 16px; font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.025); }
+
+    /* ── 상태 뱃지 ── */
+    .st-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    .st-pending  { background: rgba(245,158,11,0.15);  color: #f59e0b;  border: 1px solid rgba(245,158,11,0.3); }
+    .st-resolved { background: rgba(16,185,129,0.15);  color: #10b981;  border: 1px solid rgba(16,185,129,0.3); }
+    .st-rejected { background: rgba(239,68,68,0.15);   color: #ef4444;  border: 1px solid rgba(239,68,68,0.3); }
+    .st-closed   { background: rgba(107,114,128,0.15); color: #9ca3af;  border: 1px solid rgba(107,114,128,0.3); }
+
+    /* ── 처리 버튼 ── */
+    .action-btns { display: flex; gap: 6px; }
+    .act-btn {
+      padding: 5px 12px; border-radius: 6px; font-size: 0.78rem;
+      font-family: inherit; cursor: pointer; font-weight: 600;
+      transition: all 0.2s; border: 1px solid;
+    }
+    .act-btn--resolve { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.4); color: #10b981; }
+    .act-btn--resolve:hover { background: #10b981; color: white; }
+    .act-btn--reject { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.35); color: #ef4444; }
+    .act-btn--reject:hover { background: #ef4444; color: white; }
+    .act-btn--close { background: rgba(107,114,128,0.1); border-color: rgba(107,114,128,0.35); color: #9ca3af; }
+    .act-btn--close:hover { background: #6b7280; color: white; }
+    .act-btn--detail { background: rgba(124,90,240,0.1); border-color: rgba(124,90,240,0.35); color: var(--primary-light); }
+    .act-btn--detail:hover { background: var(--primary); color: white; }
+
+    /* ── 페이지네이션 ── */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 20px 0; }
+    .page-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
+    .page-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+    .page-btn:hover:not(.active):not(:disabled) { border-color: var(--primary); color: var(--primary-light); }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── 신고 상세 모달 ── */
+    .detail-row { margin-bottom: 14px; }
+    .detail-label { font-size: 0.78rem; color: var(--text3); font-weight: 600; margin-bottom: 4px; }
+    .detail-value { font-size: 0.9rem; color: var(--text); }
+    .detail-content {
+      padding: 12px 14px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.875rem; line-height: 1.6; color: var(--text2);
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .process-section {
+      padding: 16px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 8px; margin-top: 16px;
+    }
+    .process-section__title { font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; }
+    .process-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .process-btn {
+      flex: 1; padding: 10px 16px; border-radius: 8px; font-family: inherit;
+      font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 1px solid;
+    }
+    .process-btn--resolve { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.4); color: #10b981; }
+    .process-btn--resolve:hover { background: #10b981; color: white; }
+    .process-btn--reject  { background: rgba(239,68,68,0.1);  border-color: rgba(239,68,68,0.35);  color: #ef4444; }
+    .process-btn--reject:hover  { background: #ef4444;  color: white; }
+    .process-btn--close   { background: rgba(107,114,128,0.1);border-color: rgba(107,114,128,0.35);color: #9ca3af; }
+    .process-btn--close:hover   { background: #6b7280;  color: white; }
+
+    @media (max-width: 768px) {
+      .admin-sidebar { display: none; }
+      .admin-main { padding: 16px; }
+      .data-table { font-size: 0.78rem; }
+      .data-table th:nth-child(3), .data-table td:nth-child(3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="admin-layout">
+  <!-- 사이드바 -->
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar__logo">
+      <div class="admin-sidebar__logo-text">⚙ 관리자</div>
+      <div class="admin-sidebar__role" id="sidebar-role-label">ADMIN</div>
+    </div>
+    <div class="admin-sidebar__section">메뉴</div>
+    <a href="/admin.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">📊</span> 대시보드
+    </a>
+    <a href="/admin-reports.html" class="admin-nav-item active">
+      <span class="admin-nav-item__icon">🚨</span> 신고 관리
+    </a>
+    <a href="/admin-mentors.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🎓</span> 멘토 신청
+    </a>
+    <div class="admin-sidebar__divider"></div>
+    <a href="/admin-users.html" class="admin-nav-item" id="super-nav-users" style="display:none">
+      <span class="admin-nav-item__icon">👥</span> 사용자 관리
+    </a>
+    <div class="admin-sidebar__divider"></div>
+    <a href="/index.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🏠</span> 메인으로
+    </a>
+  </aside>
+
+  <!-- 메인 -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div>
+        <div class="admin-title">🚨 신고 관리</div>
+        <div class="admin-subtitle">신고된 콘텐츠를 검토하고 처리하세요</div>
+      </div>
+    </div>
+
+    <!-- 상태 탭 -->
+    <div class="status-tabs">
+      <button class="status-tab active" data-status="" onclick="setStatusFilter('')">전체</button>
+      <button class="status-tab" data-status="PENDING" onclick="setStatusFilter('PENDING')">⏳ 대기</button>
+      <button class="status-tab" data-status="RESOLVED" onclick="setStatusFilter('RESOLVED')">✅ 해결</button>
+      <button class="status-tab" data-status="REJECTED" onclick="setStatusFilter('REJECTED')">❌ 기각</button>
+      <button class="status-tab" data-status="CLOSED" onclick="setStatusFilter('CLOSED')">🔒 종료</button>
+    </div>
+
+    <!-- 필터 바 -->
+    <div class="filter-bar">
+      <label>신고 유형</label>
+      <select class="nc-select" id="filter-type" onchange="loadReports(0)" style="width:160px">
+        <option value="">전체</option>
+        <option value="EPISODE_COMMENT">댓글</option>
+        <option value="USER_MENTORSHIP">멘토십</option>
+      </select>
+      <div style="flex:1"></div>
+      <button class="nc-btn nc-btn--outline nc-btn--sm" onclick="loadReports(0)">🔄 새로고침</button>
+    </div>
+
+    <!-- 테이블 -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-header-title">신고 목록</div>
+        <span class="table-count" id="total-count">0건</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>신고 유형</th>
+            <th>신고 사유</th>
+            <th>신고자</th>
+            <th>상태</th>
+            <th>신고일</th>
+            <th>처리</th>
+          </tr>
+        </thead>
+        <tbody id="reports-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:40px">
+            <div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </main>
+</div>
+
+<!-- 신고 상세 / 처리 모달 -->
+<div class="nc-modal" id="modal-detail">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-detail')"></div>
+  <div class="nc-modal__box" style="max-width:560px">
+    <button class="nc-modal__close" onclick="Modal.close('modal-detail')">✕</button>
+    <div class="nc-modal__title">🚨 신고 상세</div>
+    <div id="detail-content">
+      <div class="nc-loading"><div class="nc-spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentStatusFilter = '';
+  let currentPage = 0;
+  let totalPages = 0;
+  let currentReportId = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = Auth.getUser();
+    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
+      Toast.error('관리자 권한이 필요합니다');
+      setTimeout(() => window.location.href = '/index.html', 1000);
+      return;
+    }
+    const roleLabel = document.getElementById('sidebar-role-label');
+    if (roleLabel) roleLabel.textContent = user.role;
+    if (user.role === 'SUPER_ADMIN') {
+      document.getElementById('super-nav-users').style.display = 'flex';
+    }
+    loadReports(0);
+  });
+
+  function setStatusFilter(status) {
+    currentStatusFilter = status;
+    document.querySelectorAll('.status-tab').forEach(t => t.classList.toggle('active', t.dataset.status === status));
+    loadReports(0);
+  }
+
+  async function loadReports(page) {
+    currentPage = page;
+    const tbody = document.getElementById('reports-tbody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px"><div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div></td></tr>';
+
+    const targetType = document.getElementById('filter-type').value;
+    const params = new URLSearchParams({ page, size: 10 });
+    if (currentStatusFilter) params.append('status', currentStatusFilter);
+    if (targetType) params.append('targetType', targetType);
+
+    try {
+      const res = await api.get(`/admin/reports?${params}`, true);
+      const list = res?.content || [];
+      totalPages = res?.totalPages ?? 1;
+      document.getElementById('total-count').textContent = `${res?.totalElements ?? list.length}건`;
+
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="nc-empty"><div class="nc-empty__icon">🔍</div><div class="nc-empty__text">신고 내역이 없습니다</div></div></td></tr>';
+        renderPagination();
+        return;
+      }
+
+      tbody.innerHTML = list.map((r, i) => `
+        <tr>
+          <td style="color:var(--text3);font-size:0.78rem">${r.reportId || (page * 10 + i + 1)}</td>
+          <td>${targetTypeLabel(r.targetType)}</td>
+          <td style="max-width:200px">
+            <span style="font-size:0.82rem;color:var(--text2);
+                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:180px"
+                  title="${escHtml(r.reason || '')}">
+              ${escHtml(r.reason?.slice(0, 40) || '-')}${r.reason?.length > 40 ? '…' : ''}
+            </span>
+          </td>
+          <td style="font-size:0.82rem">${escHtml(r.reporterNickname || r.reporterId || '-')}</td>
+          <td>${stBadge(r.status)}</td>
+          <td style="color:var(--text3);font-size:0.78rem;white-space:nowrap">${formatDate(r.createdAt)}</td>
+          <td>
+            ${r.status === 'PENDING' ? `
+              <div class="action-btns">
+                <button class="act-btn act-btn--detail" onclick="openDetail(${r.reportId})">상세</button>
+                <button class="act-btn act-btn--resolve" onclick="processReport(${r.reportId},'RESOLVED',this)">해결</button>
+                <button class="act-btn act-btn--reject" onclick="processReport(${r.reportId},'REJECTED',this)">기각</button>
+              </div>
+            ` : `
+              <button class="act-btn act-btn--detail" onclick="openDetail(${r.reportId})">상세</button>
+            `}
+          </td>
+        </tr>
+      `).join('');
+      renderPagination();
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--error)">
+        로드 실패: ${escHtml(e.message)}
+      </td></tr>`;
+    }
+  }
+
+  async function processReport(reportId, status, btn) {
+    if (!confirm(`신고를 "${stLabel(status)}" 처리하시겠습니까?`)) return;
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = '처리 중...';
+    try {
+      await api.patch(`/admin/reports/${reportId}`, { status }, true);
+      Toast.success(`신고가 "${stLabel(status)}" 처리되었습니다`);
+      loadReports(currentPage);
+    } catch (e) {
+      Toast.error(e.message || '처리 실패');
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+
+  async function openDetail(reportId) {
+    currentReportId = reportId;
+    Modal.open('modal-detail');
+    document.getElementById('detail-content').innerHTML = '<div class="nc-loading"><div class="nc-spinner"></div></div>';
+    try {
+      const res = await api.get(`/admin/reports?page=0&size=100`, true);
+      const report = (res?.content || []).find(r => r.reportId === reportId);
+      if (!report) throw new Error('신고를 찾을 수 없습니다');
+      renderDetail(report);
+    } catch (e) {
+      document.getElementById('detail-content').innerHTML = `
+        <div style="color:var(--error);padding:20px">${escHtml(e.message)}</div>`;
+    }
+  }
+
+  function renderDetail(r) {
+    const isPending = r.status === 'PENDING';
+    document.getElementById('detail-content').innerHTML = `
+      <div class="detail-row">
+        <div class="detail-label">신고 ID</div>
+        <div class="detail-value">#${r.reportId}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">신고 유형</div>
+        <div class="detail-value">${targetTypeLabel(r.targetType)} (대상 ID: ${r.targetId ?? '-'})</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">신고자</div>
+        <div class="detail-value">${escHtml(r.reporterNickname || r.reporterId || '-')}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">상태</div>
+        <div class="detail-value">${stBadge(r.status)}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">신고 사유</div>
+        <div class="detail-content">${escHtml(r.reason || '(사유 없음)')}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">신고일시</div>
+        <div class="detail-value" style="color:var(--text3)">${r.createdAt ? new Date(r.createdAt).toLocaleString('ko-KR') : '-'}</div>
+      </div>
+      ${isPending ? `
+        <div class="process-section">
+          <div class="process-section__title">처리 선택</div>
+          <div class="process-btns">
+            <button class="process-btn process-btn--resolve"
+                    onclick="processFromModal(${r.reportId},'RESOLVED')">✅ 해결 처리</button>
+            <button class="process-btn process-btn--reject"
+                    onclick="processFromModal(${r.reportId},'REJECTED')">❌ 기각 처리</button>
+            <button class="process-btn process-btn--close"
+                    onclick="processFromModal(${r.reportId},'CLOSED')">🔒 종료 처리</button>
+          </div>
+        </div>
+      ` : ''}
+    `;
+  }
+
+  async function processFromModal(reportId, status) {
+    if (!confirm(`신고를 "${stLabel(status)}" 처리하시겠습니까?`)) return;
+    try {
+      await api.patch(`/admin/reports/${reportId}`, { status }, true);
+      Toast.success(`신고가 "${stLabel(status)}" 처리되었습니다`);
+      Modal.close('modal-detail');
+      loadReports(currentPage);
+    } catch (e) {
+      Toast.error(e.message || '처리 실패');
+    }
+  }
+
+  function renderPagination() {
+    const el = document.getElementById('pagination');
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    let html = `<button class="page-btn" onclick="loadReports(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>‹</button>`;
+    const start = Math.max(0, currentPage - 2);
+    const end = Math.min(totalPages, start + 5);
+    for (let i = start; i < end; i++) {
+      html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadReports(${i})">${i + 1}</button>`;
+    }
+    html += `<button class="page-btn" onclick="loadReports(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>›</button>`;
+    el.innerHTML = html;
+  }
+
+  /* ── 유틸 ── */
+  function targetTypeLabel(t) {
+    if (t === 'EPISODE_COMMENT') return '<span class="st-badge st-pending" style="background:rgba(59,130,246,0.12);color:#60a5fa;border-color:rgba(59,130,246,0.3)">댓글</span>';
+    if (t === 'USER_MENTORSHIP') return '<span class="st-badge st-approved">멘토십</span>';
+    return `<span>${escHtml(t || '-')}</span>`;
+  }
+
+  const ST = {
+    PENDING:  { label: '대기',  cls: 'st-pending'  },
+    RESOLVED: { label: '해결',  cls: 'st-resolved' },
+    REJECTED: { label: '기각',  cls: 'st-rejected' },
+    CLOSED:   { label: '종료',  cls: 'st-closed'   },
+  };
+  function stBadge(status) {
+    const s = ST[status] || { label: status || '-', cls: 'st-closed' };
+    return `<span class="st-badge ${s.cls}">${s.label}</span>`;
+  }
+  function stLabel(status) { return ST[status]?.label || status; }
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

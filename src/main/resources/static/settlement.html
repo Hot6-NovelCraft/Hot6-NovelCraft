@@ -246,6 +246,8 @@
                 <span class="amount-unit">원</span>
             </div>
             <div class="amount-hint" id="amount-hint">최소 10,000원 · 최대 <span id="max-amount">···</span>원</div>
+            <button class="nc-btn nc-btn--primary nc-btn--full" style="margin-top:14px"
+                    onclick="openConfirmModal()">환전 신청</button>
         </div>
 
         <!-- 입금 계좌 -->
@@ -272,7 +274,7 @@
                 <span class="s-value highlight" id="sum-request">0원</span>
             </div>
             <div class="summary-row">
-                <span class="s-label">수수료 (3.3%)</span>
+                <span class="s-label">수수료 (10%)</span>
                 <span class="s-value" id="sum-fee">0원</span>
             </div>
             <hr class="summary-divider">
@@ -281,8 +283,7 @@
                 <span class="s-value actual" id="sum-actual">0원</span>
             </div>
             <div class="summary-note">신청 후 3~5영업일 내<br>등록 계좌로 입금</div>
-            <button class="nc-btn nc-btn--primary nc-btn--full" style="margin-top:16px"
-                    onclick="openConfirmModal()">다음 → 최종 확인</button>
+            <div id="latest-withdrawal" style="margin-top:14px"></div>
         </div>
 
         <!-- 이번 달 현황 -->
@@ -368,7 +369,7 @@
             <span class="c-value" id="conf-request">0원</span>
         </div>
         <div class="confirm-row">
-            <span class="c-label">세금 원천징수 (3.3%)</span>
+            <span class="c-label">수수료 (10%)</span>
             <span class="c-value" id="conf-fee" style="color:#f87171">0원</span>
         </div>
         <div class="confirm-row">
@@ -424,6 +425,7 @@
     /* ── 상태 ── */
     let overviewData = null;
     let selectedBankName = '';
+    let pendingBankAccountId = null;
     let currentPeriod = 'MONTHLY';
     let currentHistoryStatus = '';
 
@@ -513,6 +515,7 @@
             renderRevenueBreakdown(data);
             renderMonthlyStatus(data);
             renderAccount(data?.bankAccount);
+            loadLatestWithdrawal();
         } catch (e) {
             Toast.error('수익 정보를 불러오지 못했습니다');
         }
@@ -523,16 +526,14 @@
         const el = document.getElementById('revenue-breakdown');
         const available = data?.availableBalance ?? 0;
         const total = data?.totalEarned ?? 0;
-        const fee = Math.floor(total * 0.033);
-        const episodeSale = Math.floor(total * 0.62);
-        const subShare = Math.floor(total * 0.267);
-        const support = total - episodeSale - subShare;
+        const episodeSale = data?.episodeSaleAmount ?? 0;
+        const subShare = data?.subscriptionAmount ?? 0;
+        const fee = Math.floor(total * 0.10);
 
         el.innerHTML = `
       <div class="revenue-row"><span class="label">회차 판매 수익</span><span class="amount">${episodeSale.toLocaleString()}원</span></div>
       <div class="revenue-row"><span class="label">구독 분배 수익</span><span class="amount">${subShare.toLocaleString()}원</span></div>
-      <div class="revenue-row"><span class="label">후원 수익</span><span class="amount">${support.toLocaleString()}원</span></div>
-      <div class="revenue-row"><span class="label">세금 원천징수 (3.3%)</span><span class="amount minus">-${fee.toLocaleString()}원</span></div>
+      <div class="revenue-row"><span class="label">수수료 (10%)</span><span class="amount minus">-${fee.toLocaleString()}원</span></div>
       <div class="revenue-row total">
         <span class="label">환전 가능 금액</span>
         <span class="amount total-amt">${available.toLocaleString()}원</span>
@@ -621,7 +622,7 @@
     }
 
     function updateSummary(amount) {
-        const fee = Math.floor(amount * 0.033);
+        const fee = Math.floor(amount * 0.10);
         const actual = amount - fee;
         document.getElementById('sum-request').textContent = `${amount.toLocaleString()}원`;
         document.getElementById('sum-fee').textContent = `${fee.toLocaleString()}원`;
@@ -638,7 +639,7 @@
         if (amount < 10000) { Toast.error('최소 10,000원 이상 입력해주세요'); return; }
         if (amount > available) { Toast.error('환전 가능 금액을 초과했습니다'); return; }
 
-        const fee = Math.floor(amount * 0.033);
+        const fee = Math.floor(amount * 0.10);
         const actual = amount - fee;
         document.getElementById('conf-request').textContent = `${amount.toLocaleString()}원`;
         document.getElementById('conf-fee').textContent = `-${fee.toLocaleString()}원`;
@@ -670,6 +671,7 @@
         document.getElementById('input-holder').value = '';
         document.getElementById('input-verify-code').value = '';
         selectedBankName = '';
+        pendingBankAccountId = null;
         document.querySelectorAll('.bank-btn').forEach(b => b.classList.remove('active'));
         Modal.open('modal-bank');
     }
@@ -687,9 +689,10 @@
         if (!accountNumber) { Toast.error('계좌번호를 입력해주세요'); return; }
         if (!accountHolder) { Toast.error('예금주를 입력해주세요'); return; }
         try {
-            await api.post('/revenues/me/account/verify', {
+            const res = await api.post('/revenues/me/account/verify', {
                 bankName: selectedBankName, accountNumber, accountHolder
             }, true);
+            pendingBankAccountId = res?.bankAccountId;
             document.getElementById('bank-form-area').style.display = 'none';
             document.getElementById('verify-form-area').style.display = 'block';
             Toast.info('1원이 입금됩니다. 입금자명 숫자를 입력해주세요');
@@ -699,10 +702,15 @@
     }
 
     async function confirmBankVerify() {
-        const code = parseInt(document.getElementById('input-verify-code').value);
-        if (!code) { Toast.error('인증 코드를 입력해주세요'); return; }
+        const rawCode = document.getElementById('input-verify-code').value.trim();
+        if (!rawCode) { Toast.error('인증 코드를 입력해주세요'); return; }
+        const verificationCode = rawCode.padStart(4, '0');
+        if (!pendingBankAccountId) { Toast.error('인증 요청을 먼저 진행해주세요'); return; }
         try {
-            const res = await api.post('/revenues/me/account/verify/confirm', { verificationAmount: code }, true);
+            const res = await api.post('/revenues/me/account/verify/confirm', {
+                bankAccountId: pendingBankAccountId,
+                verificationCode
+            }, true);
             if (res?.isVerified) {
                 Toast.success('계좌 인증이 완료되었습니다');
                 Modal.close('modal-bank');
@@ -712,6 +720,35 @@
             }
         } catch (e) {
             Toast.error(e.message || '인증 실패');
+        }
+    }
+
+    /* ── 최근 환전 상태 (사이드바) ── */
+    async function loadLatestWithdrawal() {
+        const el = document.getElementById('latest-withdrawal');
+        if (!el) return;
+        try {
+            const res = await api.get('/revenues/me/exchanges?page=0&size=1', true);
+            const latest = res?.content?.[0];
+            if (!latest) {
+                el.innerHTML = `<div style="font-size:.78rem;color:var(--text3);text-align:center;padding:6px 0">최근 환전 내역 없음</div>`;
+                return;
+            }
+            const STATUS_LABEL = { PENDING:'처리 대기', APPROVED:'승인됨', COMPLETED:'입금 완료', REJECTED:'거절됨' };
+            const STATUS_COLOR = { PENDING:'#fbbf24', APPROVED:'var(--primary-light)', COMPLETED:'var(--success)', REJECTED:'#f87171' };
+            const color = STATUS_COLOR[latest.status] || 'var(--text2)';
+            const label = STATUS_LABEL[latest.status] || latest.status;
+            el.innerHTML = `
+              <div style="border:1px solid var(--border);border-radius:8px;padding:12px">
+                <div style="font-size:.72rem;color:var(--text3);margin-bottom:6px">최근 환전 신청</div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-weight:700;font-size:.9rem">${(latest.requestAmount||0).toLocaleString()}원</span>
+                  <span style="font-size:.75rem;padding:3px 10px;border-radius:10px;background:${color}22;color:${color};border:1px solid ${color}44">${label}</span>
+                </div>
+                <div style="font-size:.72rem;color:var(--text3);margin-top:4px">실수령 ${(latest.actualAmount||0).toLocaleString()}원 · ${formatDate(latest.requestedAt)}</div>
+              </div>`;
+        } catch {
+            el.innerHTML = '';
         }
     }
 

@@ -29,6 +29,7 @@ public class CustomEpisodeCommentRepositoryImpl implements CustomEpisodeCommentR
         List<EpisodeCommentListResponse> content = queryFactory
                 .select(Projections.constructor(EpisodeCommentListResponse.class,
                         comment.id,
+                        comment.userId,
                         user.nickname,
                         comment.content,
                         comment.createdAt

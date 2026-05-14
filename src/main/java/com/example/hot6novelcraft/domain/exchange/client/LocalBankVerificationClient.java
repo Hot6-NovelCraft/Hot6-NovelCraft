@@ -49,8 +49,8 @@ public class LocalBankVerificationClient implements BankVerificationClient {
         }
 
         if (holder == null) {
-            log.warn("[Local] 등록되지 않은 가상 계좌 요청");
-            throw new ServiceErrorException(ExchangeExceptionEnum.BANK_API_CALL_FAILED);
+            log.debug("[Local] 등록되지 않은 계좌 - 시뮬레이션 모드로 예금주 확인 통과");
+            return null; // null 반환 시 서비스에서 예금주 검증 스킵
         }
 
         log.debug("[Local] 예금주 확인 완료");

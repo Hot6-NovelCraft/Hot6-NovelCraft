@@ -110,7 +110,15 @@
             padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.045);
         }
         .cmt-item:last-child { border-bottom: none; }
-        .cmt-nick { font-size: 0.72rem; color: var(--primary-light); font-weight: 700; margin-bottom: 4px; }
+        .cmt-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+        .cmt-nick { font-size: 0.72rem; color: var(--primary-light); font-weight: 700; }
+        .cmt-report-btn {
+            padding: 2px 8px; border-radius: 5px; font-size: 0.65rem; font-weight: 600;
+            background: transparent; border: 1px solid rgba(239,68,68,0.25);
+            color: rgba(239,68,68,0.55); cursor: pointer; font-family: inherit;
+            transition: all 0.15s; flex-shrink: 0;
+        }
+        .cmt-report-btn:hover { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.55); color: #f87171; }
         .cmt-body { font-size: 0.8rem; color: rgba(255,255,255,0.72); line-height: 1.55; word-break: break-all; }
         .cmt-date { font-size: 0.68rem; color: rgba(255,255,255,0.28); margin-top: 4px; }
         .cmts-empty { font-size: 0.8rem; color: rgba(255,255,255,0.28); padding: 18px 0; text-align: center; }
@@ -255,6 +263,51 @@
     <button class="btn-nav" id="btn-next" onclick="goNext()" disabled>다음화</button>
 </footer>
 
+<!-- Report Modal -->
+<div class="modal-overlay" id="report-modal">
+    <div class="modal-box" style="max-width:420px">
+        <div class="modal-title" style="color:#f87171">🚨 댓글 신고</div>
+        <div style="margin-bottom:14px">
+            <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:10px;font-weight:600;letter-spacing:0.04em">신고 사유 선택</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px" id="report-presets">
+                <button class="report-preset" onclick="selectPreset(this,'스팸 / 광고성 내용')">스팸·광고</button>
+                <button class="report-preset" onclick="selectPreset(this,'욕설 / 비방')">욕설·비방</button>
+                <button class="report-preset" onclick="selectPreset(this,'음란물 / 성인 내용')">음란물</button>
+                <button class="report-preset" onclick="selectPreset(this,'불법 정보 포함')">불법 정보</button>
+                <button class="report-preset" onclick="selectPreset(this,'작품 스포일러')">스포일러</button>
+                <button class="report-preset" onclick="selectPreset(this,'기타')">기타</button>
+            </div>
+        </div>
+        <div style="margin-bottom:18px">
+            <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:6px;font-weight:600;letter-spacing:0.04em">상세 사유 <span style="color:rgba(255,255,255,0.25)">(선택)</span></div>
+            <textarea id="report-reason" maxlength="200"
+                placeholder="신고 사유를 자세히 입력해 주세요 (최대 200자)"
+                style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+                       border-radius:9px;padding:10px 12px;color:rgba(255,255,255,0.8);
+                       font-family:inherit;font-size:0.8rem;resize:none;outline:none;
+                       line-height:1.5;min-height:80px;"
+                oninput="this.style.borderColor=this.value?'rgba(239,68,68,0.45)':'rgba(255,255,255,0.1)'"
+            ></textarea>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeReportModal()">취소</button>
+            <button class="btn-confirm" id="report-submit-btn"
+                    style="background:#ef4444;flex:2"
+                    onclick="submitReport()">신고 접수</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .report-preset {
+        padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;
+        background: transparent; border: 1px solid rgba(239,68,68,0.28);
+        color: rgba(239,68,68,0.6); cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .report-preset:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.5); color: #f87171; }
+    .report-preset.selected { background: rgba(239,68,68,0.18); border-color: #ef4444; color: #f87171; }
+</style>
+
 <!-- Purchase Modal -->
 <div class="modal-overlay" id="purchase-modal">
     <div class="modal-box">
@@ -277,6 +330,8 @@
     let pendingEp = null;
     let cmtPage = 0;
     let cmtTotalPages = 0;
+    let reportTargetId = null;       // commentId
+    let reportTargetUserId = null;   // comment author's userId
 
     function esc(s) {
         if (s == null) return '';
@@ -517,11 +572,17 @@
             if (!list.length && !append) {
                 listEl.innerHTML = '<div class="cmts-empty">아직 댓글이 없습니다.</div>';
             } else {
+                const myNickname = Auth.getUser()?.nickname;
                 list.forEach(c => {
+                    const commentId = c.commentId || c.id;
+                    const isMyComment = myNickname && myNickname === c.userNickname;
                     const item = document.createElement('div');
                     item.className = 'cmt-item';
                     item.innerHTML = `
-                        <div class="cmt-nick">${esc(c.userNickname || '익명')}</div>
+                        <div class="cmt-top">
+                            <div class="cmt-nick">${esc(c.userNickname || '익명')}</div>
+                            ${!isMyComment ? `<button class="cmt-report-btn" onclick="openReportModal(${commentId}, ${c.userId})">신고</button>` : ''}
+                        </div>
                         <div class="cmt-body">${esc(c.content)}</div>
                         <div class="cmt-date">${fmtDate(c.createdAt)}</div>`;
                     listEl.appendChild(item);
@@ -580,7 +641,76 @@
         document.getElementById('purchase-modal').addEventListener('click', function (e) {
             if (e.target === this) closeModal();
         });
+        document.getElementById('report-modal').addEventListener('click', function (e) {
+            if (e.target === this) closeReportModal();
+        });
     });
+
+    // ── Report ──
+    function openReportModal(commentId, userId) {
+        if (!Auth.isLoggedIn()) {
+            window.location.href = '/login.html?redirect=' + encodeURIComponent(location.href);
+            return;
+        }
+        reportTargetId = commentId;
+        reportTargetUserId = userId;
+        // 초기화
+        document.getElementById('report-reason').value = '';
+        document.getElementById('report-reason').style.borderColor = 'rgba(255,255,255,0.1)';
+        document.querySelectorAll('.report-preset').forEach(b => b.classList.remove('selected'));
+        const btn = document.getElementById('report-submit-btn');
+        btn.disabled = false; btn.textContent = '신고 접수';
+        document.getElementById('report-modal').classList.add('active');
+    }
+
+    function closeReportModal() {
+        document.getElementById('report-modal').classList.remove('active');
+        reportTargetId = null;
+        reportTargetUserId = null;
+    }
+
+    function selectPreset(btn, text) {
+        document.querySelectorAll('.report-preset').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const ta = document.getElementById('report-reason');
+        ta.value = text;
+        ta.style.borderColor = 'rgba(239,68,68,0.45)';
+    }
+
+    async function submitReport() {
+        if (!reportTargetId) return;
+        if (!reportTargetUserId) {
+            Toast.error('신고 대상 정보를 불러올 수 없습니다. 페이지를 새로고침 해주세요.');
+            return;
+        }
+        const reason = document.getElementById('report-reason').value.trim();
+        if (!reason) {
+            document.getElementById('report-reason').style.borderColor = '#ef4444';
+            document.getElementById('report-reason').focus();
+            Toast.error('신고 사유를 입력해 주세요');
+            return;
+        }
+        const btn = document.getElementById('report-submit-btn');
+        btn.disabled = true; btn.textContent = '접수 중...';
+        try {
+            await api.post('/reports', {
+                targetType: 'COMMENTS',
+                targetId: reportTargetUserId,
+                commentId: reportTargetId,
+                reason,
+            }, true);
+            Toast.success('신고가 접수되었습니다. 검토 후 처리됩니다.');
+            closeReportModal();
+        } catch (e) {
+            if (e.message && (e.message.includes('이미') || e.message.includes('409'))) {
+                Toast.info('이미 신고한 댓글입니다');
+                closeReportModal();
+            } else {
+                Toast.error(e.message || '신고 접수에 실패했습니다');
+                btn.disabled = false; btn.textContent = '신고 접수';
+            }
+        }
+    }
 
     // Global expose
     window.goToDetail    = goToDetail;
@@ -591,6 +721,10 @@
     window.closeModal    = closeModal;
     window.showBuyModal  = showBuyModal;
     window.loadMoreComments = loadMoreComments;
+    window.openReportModal  = openReportModal;
+    window.closeReportModal = closeReportModal;
+    window.selectPreset     = selectPreset;
+    window.submitReport     = submitReport;
 
 })();
 </script>

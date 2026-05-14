@@ -27,6 +27,7 @@ public class BankAccountService {
     private final AccountVerificationRepository accountVerificationRepository;
     private final BankVerificationClient bankVerificationClient;
     private final AesEncryptionUtil aesEncryptionUtil;
+    private final RevenueService revenueService;
 
     /**
      * 계좌 등록 + 1원 인증 요청
@@ -44,22 +45,20 @@ public class BankAccountService {
             throw new ServiceErrorException(ExchangeExceptionEnum.BANK_API_UNAVAILABLE);
         }
 
-        // 이미 인증된 계좌가 있는지 확인
-        if (bankAccountRepository.existsByUserIdAndIsVerifiedTrue(userId)) {
-            throw new ServiceErrorException(ExchangeExceptionEnum.BANK_ACCOUNT_ALREADY_VERIFIED);
-        }
+        // 기존 계좌(미인증/인증 모두) 삭제 — 재시도 및 계좌 변경 허용
+        bankAccountRepository.deleteAllByUserId(userId);
 
-        // 계좌번호 암호화 후 중복 확인
+        // 계좌번호 암호화 — 타인이 이미 인증한 번호인지만 차단
         String encryptedAccountNumber = aesEncryptionUtil.encrypt(request.accountNumber());
-        if (bankAccountRepository.existsByAccountNumber(encryptedAccountNumber)) {
+        if (bankAccountRepository.existsByAccountNumberAndIsVerifiedTrue(encryptedAccountNumber)) {
             throw new ServiceErrorException(ExchangeExceptionEnum.BANK_ACCOUNT_DUPLICATE);
         }
 
-        // 예금주 실명 확인 (외부 API)
+        // 예금주 실명 확인 (외부 API) — null 반환 시 시뮬레이션 모드이므로 검증 스킵
         String actualHolder = bankVerificationClient.verifyAccountOwner(
                 request.bankName(), request.accountNumber()
         );
-        if (!request.accountHolder().equals(actualHolder)) {
+        if (actualHolder != null && !request.accountHolder().equals(actualHolder)) {
             throw new ServiceErrorException(ExchangeExceptionEnum.BANK_ACCOUNT_HOLDER_MISMATCH);
         }
 
@@ -138,6 +137,8 @@ public class BankAccountService {
         // 인증 성공 처리
         verification.verify();
         bankAccount.verify();
+
+        revenueService.evictRevenueOverviewCache(userId); // 계좌 인증 후 캐시 무효화
 
         log.info("계좌 인증 완료 - userId: {}, bankAccountId: {}", userId, bankAccount.getId());
         return VerificationConfirmResponse.success(request.bankAccountId());
