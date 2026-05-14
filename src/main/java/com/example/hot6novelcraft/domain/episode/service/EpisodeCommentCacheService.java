@@ -21,7 +21,7 @@ public class EpisodeCommentCacheService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
 
-    private static final String COMMENT_KEY_PREFIX = "comment::";
+    private static final String COMMENT_KEY_PREFIX = "comment:v2::";
     private static final Duration TTL = Duration.ofMinutes(30);
 
     // 댓글 캐시 조회
