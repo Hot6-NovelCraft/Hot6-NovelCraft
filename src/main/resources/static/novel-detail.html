@@ -320,6 +320,16 @@
             btn.classList.toggle('active', bookmarked);
             localStorage.setItem('bm_' + novelId, bookmarked ? '1' : '0');
             Toast.success(bookmarked ? '찜 목록에 추가했습니다!' : '찜을 취소했습니다');
+            // 찜할 때 서재 BOOKMARKED 자동 등록 (이미 있으면 무시)
+            if (bookmarked && novelData) {
+                api.post('/libraries/' + novelId, {
+                    novelId: Number(novelId),
+                    novelTitle: novelData.title,
+                    authorNickname: novelData.authorNickname || '작가',
+                    coverImageUrl: novelData.coverImageUrl || null,
+                    libraryType: 'BOOKMARKED'
+                }, true).catch(() => {});
+            }
         } catch (e) {
             Toast.error(e.message || '요청 실패');
         } finally {

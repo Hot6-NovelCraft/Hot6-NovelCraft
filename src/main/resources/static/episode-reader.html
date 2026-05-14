@@ -368,6 +368,27 @@
         else history.back();
     }
 
+    // ── 서재 읽는 중 등록 ──
+    async function addToLibraryReading() {
+        if (!Auth.isLoggedIn() || !novelId) return;
+        try {
+            const res = await fetch('/api/novels/' + novelId);
+            if (!res.ok) return;
+            const json = await res.json();
+            const novel = json.data;
+            if (!novel?.title || !novel?.authorNickname) return;
+            await api.post('/libraries/' + novelId, {
+                novelId: Number(novelId),
+                novelTitle: novel.title,
+                authorNickname: novel.authorNickname,
+                coverImageUrl: novel.coverImageUrl || null,
+                libraryType: 'READING'
+            }, true);
+        } catch {
+            // 이미 서재에 있거나 오류 → 무시
+        }
+    }
+
     // ── Load Episode ──
     async function loadEpisode() {
         const el = document.getElementById('r-content');
@@ -393,6 +414,7 @@
                 localStorage.setItem('ep_purchased_' + episodeId, '1');
             }
             renderEpisode(episodeData);
+            addToLibraryReading(); // 서재 읽는 중 자동 등록 (non-blocking)
         } catch (err) {
             el.innerHTML = `<div class="error-box">${esc(err.message)}</div>`;
         }

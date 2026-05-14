@@ -275,7 +275,7 @@
         <button class="lib-tab active" data-type="ALL">전체</button>
         <button class="lib-tab" data-type="READING">읽는 중</button>
         <button class="lib-tab" data-type="COMPLETED">완독</button>
-        <button class="lib-tab" data-type="BOOKMARK">찜 목록</button>
+        <button class="lib-tab" data-type="BOOKMARKED">찜 목록</button>
         <button class="lib-tab" data-type="PURCHASED">구매 내역</button>
         <button class="lib-tab" data-type="EXTERNAL">외부 도서</button>
       </div>
@@ -465,7 +465,7 @@
     const TYPE_META = {
       READING:   { label: '읽는 중',   icon: '📖', btn: '이어읽기', btnClass: 'novel-action-btn--continue' },
       COMPLETED: { label: '완독',      icon: '✅', btn: '다시 읽기', btnClass: '' },
-      BOOKMARK:  { label: '찜 목록',   icon: '❤️', btn: '읽기',     btnClass: '' },
+      BOOKMARKED:  { label: '찜 목록',   icon: '❤️', btn: '읽기',     btnClass: '' },
       PURCHASED: { label: '구매 내역', icon: '💎', btn: '읽기',     btnClass: '' },
     };
 
@@ -556,7 +556,7 @@
         const [reading, completed, bookmark, purchased] = await Promise.allSettled([
           api.get('/libraries/me?libraryType=READING&page=1&size=5&sort=LATEST', true),
           api.get('/libraries/me?libraryType=COMPLETED&page=1&size=5&sort=LATEST', true),
-          api.get('/libraries/me?libraryType=BOOKMARK&page=1&size=5&sort=LATEST', true),
+          api.get('/libraries/me?libraryType=BOOKMARKED&page=1&size=5&sort=LATEST', true),
           api.get('/libraries/me?libraryType=PURCHASED&page=1&size=5&sort=LATEST', true),
         ]);
 
@@ -579,11 +579,18 @@
           return;
         }
 
-        el.innerHTML =
+        const html =
           renderSection('READING', r.list, r.total) +
           renderSection('COMPLETED', c.list, c.total) +
-          renderSection('BOOKMARK', b.list, b.total) +
+          renderSection('BOOKMARKED', b.list, b.total) +
           renderSection('PURCHASED', p.list, p.total);
+
+        el.innerHTML = html.trim() ? html : `
+          <div class="empty-state">
+            <div class="empty-state__icon">📚</div>
+            <div class="empty-state__text">서재가 비어 있습니다</div>
+            <button class="nc-btn nc-btn--primary nc-btn--sm" onclick="window.location.href='/novel-list.html'">소설 둘러보기</button>
+          </div>`;
 
       } catch {
         el.innerHTML = '<div class="empty-state"><div class="empty-state__text">서재를 불러오지 못했습니다</div></div>';
@@ -788,8 +795,12 @@
           <a href="/mypage.html?tab=subscription" class="sub-btn">구독 관리</a>`;
       } catch {
         el.innerHTML = `
-          <div class="sub-status-none">확인 불가</div>
-          <a href="/mypage.html?tab=subscription" class="sub-btn">구독 페이지</a>`;
+          <div class="sub-status-none">구독 없음</div>
+          <div class="side-stat-row">
+            <span class="side-stat-label">혜택</span>
+            <span class="side-stat-value">-</span>
+          </div>
+          <a href="/mypage.html?tab=subscription" class="sub-btn">구독하기</a>`;
       }
     }
 
@@ -823,7 +834,7 @@
 
       // URL 파라미터로 탭 초기화
       const urlTab = new URLSearchParams(location.search).get('tab');
-      const validTabs = ['READING', 'COMPLETED', 'BOOKMARK', 'PURCHASED', 'EXTERNAL'];
+      const validTabs = ['READING', 'COMPLETED', 'BOOKMARKED', 'PURCHASED', 'EXTERNAL'];
       if (urlTab && validTabs.includes(urlTab.toUpperCase())) {
         const target = document.querySelector(`.lib-tab[data-type="${urlTab.toUpperCase()}"]`);
         if (target) target.click();
