@@ -391,7 +391,31 @@
     try {
       const data = await api.get(endpoint, true);
       renderKpis(data, mode);
-      renderCharts(data);
+
+      // 역할·소설 상태 분포는 필터 쿼리 병렬 호출로 구성
+      const [rdr, aut, adm, ong, cmp, hia, pnd] = await Promise.allSettled([
+        api.get(`${endpoint}?role=READER`, true),
+        api.get(`${endpoint}?role=AUTHOR`, true),
+        api.get(`${endpoint}?role=ADMIN`, true),
+        api.get(`${endpoint}?novelStatus=ONGOING`, true),
+        api.get(`${endpoint}?novelStatus=COMPLETED`, true),
+        api.get(`${endpoint}?novelStatus=HIATUS`, true),
+        api.get(`${endpoint}?novelStatus=PENDING`, true),
+      ]);
+      renderCharts({
+        roleDistribution: {
+          READER: rdr.value?.userStatus?.filterUserRole ?? 0,
+          AUTHOR: aut.value?.userStatus?.filterUserRole ?? 0,
+          ADMIN:  adm.value?.userStatus?.filterUserRole ?? 0,
+        },
+        novelStatusDistribution: {
+          ONGOING:   ong.value?.novelStatus?.novelsByFilter ?? 0,
+          COMPLETED: cmp.value?.novelStatus?.novelsByFilter ?? 0,
+          HIATUS:    hia.value?.novelStatus?.novelsByFilter ?? 0,
+          PENDING:   pnd.value?.novelStatus?.novelsByFilter ?? 0,
+        }
+      });
+
       if (lastUpdated) lastUpdated.textContent = '갱신: ' + new Date().toLocaleTimeString('ko-KR');
       if (mode === 'live' && currentMode === 'live') {
         liveTimer = setTimeout(() => loadDashboard('live'), 30000);
@@ -419,17 +443,14 @@
 
   function renderKpis(data, mode) {
     const label = mode === 'live' ? '실시간' : (mode === 'history' ? '해당일' : '누적');
-    setKpi('users',
-      data?.newUserCount ?? data?.newUsers ?? data?.totalUserCount ?? data?.userCount ?? 0,
-      `${label} 신규 가입자`);
-    setKpi('novels',
-      data?.newNovelCount ?? data?.newNovels ?? data?.totalNovelCount ?? data?.novelCount ?? 0,
-      `${label} 등록 소설`);
-    const rev = data?.totalRevenue ?? data?.revenue ?? data?.dailyRevenue ?? 0;
-    setKpi('revenue', `₩${Number(rev).toLocaleString()}`, `${label} 총 매출`);
-    setKpi('mentors',
-      data?.pendingMentorCount ?? data?.mentorApplicationCount ?? data?.newMentorApplications ?? 0,
-      '대기 중 멘토 신청');
+    // AdminDashboardResponse: { userStatus, novelStatus, mentorStatus }
+    const u = data?.userStatus  || {};
+    const n = data?.novelStatus || {};
+    const m = data?.mentorStatus || {};
+    setKpi('users',  u.newUsersToday  ?? u.totalUsers  ?? 0, `${label} 신규 가입자 (전체: ${(u.totalUsers ?? 0).toLocaleString()})`);
+    setKpi('novels', n.newNovelsToday ?? n.totalNovels ?? 0, `${label} 신규 소설 (전체: ${(n.totalNovels ?? 0).toLocaleString()})`);
+    setKpi('revenue', `${(m.totalMentor ?? 0).toLocaleString()}명`, '전체 멘토 수');
+    setKpi('mentors', m.newMentorsToday ?? 0, '오늘 신규 멘토');
   }
 
   function setKpi(key, value, sub) {
@@ -440,19 +461,18 @@
   }
 
   function renderCharts(data) {
-    const roles = data?.userRoleDistribution ?? data?.roleDistribution ?? {};
+    const roles  = data?.roleDistribution  || {};
+    const novels = data?.novelStatusDistribution || {};
     renderBarChart('role-chart', [
-      { label: '독자',   value: roles.READER ?? data?.readerCount ?? 0,  color: '#3b82f6' },
-      { label: '작가',   value: roles.AUTHOR ?? data?.authorCount ?? 0,  color: '#10b981' },
-      { label: '멘토',   value: roles.MENTOR ?? data?.mentorCount ?? 0,  color: '#a855f7' },
-      { label: '어드민', value: roles.ADMIN  ?? data?.adminCount  ?? 0,  color: '#f59e0b' },
+      { label: '독자',   value: roles.READER ?? 0, color: '#3b82f6' },
+      { label: '작가',   value: roles.AUTHOR ?? 0, color: '#10b981' },
+      { label: '어드민', value: roles.ADMIN  ?? 0, color: '#f59e0b' },
     ]);
-    const novels = data?.novelStatusDistribution ?? data?.novelStats ?? {};
     renderBarChart('novel-status-chart', [
-      { label: '연재중', value: novels.ONGOING   ?? data?.ongoingNovelCount   ?? 0, color: '#10b981' },
-      { label: '완결',   value: novels.COMPLETED ?? data?.completedNovelCount ?? 0, color: '#6366f1' },
-      { label: '중단',   value: novels.HIATUS    ?? data?.hiatusNovelCount    ?? 0, color: '#f59e0b' },
-      { label: '보류',   value: novels.PENDING   ?? data?.pendingNovelCount   ?? 0, color: '#9ca3af' },
+      { label: '연재중', value: novels.ONGOING   ?? 0, color: '#10b981' },
+      { label: '완결',   value: novels.COMPLETED ?? 0, color: '#6366f1' },
+      { label: '중단',   value: novels.HIATUS    ?? 0, color: '#f59e0b' },
+      { label: '보류',   value: novels.PENDING   ?? 0, color: '#9ca3af' },
     ]);
   }
 
@@ -474,7 +494,7 @@
   async function loadRecentReports() {
     const tbody = document.getElementById('recent-reports-body');
     try {
-      const res = await api.get('/admin/reports?status=PENDING&page=0&size=5', true);
+      const res = await api.get('/admin/reports?status=REGISTER&page=0&size=5', true);
       const list = res?.content || [];
       if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="4" class="nc-empty" style="padding:20px;text-align:center;color:var(--text3)">대기 중인 신고 없음</td></tr>';
@@ -498,8 +518,8 @@
   async function loadRecentMentors() {
     const tbody = document.getElementById('recent-mentors-body');
     try {
-      const res = await api.get('/admin/mentors?status=PENDING&page=0&size=5', true);
-      const list = res?.content || res || [];
+      const res = await api.get('/admin/mentors/pending', true);
+      const list = Array.isArray(res) ? res.slice(0, 5) : (res?.content || []);
       if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="4" class="nc-empty" style="padding:20px;text-align:center;color:var(--text3)">대기 중인 신청 없음</td></tr>';
         return;
@@ -528,11 +548,16 @@
   }
 
   const ST = {
-    PENDING:  { label: '대기',  cls: 'st-pending'  },
-    RESOLVED: { label: '해결',  cls: 'st-resolved' },
-    REJECTED: { label: '기각',  cls: 'st-rejected' },
-    APPROVED: { label: '승인',  cls: 'st-approved' },
-    CLOSED:   { label: '종료',  cls: 'st-closed'   },
+    // MentorStatus
+    PENDING:    { label: '대기',    cls: 'st-pending'  },
+    APPROVED:   { label: '승인',    cls: 'st-approved' },
+    REJECTED:   { label: '거절',    cls: 'st-rejected' },
+    // ReportStatus
+    REGISTER:   { label: '접수',    cls: 'st-pending'  },
+    COMPLETION: { label: '처리완료', cls: 'st-resolved' },
+    // 기타
+    RESOLVED:   { label: '해결',    cls: 'st-resolved' },
+    CLOSED:     { label: '종료',    cls: 'st-closed'   },
   };
   function stBadge(status) {
     const s = ST[status] || { label: status || '-', cls: 'st-closed' };

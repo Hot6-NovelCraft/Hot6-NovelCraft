@@ -269,6 +269,64 @@
             .novel-card { flex-wrap: wrap; }
             .novel-card__actions { width: 100%; justify-content: flex-end; }
         }
+
+        /* ── 관리자 대시보드 ── */
+        #admin-section { display: none; }
+        .admin-section-title {
+            font-size: 1rem; font-weight: 700; margin-bottom: 14px;
+            color: var(--text1); display: flex; align-items: center; gap: 8px;
+        }
+        .admin-badge {
+            font-size: 0.68rem; font-weight: 700; padding: 2px 8px;
+            border-radius: 20px; background: rgba(239,68,68,0.12);
+            color: #ef4444; border: 1px solid rgba(239,68,68,0.3);
+        }
+        .admin-stats-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+            margin-bottom: 16px;
+        }
+        @media(max-width: 760px) { .admin-stats-grid { grid-template-columns: repeat(3, 1fr); } }
+        .admin-stat-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px 16px;
+        }
+        .admin-stat-card__label { font-size: 0.72rem; color: var(--text3); margin-bottom: 6px; }
+        .admin-stat-card__value {
+            font-size: 1.3rem; font-weight: 900; color: var(--text1);
+            font-family: 'Noto Serif KR', serif;
+        }
+        .admin-stat-card__sub { font-size: 0.72rem; color: var(--primary-light); margin-top: 4px; }
+        .admin-filter-row {
+            display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+            margin-bottom: 12px;
+        }
+        .admin-select {
+            padding: 6px 12px; border-radius: 8px; font-size: 0.8rem;
+            background: var(--surface2); border: 1px solid var(--border);
+            color: var(--text1); font-family: inherit; cursor: pointer;
+        }
+        .admin-btn {
+            padding: 6px 14px; border-radius: 8px; font-size: 0.8rem;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            background: var(--primary); border: none; color: white;
+            transition: opacity 0.15s;
+        }
+        .admin-btn:hover { opacity: 0.85; }
+        .admin-btn--outline {
+            background: transparent; border: 1px solid var(--border); color: var(--text2);
+        }
+        .admin-btn--outline:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .admin-history-row {
+            display: flex; gap: 8px; align-items: center; margin-bottom: 14px;
+        }
+        .admin-date-input {
+            padding: 6px 10px; border-radius: 8px; font-size: 0.8rem;
+            background: var(--surface2); border: 1px solid var(--border);
+            color: var(--text1); font-family: inherit;
+        }
+        .admin-divider {
+            border: none; border-top: 1px solid var(--border); margin: 20px 0;
+        }
     </style>
 </head>
 <body>
@@ -280,6 +338,74 @@
         <div class="dash-header__title">작가 대시보드</div>
         <button class="btn-header btn-header--primary" onclick="window.location.href='/settlement.html'">환전 신청</button>
         <button class="btn-header btn-header--outline" onclick="window.location.href='/mypage.html'">회원정보 수정</button>
+    </div>
+
+    <!-- 관리자 전용 플랫폼 통계 -->
+    <div id="admin-section">
+        <hr class="admin-divider" style="margin-top:0">
+        <div class="admin-section-title">
+            플랫폼 통계 <span class="admin-badge">ADMIN</span>
+        </div>
+
+        <!-- 실시간 통계 카드 -->
+        <div class="admin-stats-grid">
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">전체 유저</div>
+                <div class="admin-stat-card__value" id="adm-total-users">-</div>
+                <div class="admin-stat-card__sub" id="adm-new-users-today"></div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">역할 필터 유저</div>
+                <div class="admin-stat-card__value" id="adm-filter-users">-</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">전체 소설</div>
+                <div class="admin-stat-card__value" id="adm-total-novels">-</div>
+                <div class="admin-stat-card__sub" id="adm-new-novels-today"></div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">필터 소설</div>
+                <div class="admin-stat-card__value" id="adm-filter-novels">-</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">전체 멘토</div>
+                <div class="admin-stat-card__value" id="adm-total-mentors">-</div>
+                <div class="admin-stat-card__sub" id="adm-new-mentors-today"></div>
+            </div>
+        </div>
+
+        <!-- 실시간 필터 -->
+        <div class="admin-filter-row">
+            <select class="admin-select" id="adm-role-filter">
+                <option value="">전체 역할</option>
+                <option value="READER">독자</option>
+                <option value="AUTHOR">작가</option>
+                <option value="ADMIN">관리자</option>
+            </select>
+            <select class="admin-select" id="adm-novel-status-filter">
+                <option value="ALL">전체 소설</option>
+                <option value="ONGOING">연재중</option>
+                <option value="COMPLETED">완결</option>
+                <option value="HIATUS">중단</option>
+                <option value="PENDING">보류</option>
+            </select>
+            <select class="admin-select" id="adm-deleted-filter">
+                <option value="">삭제 포함</option>
+                <option value="false">정상만</option>
+                <option value="true">삭제만</option>
+            </select>
+            <button class="admin-btn" onclick="loadAdminLive()">조회</button>
+        </div>
+
+        <!-- 과거 스냅샷 조회 -->
+        <div class="admin-history-row">
+            <input type="date" class="admin-date-input" id="adm-history-date"
+                   max="" placeholder="날짜 선택">
+            <button class="admin-btn admin-btn--outline" onclick="loadAdminHistory()">과거 통계 조회</button>
+            <button class="admin-btn admin-btn--outline" onclick="loadAdminLive()">실시간으로 돌아가기</button>
+        </div>
+
+        <hr class="admin-divider">
     </div>
 
     <!-- 통계 카드 -->
@@ -446,7 +572,6 @@
 
     // ── 통계 로드 ──
     async function loadStats() {
-        // 팔로워 수
         try {
             const res = await fetch('/api/authors/me/follower-count', { headers: authHeaders() });
             if (res.ok) {
@@ -454,6 +579,61 @@
                 document.getElementById('stat-followers').textContent = fmtNum(json.data ?? 0);
             }
         } catch (_) {}
+    }
+
+    // ── 관리자 대시보드 ──
+    function renderAdminStats(d) {
+        const u = d.userStatus  || {};
+        const n = d.novelStatus || {};
+        const m = d.mentorStatus || {};
+
+        document.getElementById('adm-total-users').textContent   = fmtNum(u.totalUsers ?? '-');
+        document.getElementById('adm-new-users-today').textContent = u.newUsersToday != null ? `오늘 +${fmtNum(u.newUsersToday)}` : '';
+        document.getElementById('adm-filter-users').textContent  = fmtNum(u.filterUserRole ?? '-');
+        document.getElementById('adm-total-novels').textContent  = fmtNum(n.totalNovels ?? '-');
+        document.getElementById('adm-new-novels-today').textContent = n.newNovelsToday != null ? `오늘 +${fmtNum(n.newNovelsToday)}` : '';
+        document.getElementById('adm-filter-novels').textContent = fmtNum(n.novelsByFilter ?? '-');
+        document.getElementById('adm-total-mentors').textContent = fmtNum(m.totalMentor ?? '-');
+        document.getElementById('adm-new-mentors-today').textContent = m.newMentorsToday != null ? `오늘 +${fmtNum(m.newMentorsToday)}` : '';
+    }
+
+    async function loadAdminLive() {
+        const role        = document.getElementById('adm-role-filter').value;
+        const novelStatus = document.getElementById('adm-novel-status-filter').value;
+        const deleted     = document.getElementById('adm-deleted-filter').value;
+
+        const qs = new URLSearchParams();
+        if (role)        qs.set('role', role);
+        if (novelStatus && novelStatus !== 'ALL') {
+            qs.set('novelTotalStatus', novelStatus);
+            qs.set('novelStatus', novelStatus);
+        } else {
+            qs.set('novelTotalStatus', 'ALL');
+        }
+        if (deleted !== '') qs.set('isDeleted', deleted);
+
+        try {
+            const res = await fetch(`/api/admin/dashboard/live?${qs}`, { headers: authHeaders() });
+            if (!res.ok) { Toast.error('관리자 권한이 필요합니다.'); return; }
+            const json = await res.json();
+            renderAdminStats(json.data || {});
+        } catch (e) {
+            Toast.error('통계 조회 실패');
+        }
+    }
+
+    async function loadAdminHistory() {
+        const date = document.getElementById('adm-history-date').value;
+        if (!date) { Toast.error('날짜를 선택해 주세요.'); return; }
+        try {
+            const res = await fetch(`/api/admin/dashboard/history?targetDate=${date}`, { headers: authHeaders() });
+            if (!res.ok) { Toast.error('관리자 권한이 필요합니다.'); return; }
+            const json = await res.json();
+            renderAdminStats(json.data || {});
+            Toast.info(`${date} 스냅샷 통계입니다.`);
+        } catch (e) {
+            Toast.error('과거 통계 조회 실패');
+        }
     }
 
     function updateStatsFromNovels(novels) {
@@ -695,12 +875,26 @@
     // ── 초기화 ──
     document.addEventListener('DOMContentLoaded', () => {
         if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+
+        const role = Auth.getUser()?.role;
+
+        // 관리자면 admin 섹션 표시 후 실시간 통계 로드
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+            document.getElementById('admin-section').style.display = '';
+            // history date picker max = 오늘
+            const today = new Date().toISOString().slice(0, 10);
+            document.getElementById('adm-history-date').max = today;
+            loadAdminLive();
+        }
+
         loadNovels();
         loadStats();
     });
 
-    window.setFilter       = setFilter;
-    window.goNewNovel      = goNewNovel;
+    window.loadAdminLive    = loadAdminLive;
+    window.loadAdminHistory = loadAdminHistory;
+    window.setFilter        = setFilter;
+    window.goNewNovel       = goNewNovel;
     window.editNovel       = editNovel;
     window.goStats         = goStats;
     window.goNewEpisode    = goNewEpisode;

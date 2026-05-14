@@ -72,7 +72,6 @@ public class JwtFilter extends OncePerRequestFilter {
                     , "/api/novels/ranking"
                     , "/actuator/prometheus"
                     , "/api/novels/new"             // 신작 목록
-                    , "/api/ai/recommendation"  // AI 추천
                     , "/api/search/keywords/popular"   // 인기 검색어
                     , "/api/search/tags/popular"
                     , "/api/v2/novels");
