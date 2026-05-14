@@ -270,6 +270,8 @@
         .btn-cover-save:hover { opacity: 0.88; }
         .btn-cover-regen { background: transparent; border: 1px solid var(--border); color: var(--text2); }
         .btn-cover-regen:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .btn-cover-cancel { background: transparent; border: 1px solid #f87171; color: #f87171; }
+        .btn-cover-cancel:hover { background: rgba(248,113,113,0.1); }
         .cover-status { text-align: center; font-size: 0.8rem; color: var(--text3); padding: 4px 20px; }
         .cover-status.error { color: #f87171; }
         .btn-check-result {
@@ -429,6 +431,7 @@
             <div class="cover-result-btns" id="cover-result-btns" style="display:none">
                 <button class="btn-cover-save" onclick="saveCover()">저장하기</button>
                 <button class="btn-cover-regen" onclick="generateCover()">다시 생성</button>
+                <button class="btn-cover-cancel" onclick="cancelCover()">취소</button>
             </div>
         </div>
     </div>
@@ -468,6 +471,7 @@
     let coverJobId        = null;
     let coverPollTimer    = null;
     let generatedCoverUrl = null;
+    let coverPollErrCount = 0;
 
     /* AI 리뷰 상태 */
     let reviewJobId     = null;
@@ -814,18 +818,29 @@
             return;
         }
 
-        // localStorage에 저장된 jobId 복원
+        // 이미 완료된 생성 이미지가 있으면 결과 화면 유지
+        if (generatedCoverUrl) {
+            preview.innerHTML = `<img src="${esc(generatedCoverUrl)}" alt="generated cover">`;
+            statusEl.textContent = '✅ 이미지 생성 완료! 저장하시겠습니까?';
+            statusEl.className = 'cover-status';
+            genBtn.style.display = 'none';
+            checkBtn.style.display = 'none';
+            resultBtns.style.display = 'flex';
+            openModal('modal-cover');
+            return;
+        }
+
+        // localStorage에 저장된 jobId 복원 (페이지 새로고침 후 재진입)
         const savedJob = localStorage.getItem(`cover_job_${novelId}`);
         if (savedJob) {
             coverJobId = savedJob;
+            coverPollErrCount = 0;
             preview.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
             statusEl.textContent = 'AI 이미지 생성 요청이 진행 중입니다. 결과를 확인해 보세요.';
             statusEl.className = 'cover-status';
             genBtn.style.display  = 'none';
             checkBtn.style.display = '';
             resultBtns.style.display = 'none';
-            generatedCoverUrl = null;
-            // 자동 폴링 재개
             if (!coverPollTimer) coverPollTimer = setInterval(pollCover, 4000);
             openModal('modal-cover');
             return;
@@ -844,7 +859,6 @@
         resultBtns.style.display = 'none';
         genBtn.style.display  = '';
         checkBtn.style.display = 'none';
-        generatedCoverUrl = null;
         openModal('modal-cover');
     }
     window.openCover = openCover;
@@ -852,6 +866,8 @@
     async function generateCover() {
         clearInterval(coverPollTimer);
         coverPollTimer = null;
+        coverPollErrCount = 0;
+        generatedCoverUrl = null;
         const genBtn   = document.getElementById('btn-gen-cover');
         const checkBtn = document.getElementById('btn-check-cover');
         const statusEl = document.getElementById('cover-status');
@@ -888,18 +904,19 @@
         if (!coverJobId) return;
         try {
             const job = await api.get(`/ai/novels/cover/status/${coverJobId}`, true);
-            const statusEl = document.getElementById('cover-status');
-            const genBtn   = document.getElementById('btn-gen-cover');
-            const checkBtn = document.getElementById('btn-check-cover');
+            coverPollErrCount = 0;
+            const statusEl   = document.getElementById('cover-status');
+            const genBtn     = document.getElementById('btn-gen-cover');
+            const checkBtn   = document.getElementById('btn-check-cover');
             const resultBtns = document.getElementById('cover-result-btns');
+            const preview    = document.getElementById('cover-preview');
             if (job?.status === 'COMPLETED' && job.coverImageUrl) {
                 clearInterval(coverPollTimer);
                 coverPollTimer = null;
                 localStorage.removeItem(`cover_job_${novelId}`);
                 generatedCoverUrl = job.coverImageUrl;
-                document.getElementById('cover-preview').innerHTML =
-                    `<img src="${esc(generatedCoverUrl)}" alt="generated cover">`;
-                statusEl.textContent = '✅ 이미지 생성 완료!';
+                preview.innerHTML = `<img src="${esc(generatedCoverUrl)}" alt="generated cover">`;
+                statusEl.textContent = '✅ 이미지 생성 완료! 저장하시겠습니까?';
                 statusEl.className = 'cover-status';
                 genBtn.style.display  = 'none';
                 checkBtn.style.display = 'none';
@@ -908,10 +925,11 @@
                 clearInterval(coverPollTimer);
                 coverPollTimer = null;
                 localStorage.removeItem(`cover_job_${novelId}`);
+                coverJobId = null;
                 const errMsg = job.errorMessage || '알 수 없는 오류';
                 statusEl.textContent = '❌ 생성 실패: ' + errMsg;
                 statusEl.className = 'cover-status error';
-                document.getElementById('cover-preview').textContent = '📖';
+                preview.textContent = '📖';
                 genBtn.disabled = false;
                 genBtn.textContent = '✨ AI 이미지 생성 (300P)';
                 genBtn.style.display = '';
@@ -919,14 +937,36 @@
                 resultBtns.style.display = 'none';
             }
             // PENDING / PROCESSING → 계속 대기
-        } catch (_) {}
+        } catch (e) {
+            coverPollErrCount++;
+            console.error('[AI 커버 폴링 오류]', coverPollErrCount + '회', e?.message || e);
+            if (coverPollErrCount >= 5) {
+                clearInterval(coverPollTimer);
+                coverPollTimer = null;
+                localStorage.removeItem(`cover_job_${novelId}`);
+                coverJobId = null;
+                const statusEl   = document.getElementById('cover-status');
+                const genBtn     = document.getElementById('btn-gen-cover');
+                const checkBtn   = document.getElementById('btn-check-cover');
+                const resultBtns = document.getElementById('cover-result-btns');
+                const preview    = document.getElementById('cover-preview');
+                if (statusEl)   { statusEl.textContent = '상태 확인 중 오류가 발생했습니다. 다시 시도해 주세요.'; statusEl.className = 'cover-status error'; }
+                if (genBtn)     { genBtn.style.display = ''; genBtn.disabled = false; genBtn.textContent = '✨ AI 이미지 생성 (300P)'; }
+                if (checkBtn)   checkBtn.style.display = 'none';
+                if (resultBtns) resultBtns.style.display = 'none';
+                if (preview)    preview.textContent = '📖';
+            }
+        }
     }
 
     async function saveCover() {
         if (!generatedCoverUrl) return;
+        const urlToSave = generatedCoverUrl;
         try {
-            await api.patch(`/novels/${novelId}/cover`, { coverImageUrl: generatedCoverUrl }, true);
-            Toast.success('커버 이미지가 저장됐습니다!');
+            await api.patch(`/novels/${novelId}/cover`, { coverImageUrl: urlToSave }, true);
+            generatedCoverUrl = null;
+            coverJobId = null;
+            Toast.success('커버 이미지가 소설 표지로 등록됐습니다!');
             closeModal('modal-cover');
         } catch (e) {
             Toast.error(e.message || '저장 실패');
@@ -952,6 +992,28 @@
         }
     }
     window.checkCoverResult = checkCoverResult;
+
+    function cancelCover() {
+        generatedCoverUrl = null;
+        const preview    = document.getElementById('cover-preview');
+        const statusEl   = document.getElementById('cover-status');
+        const genBtn     = document.getElementById('btn-gen-cover');
+        const checkBtn   = document.getElementById('btn-check-cover');
+        const resultBtns = document.getElementById('cover-result-btns');
+        statusEl.textContent = '현재 커버 이미지';
+        statusEl.className = 'cover-status';
+        resultBtns.style.display = 'none';
+        genBtn.style.display = '';
+        checkBtn.style.display = 'none';
+        api.get('/novels/' + novelId, false).then(d => {
+            if (d?.coverImageUrl) {
+                preview.innerHTML = `<img src="${esc(d.coverImageUrl)}" alt="cover">`;
+            } else {
+                preview.textContent = '📖';
+            }
+        }).catch(() => { preview.textContent = '📖'; });
+    }
+    window.cancelCover = cancelCover;
 
     /* ────────── AI 리뷰 ────────── */
     function openReview() {
