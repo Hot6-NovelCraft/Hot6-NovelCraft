@@ -238,12 +238,10 @@
       </div>
     </div>
 
-    <!-- 상태 탭 -->
-    <div class="status-tabs">
-      <button class="status-tab active" data-status="PENDING" onclick="setStatusFilter('PENDING')">⏳ 대기</button>
-      <button class="status-tab" data-status="APPROVED" onclick="setStatusFilter('APPROVED')">✅ 승인</button>
-      <button class="status-tab" data-status="REJECTED" onclick="setStatusFilter('REJECTED')">❌ 거절</button>
-      <button class="status-tab" data-status="" onclick="setStatusFilter('')">전체</button>
+    <!-- 안내 -->
+    <div style="padding:10px 16px;border-radius:8px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);
+                font-size:0.82rem;color:var(--text3);margin-bottom:16px">
+      ⚠️ 숙련(PROFICIENT) 등급 심사 대기 중인 멘토만 표시됩니다
     </div>
 
     <!-- 테이블 -->
@@ -257,16 +255,14 @@
           <tr>
             <th>신청자</th>
             <th>경력</th>
-            <th>주력 장르</th>
-            <th>전문 분야</th>
-            <th>최대 멘티</th>
+            <th>수상·출간 경력</th>
             <th>상태</th>
-            <th>신청일</th>
+            <th>멘토 ID</th>
             <th>처리</th>
           </tr>
         </thead>
         <tbody id="mentors-tbody">
-          <tr><td colspan="8" style="text-align:center;padding:40px">
+          <tr><td colspan="6" style="text-align:center;padding:40px">
             <div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div>
           </td></tr>
         </tbody>
@@ -331,15 +327,14 @@
 
   async function loadStats() {
     try {
-      const [pending, approved, rejected] = await Promise.allSettled([
-        api.get('/admin/mentors?status=PENDING&page=0&size=1', true),
-        api.get('/admin/mentors?status=APPROVED&page=0&size=1', true),
-        api.get('/admin/mentors?status=REJECTED&page=0&size=1', true),
-      ]);
-      setStatCard('pending',  pending.value?.totalElements  ?? '-');
-      setStatCard('approved', approved.value?.totalElements ?? '-');
-      setStatCard('rejected', rejected.value?.totalElements ?? '-');
-    } catch {}
+      const list = await api.get('/admin/mentors/pending', true);
+      const count = Array.isArray(list) ? list.length : 0;
+      setStatCard('pending', count);
+      setStatCard('approved', '-');
+      setStatCard('rejected', '-');
+    } catch {
+      setStatCard('pending', '-');
+    }
   }
 
   function setStatCard(key, val) {
@@ -356,56 +351,47 @@
   async function loadMentors(page) {
     currentPage = page;
     const tbody = document.getElementById('mentors-tbody');
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px"><div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div></td></tr>';
-
-    const params = new URLSearchParams({ page, size: 10 });
-    if (currentStatusFilter) params.append('status', currentStatusFilter);
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px"><div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div></td></tr>';
 
     try {
-      const res = await api.get(`/admin/mentors?${params}`, true);
-      const list = res?.content || (Array.isArray(res) ? res : []);
+      const res = await api.get('/admin/mentors/pending', true);
+      const list = Array.isArray(res) ? res : [];
       mentorListCache = list;
-      totalPages = res?.totalPages ?? 1;
-      document.getElementById('total-count').textContent = `${res?.totalElements ?? list.length}건`;
+      document.getElementById('total-count').textContent = `${list.length}건`;
 
       if (!list.length) {
-        tbody.innerHTML = `<tr><td colspan="8"><div class="nc-empty">
+        tbody.innerHTML = `<tr><td colspan="6"><div class="nc-empty">
           <div class="nc-empty__icon">🎓</div>
-          <div class="nc-empty__text">${currentStatusFilter ? `${stLabel(currentStatusFilter)} 상태의` : ''} 멘토 신청이 없습니다</div>
+          <div class="nc-empty__text">심사 대기 중인 멘토 신청이 없습니다</div>
         </div></td></tr>`;
-        renderPagination(); return;
+        return;
       }
 
-      tbody.innerHTML = list.map(m => {
-        const genres = (m.mainGenres || []).slice(0,2).map(g => `<span class="genre-tag">${escHtml(g)}</span>`).join('');
-        const fields = (m.specialFields || []).slice(0,2).join(', ');
-        const isPending = !m.status || m.status === 'PENDING';
-        return `
+      tbody.innerHTML = list.map(m => `
         <tr>
           <td>
-            <div style="font-weight:600">${escHtml(m.nickname || m.applicantNickname || '-')}</div>
+            <div style="font-weight:600">${escHtml(m.nickname || '-')}</div>
             <div style="font-size:0.75rem;color:var(--text3)">${escHtml(m.email || '')}</div>
           </td>
           <td><span class="career-badge">${careerLabel(m.careerLevel)}</span></td>
-          <td><div style="display:flex;gap:4px;flex-wrap:wrap">${genres || '<span style="color:var(--text3)">-</span>'}</div></td>
-          <td style="font-size:0.78rem;color:var(--text3)">${escHtml(fields) || '-'}</td>
-          <td style="text-align:center;font-weight:600">${m.maxMentees ?? '-'}</td>
+          <td style="font-size:0.78rem;color:var(--text2);max-width:200px">
+            <span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px"
+                  title="${escHtml(m.awardsCareer || '')}">
+              ${escHtml(m.awardsCareer ? m.awardsCareer.slice(0, 40) + (m.awardsCareer.length > 40 ? '…' : '') : '-')}
+            </span>
+          </td>
           <td>${stBadge(m.status || 'PENDING')}</td>
-          <td style="color:var(--text3);font-size:0.78rem;white-space:nowrap">${formatDate(m.appliedAt || m.createdAt)}</td>
+          <td style="color:var(--text3);font-size:0.78rem;white-space:nowrap">#${m.mentorId}</td>
           <td>
             <div class="action-btns">
-              <button class="act-btn act-btn--detail" onclick="openDetail(${m.mentorId || m.applicationId || m.id})">상세</button>
-              ${isPending ? `
-                <button class="act-btn act-btn--approve" onclick="approveMentor(${m.mentorId || m.applicationId || m.id}, this)">승인</button>
-                <button class="act-btn act-btn--reject" onclick="openRejectModal(${m.mentorId || m.applicationId || m.id})">거절</button>
-              ` : ''}
+              <button class="act-btn act-btn--detail" onclick="openDetail(${m.mentorId})">상세</button>
+              <button class="act-btn act-btn--approve" onclick="approveMentor(${m.mentorId}, this)">승인</button>
+              <button class="act-btn act-btn--reject" onclick="openRejectModal(${m.mentorId})">거절</button>
             </div>
           </td>
-        </tr>`;
-      }).join('');
-      renderPagination();
+        </tr>`).join('');
     } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--error)">
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--error)">
         로드 실패: ${escHtml(e.message)}</td></tr>`;
     }
   }
@@ -451,77 +437,52 @@
   }
 
   function openDetail(mentorId) {
+    const m = mentorListCache.find(x => x.mentorId === mentorId);
+    if (!m) { Toast.error('데이터를 찾을 수 없습니다'); return; }
+    renderDetailContent(m);
     Modal.open('modal-detail');
-    const m = mentorListCache.find(x => (x.mentorId || x.applicationId || x.id) === mentorId);
-    if (m) { renderDetailContent(m); return; }
-    document.getElementById('detail-content').innerHTML = '<div class="nc-loading"><div class="nc-spinner"></div></div>';
   }
 
   function renderDetailContent(m) {
-    const isPending = !m.status || m.status === 'PENDING';
-    const genres = (m.mainGenres || []).map(g => `<span class="genre-tag">${escHtml(g)}</span>`).join('');
-    const fields = (m.specialFields || []).map(f => `<span class="genre-tag">${escHtml(f)}</span>`).join('');
-    const styles = (m.mentoringStyles || m.mentoringStyle || []).join(', ');
-    const theId = m.mentorId || m.applicationId || m.id;
     document.getElementById('detail-content').innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
         <div class="detail-row">
           <div class="detail-label">신청자</div>
-          <div class="detail-value" style="font-weight:600">${escHtml(m.nickname || m.applicantNickname || '-')}</div>
+          <div class="detail-value" style="font-weight:600">${escHtml(m.nickname || '-')}</div>
         </div>
         <div class="detail-row">
           <div class="detail-label">상태</div>
           <div class="detail-value">${stBadge(m.status || 'PENDING')}</div>
         </div>
         <div class="detail-row">
+          <div class="detail-label">이메일</div>
+          <div class="detail-value" style="color:var(--text2)">${escHtml(m.email || '-')}</div>
+        </div>
+        <div class="detail-row">
           <div class="detail-label">경력 등급</div>
           <div class="detail-value"><span class="career-badge">${careerLabel(m.careerLevel)}</span></div>
         </div>
         <div class="detail-row">
-          <div class="detail-label">최대 멘티 수</div>
-          <div class="detail-value" style="font-weight:600">${m.maxMentees ?? '-'}명</div>
+          <div class="detail-label">멘토 ID</div>
+          <div class="detail-value" style="color:var(--text3)">#${m.mentorId}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">유저 ID</div>
+          <div class="detail-value" style="color:var(--text3)">#${m.userId}</div>
         </div>
       </div>
+      ${m.awardsCareer ? `
       <div class="detail-row">
-        <div class="detail-label">주력 장르</div>
-        <div class="genre-tags">${genres || '<span style="color:var(--text3)">없음</span>'}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">전문 분야</div>
-        <div class="genre-tags">${fields || '<span style="color:var(--text3)">없음</span>'}</div>
-      </div>
-      ${styles ? `<div class="detail-row">
-        <div class="detail-label">멘토링 스타일</div>
-        <div class="detail-value" style="color:var(--text2)">${escHtml(styles)}</div>
-      </div>` : ''}
-      ${m.awardsCareer ? `<div class="detail-row">
         <div class="detail-label">수상·출간 경력</div>
         <div class="detail-content">${escHtml(m.awardsCareer)}</div>
       </div>` : ''}
-      <div class="detail-row">
-        <div class="detail-label">자기소개</div>
-        <div class="detail-content">${escHtml(m.bio || '(없음)')}</div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="nc-btn nc-btn--full"
+                style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.4);color:#10b981"
+                onclick="approveMentorFromModal(${m.mentorId})">✅ 승인</button>
+        <button class="nc-btn nc-btn--full nc-btn--outline"
+                onclick="Modal.close('modal-detail');openRejectModal(${m.mentorId})">❌ 거절</button>
       </div>
-      <div class="detail-row">
-        <div class="detail-label">즉시 수락</div>
-        <div class="detail-value">${m.allowInstant ? '✅ 허용' : '❌ 비허용'}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">신청일</div>
-        <div class="detail-value" style="color:var(--text3)">${m.appliedAt || m.createdAt ? new Date(m.appliedAt || m.createdAt).toLocaleString('ko-KR') : '-'}</div>
-      </div>
-      ${m.rejectReason ? `<div class="detail-row">
-        <div class="detail-label" style="color:var(--error)">거절 사유</div>
-        <div class="detail-content" style="border-color:rgba(239,68,68,0.3)">${escHtml(m.rejectReason)}</div>
-      </div>` : ''}
-      ${isPending ? `
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <button class="nc-btn nc-btn--full" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.4);color:#10b981"
-                  onclick="approveMentorFromModal(${theId})">✅ 승인</button>
-          <button class="nc-btn nc-btn--full nc-btn--outline"
-                  onclick="Modal.close('modal-detail');openRejectModal(${theId})">❌ 거절 (사유 입력)</button>
-        </div>
-      ` : ''}
     `;
   }
 
