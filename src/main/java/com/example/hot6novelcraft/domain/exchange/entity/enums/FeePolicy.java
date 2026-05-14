@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum FeePolicy {
 
-    DEFAULT(0.033, 10_000);  // 3.3% 원천징수, 최소 환전 금액 10,000원
+    DEFAULT(0.10, 10_000);  // 10% 수수료, 최소 환전 금액 10,000원
 
     private final double feeRate;
     private final int minimumWithdrawalAmount;

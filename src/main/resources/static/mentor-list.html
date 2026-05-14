@@ -701,6 +701,7 @@
     if (!nav) return;
     const user = Auth.getUser();
     const isLoggedIn = Auth.isLoggedIn();
+    const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
     nav.innerHTML = `
       <div class="nc-nav__inner">
         <a href="/index.html" class="nc-nav__logo"><span class="logo-icon">✦</span>NovelCraft</a>
@@ -718,6 +719,7 @@
                 ${user?.nickname || '내 프로필'} ▾
               </button>
               <div class="nc-user-dropdown">
+                ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
                 <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
                 <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
                 <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="doLogout()">로그아웃</button>

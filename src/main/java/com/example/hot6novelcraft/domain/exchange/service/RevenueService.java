@@ -53,10 +53,19 @@ public class RevenueService {
             log.warn("수익 현황 캐시 역직렬화 실패, DB 조회로 전환 - authorId: {}", authorId);
         }
 
-        // 총 누적 수익 (회차 판매 + 구독 + 환불)
-        Integer totalEarned = revenueRepository.sumAmountByAuthorIdAndTypeIn(
-                authorId, List.of(RevenueType.EPISODE_SALE, RevenueType.SUBSCRIPTION, RevenueType.REFUND)
+        // 수익 유형별 합산
+        Integer episodeSaleAmount = revenueRepository.sumAmountByAuthorIdAndType(
+                authorId, RevenueType.EPISODE_SALE
         );
+        Integer subscriptionAmount = revenueRepository.sumAmountByAuthorIdAndType(
+                authorId, RevenueType.SUBSCRIPTION
+        );
+        Integer refundAmount = revenueRepository.sumAmountByAuthorIdAndType(
+                authorId, RevenueType.REFUND
+        );
+
+        // 총 누적 수익
+        Integer totalEarned = episodeSaleAmount + subscriptionAmount + refundAmount;
 
         // 총 환전 금액
         Integer totalWithdrawn = revenueRepository.sumAmountByAuthorIdAndType(
@@ -73,7 +82,8 @@ public class RevenueService {
                 .orElse(null);
 
         RevenueOverviewResponse response = RevenueOverviewResponse.of(
-                totalEarned, totalWithdrawn, availableBalance, bankAccountInfo
+                totalEarned, totalWithdrawn, availableBalance,
+                episodeSaleAmount, subscriptionAmount, bankAccountInfo
         );
 
         // Redis 캐시 저장 (JSON 문자열로 직렬화하여 저장 - Record 클래스 타입 정보 보존)
