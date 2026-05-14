@@ -692,6 +692,7 @@
       loggedIn ? loadMyHistory() : Promise.resolve(),
     ]);
     renderSidebar();
+    renderMainContent();
   }
 
   /* ── 네비게이션 ── */
@@ -1012,9 +1013,7 @@
   }
 
   function renderHistorySection() {
-    const pending  = myHistory.filter(h => h.status === 'PENDING');
-    const rejected = myHistory.filter(h => h.status === 'REJECTED');
-    const shown    = [...pending, ...rejected].slice(0, 5);
+    const shown = myHistory.slice(0, 5);
     if (!shown.length) return '';
 
     return `
@@ -1045,6 +1044,17 @@
     if (detailRes.status === 'fulfilled')    mentorDetail    = detailRes.value?.data    || detailRes.value;
     if (mentoringRes.status === 'fulfilled') mentoringDetail = mentoringRes.value?.data || mentoringRes.value;
     _matchedMentorDetail = mentorDetail; // 사이드바 프로필 표시용 캐시
+
+    // 서버 실제 상태 확인 — 멘토가 먼저 종료/거절했을 때 멘티 뷰가 어긋나는 것 방지
+    const serverStatus = mentoringDetail?.status;
+    if (serverStatus && serverStatus !== 'ACCEPTED') {
+      // 상태가 더 이상 ACCEPTED 아님 → 이력 갱신 후 메인 재렌더
+      matchedRecord = null;
+      await loadMyHistory();
+      renderSidebar();
+      renderMainContent();
+      return;
+    }
 
     const genreStr = (mentorDetail?.mainGenres || []).map(g => GENRE_LABELS[g]||g).join(' · ');
     const motivation    = h.motivation || null;
@@ -1155,12 +1165,14 @@
       try {
         await api.patch(`/v2/mentorings/${id}/complete-by-mentee`, {}, true);
         Toast.success('멘토링이 종료되었습니다.');
-        await loadMyHistory();
-        renderSidebar();
-        renderMainContent();
       } catch (e) {
-        Toast.error(e?.message || '종료 중 오류가 발생했습니다.');
+        // 멘토가 먼저 종료한 경우 이미 COMPLETED → 안내 후 상태 갱신
+        Toast.error(e?.message?.includes('수락') ? '이미 종료된 멘토링입니다.' : (e?.message || '종료 중 오류가 발생했습니다.'));
       }
+      // 성공/실패 모두 최신 상태로 갱신
+      await loadMyHistory();
+      renderSidebar();
+      renderMainContent();
     });
   }
 
@@ -1258,11 +1270,13 @@
   /* ── 내 멘토링 현황 드로어 ── */
   const _reviewedIds = new Set(); // 이번 세션에 평가한 ID 기억
 
-  function openHistoryDrawer() {
+  async function openHistoryDrawer() {
     if (!Auth.isLoggedIn()) { Toast.error('로그인이 필요합니다.'); return; }
     document.getElementById('history-drawer')?.classList.add('open');
     document.getElementById('history-drawer-backdrop')?.classList.add('open');
     document.body.style.overflow = 'hidden';
+    // 서버에서 최신 이력 조회 후 렌더 (멘토가 종료/거절해도 즉시 반영)
+    await loadMyHistory();
     renderHistoryDrawer();
   }
   function closeHistoryDrawer() {
@@ -1513,9 +1527,12 @@
       location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
       return;
     }
-    const pendingRecord = myHistory.find(h => h.status === 'PENDING');
-    if (pendingRecord) {
-      Toast.error(`이미 ${pendingRecord.mentorNickname} 멘토님께 신청 중입니다. 취소 후 다시 신청해 주세요.`);
+    const blockingRecord = myHistory.find(h => h.status === 'PENDING' || h.status === 'ACCEPTED');
+    if (blockingRecord) {
+      const msg = blockingRecord.status === 'PENDING'
+        ? `이미 ${blockingRecord.mentorNickname} 멘토님께 신청 중입니다. 취소 후 다시 신청해 주세요.`
+        : `${blockingRecord.mentorNickname} 멘토님과 멘토링이 진행 중입니다. 종료 후 신청해 주세요.`;
+      Toast.error(msg);
       return;
     }
     location.href = `/mentorship-apply.html?mentorId=${mentorId}`;

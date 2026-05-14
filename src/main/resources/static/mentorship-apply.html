@@ -239,13 +239,17 @@
         ? (novelsRes.value?.data?.content || novelsRes.value?.data || novelsRes.value?.content || [])
         : [];
 
-      /* 이미 PENDING 신청이 있으면 이 멘토가 아닌 경우 차단 */
+      /* PENDING 또는 ACCEPTED 상태가 있으면 신청 차단 */
       if (historyRes.status === 'fulfilled') {
         const history = historyRes.value?.data || historyRes.value || [];
-        const pending = history.find(h => h.status === 'PENDING');
-        if (pending && String(pending.mentorId) !== String(mentorId)) {
-          showError(`이미 <strong>${pending.mentorNickname}</strong> 멘토님께 신청 중입니다.<br>수락 전에는 다른 멘토에게 신청할 수 없습니다.`);
-          return;
+        const blocking = history.find(h => h.status === 'PENDING' || h.status === 'ACCEPTED');
+        if (blocking) {
+          if (blocking.status === 'ACCEPTED') {
+            showError(`<strong>${blocking.mentorNickname}</strong> 멘토님과 멘토링이 진행 중입니다.<br>현재 멘토링을 종료한 후 신청해 주세요.`);
+          } else if (String(blocking.mentorId) !== String(mentorId)) {
+            showError(`이미 <strong>${blocking.mentorNickname}</strong> 멘토님께 신청 중입니다.<br>수락 전에는 다른 멘토에게 신청할 수 없습니다.`);
+          }
+          if (blocking.status === 'ACCEPTED' || String(blocking.mentorId) !== String(mentorId)) return;
         }
       }
 
