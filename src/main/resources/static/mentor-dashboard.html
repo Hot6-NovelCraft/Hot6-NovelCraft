@@ -433,8 +433,10 @@
               🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
             </button>
             <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+            ${isAuthorOrMentor ? `
             <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
             <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+            ` : ''}
             <div class="nc-user-menu" id="user-menu">
               <button class="nc-nav__btn" onclick="toggleUserMenu()" style="font-weight:600;user-select:none">
                 ${user?.nickname || '내 프로필'} ▾

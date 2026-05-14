@@ -43,37 +43,51 @@ const api = {
         const data = await res.json();
 
         // ✅ AccessToken 만료 시 Refresh-Token으로 재시도
-        if (res.status === 401 && data.message?.includes('만료')) {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (!refreshToken) {
+        if (res.status === 401) {
+            if (data.message?.includes('만료')) {
+                const refreshToken = localStorage.getItem('refreshToken');
+                if (!refreshToken) {
+                    Auth.removeToken(); Auth.removeUser();
+                    window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+                    return;
+                }
+                // Refresh-Token 헤더로 재요청
+                const currentToken = Auth.getToken();
+                const retryHeaders = { 'Content-Type': 'application/json',
+                    ...(currentToken && { 'Authorization': `Bearer ${currentToken}` }),
+                    'Refresh-Token': `Bearer ${refreshToken}`
+                };
+                const retryOpts = { method, headers: retryHeaders };
+                if (body) retryOpts.body = JSON.stringify(body);
+                const retryRes = await fetch(API_BASE + path, retryOpts);
+
+                // 새 AccessToken 응답 헤더에서 저장
+                const newToken = retryRes.headers.get('Authorization');
+                if (newToken) {
+                    Auth.setToken(newToken.replace('Bearer ', ''));
+                }
+
+                const retryData = await retryRes.json();
+                if (!retryRes.ok) {
+                    // Refresh도 만료 → 로그아웃
+                    Auth.removeToken(); Auth.removeUser();
+                    window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+                    return;
+                }
+                return retryData.data;
+            } else {
+                // 토큰은 유효하지만 사용자가 존재하지 않음 (탈퇴, DB 초기화 등) → 로그아웃 후 재로그인
                 Auth.removeToken(); Auth.removeUser();
                 window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
                 return;
             }
-            // Refresh-Token 헤더로 재요청
-            const currentToken = Auth.getToken();
-            const retryHeaders = { 'Content-Type': 'application/json',
-                ...(currentToken && { 'Authorization': `Bearer ${currentToken}` }),
-                'Refresh-Token': `Bearer ${refreshToken}`
-            };
-            const retryOpts = { method, headers: retryHeaders };
-            if (body) retryOpts.body = JSON.stringify(body);
-            const retryRes = await fetch(API_BASE + path, retryOpts);
+        }
 
-            // 새 AccessToken 응답 헤더에서 저장
-            const newToken = retryRes.headers.get('Authorization');
-            if (newToken) {
-                Auth.setToken(newToken.replace('Bearer ', ''));
-            }
-
-            const retryData = await retryRes.json();
-            if (!retryRes.ok) {
-                // Refresh도 만료 → 로그아웃
-                Auth.removeToken(); Auth.removeUser();
-                window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
-                return;
-            }
-            return retryData.data;
+        // 인증 처리 중 사용자 없음(탈퇴·DB 초기화) → 500으로 내려오는 경우 로그인으로 유도
+        if (res.status === 500 && data.message?.includes('인증 처리 중 서버 오류')) {
+            Auth.removeToken(); Auth.removeUser();
+            window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+            return;
         }
 
         if (!res.ok) throw new Error(data.message || '요청 실패');

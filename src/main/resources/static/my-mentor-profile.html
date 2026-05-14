@@ -263,6 +263,7 @@
   function initNav() {
     const nav  = document.getElementById('nc-nav');
     const user = Auth.getUser();
+    const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
     if (!nav) return;
     nav.innerHTML = `
       <div class="nc-nav__inner">
@@ -271,8 +272,10 @@
           ${user ? `
             <button class="nc-point-btn" id="nav-point" onclick="openPointModal()">···P</button>
             <button class="nc-nav__btn" onclick="location.href='/library.html'">내 서재</button>
+            ${isAuthorOrMentor ? `
             <button class="nc-nav__btn nc-nav__btn--mentee" onclick="location.href='/mentor-list.html'">멘티</button>
             <button class="nc-nav__btn nc-nav__btn--mentor" onclick="location.href='/mentor-dashboard.html'">멘토</button>
+            ` : ''}
             <div class="nc-user-menu">
               <button class="nc-nav__btn" onclick="toggleUserMenu()" style="font-weight:600;user-select:none">
                 ${esc(user.nickname || '내 계정')} ▾
