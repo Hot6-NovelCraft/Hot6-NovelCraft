@@ -9,6 +9,10 @@ import com.example.hot6novelcraft.domain.episode.dto.response.NovelBulkPurchaseR
 import com.example.hot6novelcraft.domain.episode.entity.Episode;
 import com.example.hot6novelcraft.domain.episode.entity.enums.EpisodeStatus;
 import com.example.hot6novelcraft.domain.episode.repository.EpisodeRepository;
+import com.example.hot6novelcraft.domain.exchange.entity.Revenue;
+import com.example.hot6novelcraft.domain.exchange.entity.enums.RevenueType;
+import com.example.hot6novelcraft.domain.exchange.repository.RevenueRepository;
+import com.example.hot6novelcraft.domain.novel.repository.NovelRepository;
 import com.example.hot6novelcraft.domain.point.entity.Point;
 import com.example.hot6novelcraft.domain.point.entity.PointHistory;
 import com.example.hot6novelcraft.domain.point.entity.enums.PointHistoryType;
@@ -35,6 +39,8 @@ public class EpisodePurchaseTransactionService {
     private final PointHistoryRepository pointHistoryRepository;
     private final EpisodeRepository episodeRepository;
     private final EpisodePurchaseConfig purchaseConfig;
+    private final NovelRepository novelRepository;
+    private final RevenueRepository revenueRepository;
 
     /**
      * 회차 단건 구매 (트랜잭션 처리)
@@ -77,6 +83,19 @@ public class EpisodePurchaseTransactionService {
                         "회차 구매: " + episode.getTitle()
                 )
         );
+
+        // 6. 작가 수익 기록 (EPISODE_SALE)
+        novelRepository.findById(episode.getNovelId()).ifPresent(novel -> {
+            Long authorId = novel.getAuthorId();
+            Integer earned = revenueRepository.sumAmountByAuthorIdAndTypeIn(
+                    authorId, List.of(RevenueType.EPISODE_SALE, RevenueType.SUBSCRIPTION, RevenueType.REFUND));
+            Integer withdrawn = revenueRepository.sumAmountByAuthorIdAndType(authorId, RevenueType.WITHDRAWAL);
+            int newBalance = earned - withdrawn + episode.getPointPrice();
+            revenueRepository.save(
+                    Revenue.create(authorId, episodeId, episode.getPointPrice(), newBalance, RevenueType.EPISODE_SALE)
+            );
+            log.info("[회차 구매] 작가 수익 기록 authorId={} episodeId={} amount={}P", authorId, episodeId, episode.getPointPrice());
+        });
 
         log.info("[회차 구매] 구매 완료 userId={} episodeId={} price={}P balance={}P",
                 userId, episodeId, episode.getPointPrice(), point.getBalance());
@@ -147,10 +166,31 @@ public class EpisodePurchaseTransactionService {
 
         log.info("[소설 전체 구매] PointHistory 저장 완료 - 회차당 평균 할인: {}P", discountPerEpisode);
 
+        // 6. 작가 수익 일괄 기록 (EPISODE_SALE, 할인 적용 금액 기준)
+        novelRepository.findById(novelId).ifPresent(novel -> {
+            Long authorId = novel.getAuthorId();
+            Integer earned = revenueRepository.sumAmountByAuthorIdAndTypeIn(
+                    authorId, List.of(RevenueType.EPISODE_SALE, RevenueType.SUBSCRIPTION, RevenueType.REFUND));
+            Integer withdrawn = revenueRepository.sumAmountByAuthorIdAndType(authorId, RevenueType.WITHDRAWAL);
+            int runningBalance = earned - withdrawn;
+
+            List<Revenue> revenues = new ArrayList<>();
+            int discountPerEp = discountAmount / episodeCount;
+            int discountRem = discountAmount % episodeCount;
+            for (int i = 0; i < episodeCount; i++) {
+                Episode ep = unpurchasedEpisodes.get(i);
+                int actualPrice = ep.getPointPrice() - discountPerEp - (i == 0 ? discountRem : 0);
+                runningBalance += actualPrice;
+                revenues.add(Revenue.create(authorId, ep.getId(), actualPrice, runningBalance, RevenueType.EPISODE_SALE));
+            }
+            revenueRepository.saveAll(revenues);
+            log.info("[소설 전체 구매] 작가 수익 기록 authorId={} novelId={} 총금액={}P", authorId, novelId, finalPrice);
+        });
+
         log.info("[소설 전체 구매] 구매 완료 userId={} novelId={} 회차수={} 최종금액={}P 잔액={}P",
                 userId, novelId, unpurchasedEpisodes.size(), finalPrice, point.getBalance());
 
-        // 6. 응답 생성
+        // 7. 응답 생성
         return NovelBulkPurchaseResponse.of(
                 novelId, unpurchasedEpisodes, discountRate, point.getBalance()
         );

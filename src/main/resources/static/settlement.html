@@ -528,12 +528,9 @@
         const total = data?.totalEarned ?? 0;
         const episodeSale = data?.episodeSaleAmount ?? 0;
         const subShare = data?.subscriptionAmount ?? 0;
-        const fee = Math.floor(total * 0.10);
-
         el.innerHTML = `
       <div class="revenue-row"><span class="label">회차 판매 수익</span><span class="amount">${episodeSale.toLocaleString()}원</span></div>
       <div class="revenue-row"><span class="label">구독 분배 수익</span><span class="amount">${subShare.toLocaleString()}원</span></div>
-      <div class="revenue-row"><span class="label">수수료 (10%)</span><span class="amount minus">-${fee.toLocaleString()}원</span></div>
       <div class="revenue-row total">
         <span class="label">환전 가능 금액</span>
         <span class="amount total-amt">${available.toLocaleString()}원</span>

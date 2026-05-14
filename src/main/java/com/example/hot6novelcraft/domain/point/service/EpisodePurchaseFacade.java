@@ -5,6 +5,8 @@ import com.example.hot6novelcraft.common.exception.domain.PaymentExceptionEnum;
 import com.example.hot6novelcraft.common.security.RedisUtil;
 import com.example.hot6novelcraft.domain.episode.dto.response.EpisodePurchaseResponse;
 import com.example.hot6novelcraft.domain.episode.dto.response.NovelBulkPurchaseResponse;
+import com.example.hot6novelcraft.domain.exchange.service.RevenueService;
+import com.example.hot6novelcraft.domain.exchange.service.StatisticsService;
 import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
 import com.example.hot6novelcraft.domain.notification.producer.NotificationProducer;
 import com.example.hot6novelcraft.domain.novel.repository.NovelRepository;
@@ -30,6 +32,8 @@ public class EpisodePurchaseFacade {
     private final NotificationProducer notificationProducer;
     private final NovelRepository novelRepository;
     private final PointHistoryRepository pointHistoryRepository;
+    private final RevenueService revenueService;
+    private final StatisticsService statisticsService;
 
     /**
      * 회차 단건 구매 (락 관리)
@@ -47,6 +51,11 @@ public class EpisodePurchaseFacade {
         try {
             EpisodePurchaseResponse response = transactionService.executePurchase(userId, episodeId);
             notificationProducer.publish(NotificationEvent.episodePurchase(userId, response.episodeTitle(), response.pointPrice(), episodeId));
+            // 트랜잭션 커밋 후 작가 수익 캐시 무효화
+            novelRepository.findById(response.novelId()).ifPresent(novel -> {
+                revenueService.evictRevenueOverviewCache(novel.getAuthorId());
+                statisticsService.evictStatisticsCache(novel.getAuthorId());
+            });
             return response;
         } finally {
             redisUtil.releaseLock(lockKey);
@@ -68,8 +77,13 @@ public class EpisodePurchaseFacade {
 
         try {
             NovelBulkPurchaseResponse response = transactionService.executeAllPurchase(userId, novelId);
-            String novelTitle = novelRepository.findById(novelId).map(n -> n.getTitle()).orElse("소설");
-            notificationProducer.publish(NotificationEvent.novelBulkPurchase(userId, novelTitle, response.totalEpisodes(), response.finalPrice(), novelId));
+            novelRepository.findById(novelId).ifPresent(novel -> {
+                String novelTitle = novel.getTitle();
+                notificationProducer.publish(NotificationEvent.novelBulkPurchase(userId, novelTitle, response.totalEpisodes(), response.finalPrice(), novelId));
+                // 트랜잭션 커밋 후 작가 수익 캐시 무효화
+                revenueService.evictRevenueOverviewCache(novel.getAuthorId());
+                statisticsService.evictStatisticsCache(novel.getAuthorId());
+            });
             return response;
         } finally {
             redisUtil.releaseLock(lockKey);
