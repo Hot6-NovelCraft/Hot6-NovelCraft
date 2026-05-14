@@ -678,8 +678,8 @@
             const badgeClass = STATUS_BADGE[n.status] || 'badge--pending';
             const statusLabel = STATUS_LABEL[n.status] || n.status;
             const coverHtml = n.coverImageUrl
-                ? `<img src="${esc(n.coverImageUrl)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='📖'">`
-                : '📖';
+                ? `<img src="${esc(n.coverImageUrl)}" alt="" onerror="this.src='/images/default-cover.svg'">`
+                : `<img src="/images/default-cover.svg" alt="표지 없음">`;
             return `
             <div class="novel-card">
                 <div class="novel-card__cover">${coverHtml}</div>

@@ -504,8 +504,8 @@
         <div class="novel-item" onclick="window.location.href='/novel-detail.html?id=${novel.novelId}'">
           <div class="novel-cover">
             ${novel.coverImageUrl
-              ? `<img src="${novel.coverImageUrl}" alt="${escHtml(novel.title)}" onerror="this.parentElement.innerHTML='📖'">`
-              : '📖'}
+              ? `<img src="${novel.coverImageUrl}" alt="${escHtml(novel.title)}" onerror="this.src='/images/default-cover.svg'">`
+              : `<img src="/images/default-cover.svg" alt="표지 없음">`}
           </div>
           <div class="novel-info">
             <div class="novel-title">${escHtml(novel.title)}</div>
@@ -665,7 +665,7 @@
           list.map(b => `
             <div class="novel-item" id="ext-book-${b.userBookId}" style="display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;transition:border-color 0.2s">
               <div style="width:48px;height:64px;border-radius:7px;background:linear-gradient(135deg,var(--surface2),var(--border));display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;overflow:hidden;border:1px solid var(--border)">
-                ${b.coverImageUrl ? `<img src="${b.coverImageUrl}" style="width:100%;height:100%;object-fit:cover">` : '📖'}
+                ${b.coverImageUrl ? `<img src="${b.coverImageUrl}" style="width:100%;height:100%;object-fit:cover" onerror="this.src='/images/default-cover.svg'">` : `<img src="/images/default-cover.svg" style="width:100%;height:100%;object-fit:cover" alt="표지 없음">`}
               </div>
               <div style="flex:1;min-width:0">
                 <div style="font-size:0.92rem;font-weight:600;color:var(--text);margin-bottom:4px;word-break:break-word">${b.title || '제목 없음'}</div>

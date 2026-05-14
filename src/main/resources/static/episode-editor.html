@@ -423,7 +423,7 @@
             <div class="ed-modal__hd-title">🎨 AI 커버 이미지 생성</div>
             <button class="ed-modal__close" onclick="closeModal('modal-cover')">✕</button>
         </div>
-        <div class="cover-preview" id="cover-preview">📖</div>
+        <div class="cover-preview" id="cover-preview"><img src="/images/default-cover.svg" alt="표지 없음" style="width:100%;height:100%;object-fit:cover"></div>
         <div class="cover-status" id="cover-status">현재 커버 이미지</div>
         <div class="cover-actions">
             <button class="btn-gen-cover" id="btn-gen-cover" onclick="generateCover()">✨ AI 이미지 생성 (300P)</button>
@@ -851,9 +851,9 @@
             if (d?.coverImageUrl) {
                 preview.innerHTML = `<img src="${esc(d.coverImageUrl)}" alt="cover">`;
             } else {
-                preview.textContent = '📖';
+                preview.innerHTML = `<img src="/images/default-cover.svg" alt="표지 없음" style="width:100%;height:100%;object-fit:cover">`;
             }
-        }).catch(() => { preview.textContent = '📖'; });
+        }).catch(() => { preview.innerHTML = `<img src="/images/default-cover.svg" alt="표지 없음" style="width:100%;height:100%;object-fit:cover">`; });
         statusEl.textContent = '현재 커버 이미지';
         statusEl.className = 'cover-status';
         resultBtns.style.display = 'none';
@@ -929,7 +929,7 @@
                 const errMsg = job.errorMessage || '알 수 없는 오류';
                 statusEl.textContent = '❌ 생성 실패: ' + errMsg;
                 statusEl.className = 'cover-status error';
-                preview.textContent = '📖';
+                preview.innerHTML = `<img src="/images/default-cover.svg" alt="표지 없음" style="width:100%;height:100%;object-fit:cover">`;
                 genBtn.disabled = false;
                 genBtn.textContent = '✨ AI 이미지 생성 (300P)';
                 genBtn.style.display = '';
@@ -954,7 +954,7 @@
                 if (genBtn)     { genBtn.style.display = ''; genBtn.disabled = false; genBtn.textContent = '✨ AI 이미지 생성 (300P)'; }
                 if (checkBtn)   checkBtn.style.display = 'none';
                 if (resultBtns) resultBtns.style.display = 'none';
-                if (preview)    preview.textContent = '📖';
+                if (preview)    preview.innerHTML = `<img src="/images/default-cover.svg" alt="표지 없음" style="width:100%;height:100%;object-fit:cover">`;
             }
         }
     }
@@ -1009,9 +1009,9 @@
             if (d?.coverImageUrl) {
                 preview.innerHTML = `<img src="${esc(d.coverImageUrl)}" alt="cover">`;
             } else {
-                preview.textContent = '📖';
+                preview.innerHTML = `<img src="/images/default-cover.svg" alt="표지 없음" style="width:100%;height:100%;object-fit:cover">`;
             }
-        }).catch(() => { preview.textContent = '📖'; });
+        }).catch(() => { preview.innerHTML = `<img src="/images/default-cover.svg" alt="표지 없음" style="width:100%;height:100%;object-fit:cover">`; });
     }
     window.cancelCover = cancelCover;
 

@@ -892,7 +892,7 @@
         el.innerHTML = list.map(n => `
         <div class="ai-rec-card" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
           <div class="ai-rec-cover">
-            ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.parentElement.innerHTML='📖'">` : '📖'}
+            ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.src='/images/default-cover.svg'">` : `<img src="/images/default-cover.svg" alt="표지 없음">`}
           </div>
           <div class="ai-rec-title">${escHtml(n.title)}</div>
           <div class="ai-rec-author">${escHtml(n.authorNickname || n.authorName || '')}</div>
@@ -920,7 +920,7 @@
           <div class="ranking-item" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
             <span class="ranking-num ${i < 3 ? 'top3' : ''}">${i + 1}</span>
             <div class="ranking-cover">
-              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.parentElement.innerHTML='📖'">` : '📖'}
+              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.src='/images/default-cover.svg'">` : `<img src="/images/default-cover.svg" alt="표지 없음">`}
             </div>
             <div class="ranking-info">
               <div class="ranking-title">${escHtml(n.title)}</div>
@@ -981,7 +981,7 @@
             el.innerHTML = list.map(n => `
           <div class="novel-list-item" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
             <div class="novel-list-cover">
-              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.parentElement.innerHTML='📖'">` : '📖'}
+              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.src='/images/default-cover.svg'">` : `<img src="/images/default-cover.svg" alt="표지 없음">`}
             </div>
             <div class="novel-list-info">
               <div class="novel-list-title">${escHtml(n.title)}</div>

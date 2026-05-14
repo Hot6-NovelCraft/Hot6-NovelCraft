@@ -283,8 +283,8 @@
 
     function renderCard(n) {
         const coverHtml = n.coverImageUrl
-            ? `<img src="${esc(n.coverImageUrl)}" alt="${esc(n.title)}" onerror="this.style.display='none';this.parentElement.textContent='📖'">`
-            : '📖';
+            ? `<img src="${esc(n.coverImageUrl)}" alt="${esc(n.title)}" onerror="this.src='/images/default-cover.svg'">`
+            : `<img src="/images/default-cover.svg" alt="표지 없음">`;
 
         return `
         <div class="novel-card" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">

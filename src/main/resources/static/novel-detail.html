@@ -256,8 +256,8 @@
 
     function renderHero(n) {
         const coverHtml = n.coverImageUrl
-            ? `<img src="${esc(n.coverImageUrl)}" alt="${esc(n.title)}" onerror="this.style.display='none';this.parentElement.textContent='📖'">`
-            : '📖';
+            ? `<img src="${esc(n.coverImageUrl)}" alt="${esc(n.title)}" onerror="this.src='/images/default-cover.svg'">`
+            : `<img src="/images/default-cover.svg" alt="표지 없음">`;
 
         const genreLabel = GENRE_MAP[n.genre] || n.genre || '';
         const st = NOVEL_STATUS[n.status] || { label: n.status || '', color: '#9ca3af' };

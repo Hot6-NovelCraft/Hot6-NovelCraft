@@ -878,7 +878,7 @@
         el.innerHTML = list.map(n => `
           <div class="lib-item" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
             <div class="lib-cover">
-              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${escHtml(n.novelTitle || n.title || '')}" onerror="this.parentElement.innerHTML='📖'">` : '📖'}
+              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${escHtml(n.novelTitle || n.title || '')}" onerror="this.src='/images/default-cover.svg'">` : `<img src="/images/default-cover.svg" alt="표지 없음">`}
             </div>
             <div class="lib-info">
               <div class="lib-title">${escHtml(n.novelTitle || n.title || '제목 없음')}</div>
