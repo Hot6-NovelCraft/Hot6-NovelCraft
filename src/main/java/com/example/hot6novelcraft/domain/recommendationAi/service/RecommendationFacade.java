@@ -44,14 +44,19 @@ public class RecommendationFacade {
     @SuppressWarnings("unchecked")
     public RecommendationResponse getPersonalizedRecommendations(Long userId) {
 
-        // 캐시 확인
+        // 캐시 확인 (역직렬화 실패 시 재생성)
         String cacheKey = CACHE_KEY_PREFIX + "user:" + userId;
-        Object cached = redisTemplate.opsForValue().get(cacheKey);
-
-        if(cached instanceof RecommendationResponse response) {
-            log.debug("[AI 추천] 캐시 HIT userId: {}", userId);
-            return response;
+        try {
+            Object cached = redisTemplate.opsForValue().get(cacheKey);
+            if(cached instanceof RecommendationResponse response) {
+                log.debug("[AI 추천] 캐시 HIT userId: {}", userId);
+                return response;
+            }
+        } catch (Exception e) {
+            log.warn("[AI 추천] 캐시 조회 실패, 재생성합니다. userId: {}", userId);
         }
+
+        try {
 
         // AI 성능 측정 시작
         long start = System.currentTimeMillis();
@@ -101,14 +106,22 @@ public class RecommendationFacade {
         RecommendationResponse response = new RecommendationResponse(novels, type);
 
         // 캐시 저장
-        redisTemplate.opsForValue().set(cacheKey, response, CACHE_TTL);
+        try { redisTemplate.opsForValue().set(cacheKey, response, CACHE_TTL); } catch (Exception e) {
+            log.warn("[AI 추천] 캐시 저장 실패 userId: {}", userId);
+        }
 
         return response;
+
+        } catch (Exception e) {
+            log.error("[AI 추천] 개인화 추천 실패, fallback으로 대체 userId: {}", userId, e);
+            return getFallbackRecommendation();
+        }
     }
 
     // 비로그인 트렌드 추천 - TTL 1시간 (모든 비로그인 사용자 공용 캐시)
     public RecommendationResponse getTrendRecommendation() {
         String cacheKey = CACHE_KEY_PREFIX + "trend";
+        try {
         Object cached = redisTemplate.opsForValue().get(cacheKey);
 
         if(cached instanceof RecommendationResponse response) {
@@ -130,9 +143,16 @@ public class RecommendationFacade {
         RecommendationResponse response = new RecommendationResponse(novels, "TREND");
 
         // 비로그인 공용 캐시
-        redisTemplate.opsForValue().set(cacheKey, response, Duration.ofHours(1));
+        try { redisTemplate.opsForValue().set(cacheKey, response, Duration.ofHours(1)); } catch (Exception e) {
+            log.warn("[AI 추천] 트렌드 캐시 저장 실패");
+        }
 
         return response;
+
+        } catch (Exception e) {
+            log.error("[AI 추천] 트렌드 추천 실패, fallback으로 대체", e);
+            return getFallbackRecommendation();
+        }
     }
 
     /** ======= 공용 메소드 =======  */

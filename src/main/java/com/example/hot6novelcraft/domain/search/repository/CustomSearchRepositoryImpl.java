@@ -40,6 +40,7 @@ public class CustomSearchRepositoryImpl implements CustomSearchRepository {
         List<NovelSearchResponse> content = queryFactory
                 .select(Projections.constructor(
                         NovelSearchResponse.class
+                        , novel.id
                         , novel.coverImageUrl
                         , novel.title
                         , user.nickname
@@ -88,8 +89,10 @@ public class CustomSearchRepositoryImpl implements CustomSearchRepository {
             List<NovelSimpleResponse> novels = queryFactory
                     .select(Projections.constructor(
                             NovelSimpleResponse.class
+                            , novel.id
                             , novel.title
                             , user.nickname
+                            , novel.tags
                     ))
                     .from(novel)
                     .join(user).on(novel.authorId.eq(user.id))

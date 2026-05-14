@@ -114,14 +114,20 @@
     .author-info { flex: 1; min-width: 0; }
     .author-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 3px; }
     .author-meta { font-size: 0.75rem; color: var(--text3); }
+    .author-novel-link { color: var(--primary-light); cursor: pointer; text-decoration: underline; }
+    .author-novel-link:hover { color: var(--primary); }
     .follow-btn {
       padding: 7px 18px; border-radius: 8px; flex-shrink: 0;
       background: transparent; border: 1px solid var(--border);
       color: var(--text2); font-size: 0.8rem; cursor: pointer;
-      transition: all 0.2s; white-space: nowrap; font-family: inherit;
+      transition: all 0.2s; white-space: nowrap; font-family: inherit; font-weight: 600;
     }
     .follow-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-    .follow-btn.following { background: rgba(240,104,66,0.12); border-color: var(--accent2); color: var(--accent2); }
+    .follow-btn.following {
+      background: var(--accent2); border-color: var(--accent2);
+      color: white;
+    }
+    .follow-btn.following:hover { background: #d45a2a; border-color: #d45a2a; }
 
     /* ── 구분선 ── */
     .results-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
@@ -314,9 +320,10 @@
       dropdown.innerHTML = '<div class="nc-search-loading">로딩 중...</div>';
       dropdown.classList.add('active');
       try {
+        const loggedIn = Auth.isLoggedIn();
         const [popular, recent] = await Promise.allSettled([
-          api.get('/search/keywords/popular'),
-          Auth.isLoggedIn() ? api.get('/search/keywords/recent', true) : Promise.resolve([])
+          api.get('/search/keywords/popular', loggedIn),
+          loggedIn ? api.get('/search/keywords/recent', true) : Promise.resolve([])
         ]);
         let html = '';
         if (recent.status === 'fulfilled' && recent.value?.length) {
@@ -416,9 +423,10 @@
     const qs = new URLSearchParams({ page: String(page), size: '20' });
     if (keyword) qs.append('keyword', keyword);
 
+    const useAuth = Auth.isLoggedIn();
     let novels = [], total = 0, totalPages = 1;
     try {
-      const res = await api.get(`/search/v2/novels?${qs}`);
+      const res = await api.get(`/search/v2/novels?${qs}`, useAuth);
       novels = res?.content || [];
       total = res?.totalElements ?? novels.length;
       totalPages = res?.totalPages ?? 1;
@@ -427,8 +435,8 @@
     let authors = [];
     if (showAuthors && keyword) {
       try {
-        const aRes = await api.get(`/search/v2/authors?keyword=${encodeURIComponent(keyword)}`);
-        authors = Array.isArray(aRes) ? aRes : (aRes?.content || []);
+        const aRes = await api.get(`/search/v2/authors?keyword=${encodeURIComponent(keyword)}`, useAuth);
+        authors = aRes?.matchingAuthors || [];
       } catch {}
     }
 
@@ -451,18 +459,19 @@
     if (showAuthors && authors.length) {
       if (novels.length) html += `<hr class="results-divider">`;
       html += `<div class="result-section-label">작가 검색 결과</div>`;
-      html += authors.slice(0, 5).map(renderAuthorItem).join('');
+      html += authors.slice(0, 5).map(renderAuthorSearchItem).join('');
     }
 
     container.innerHTML = html;
     bindPaginationEvents();
   }
 
-  /* ── 작가 검색 ── */
+  /* ── 작가 검색 ──
+     응답: IntegratedAuthorSearchResponse { matchingAuthors: [{authorId, nickname, bio, topNovels}], matchingNovels } */
   async function loadAuthorResults(keyword, container) {
     try {
-      const res = await api.get(`/search/v2/authors?keyword=${encodeURIComponent(keyword)}`);
-      const list = Array.isArray(res) ? res : (res?.content || []);
+      const res = await api.get(`/search/v2/authors?keyword=${encodeURIComponent(keyword)}`, Auth.isLoggedIn());
+      const list = res?.matchingAuthors || [];
       if (!list.length) {
         updateSummary(0, keyword);
         container.innerHTML = renderEmpty('작가 검색 결과가 없습니다', `"${escHtml(keyword)}" 작가를 찾을 수 없습니다`);
@@ -470,19 +479,19 @@
       }
       updateSummary(list.length, keyword);
       container.innerHTML = `<div class="result-section-label">작가 검색 결과</div>`
-              + list.map(renderAuthorItem).join('');
+              + list.map(renderAuthorSearchItem).join('');
     } catch (e) {
       container.innerHTML = renderEmpty('오류 발생', '작가 정보를 불러오지 못했습니다.');
     }
   }
 
-  /* ── 태그 검색 ── */
+  /* ── 태그 검색 ──
+     응답: [{tag, novels: [{title, authorNickname, tags}]}] → novels 펼치기 */
   async function loadTagResults(keyword, container) {
     if (!keyword) {
       container.innerHTML = renderEmpty('검색어를 입력하세요', '태그명을 검색해보세요');
       return;
     }
-    /* 한국어 입력 → enum key 매핑 */
     const tagKey = Object.entries(TAG_MAP).find(([k, v]) =>
             v === keyword || k.toLowerCase() === keyword.toLowerCase()
     )?.[0];
@@ -492,16 +501,16 @@
       return;
     }
 
-    const res = await api.get(`/search/v2/tags?tags=${tagKey}`);
-    const list = res?.content || (Array.isArray(res) ? res : []);
-    if (!list.length) {
+    const res = await api.get(`/search/v2/tags?tags=${tagKey}`, Auth.isLoggedIn());
+    const novels = Array.isArray(res) ? res.flatMap(tg => tg.novels || []) : [];
+    if (!novels.length) {
       updateSummary(0, keyword);
       container.innerHTML = renderEmpty('태그 검색 결과가 없습니다', `#${escHtml(TAG_MAP[tagKey] || tagKey)} 태그에 해당하는 소설이 없습니다`);
       return;
     }
-    updateSummary(list.length, `#${TAG_MAP[tagKey]}`);
+    updateSummary(novels.length, `#${TAG_MAP[tagKey]}`);
     container.innerHTML = `<div class="result-section-label">#${escHtml(TAG_MAP[tagKey] || tagKey)} 소설 목록</div>`
-            + list.map(renderNovelItem).join('');
+            + novels.map(renderSimpleNovelItem).join('');
   }
 
   /* ── 렌더링 헬퍼 ── */
@@ -553,6 +562,50 @@
         </div>`;
   }
 
+  /* AuthorSearchResponse: {authorId, nickname, bio, topNovels: [{id, title, coverImageUrl}]} */
+  function renderAuthorSearchItem(a) {
+    const initial = (a.nickname || '작')?.charAt(0)?.toUpperCase();
+    const topNovels = a.topNovels?.slice(0, 2) || [];
+    const topLinks = topNovels.map(n =>
+      `<span class="author-novel-link" onclick="event.stopPropagation();window.location.href='/novel-detail.html?id=${n.id}'">${escHtml(n.title)}</span>`
+    ).join(', ');
+    const bioText = a.bio ? escHtml(a.bio.slice(0, 30)) : null;
+    const meta = [bioText, topLinks ? `대표작: ${topLinks}` : null].filter(Boolean).join(' · ') || '작가';
+    return `
+        <div class="author-item">
+          <div class="author-avatar">${escHtml(initial)}</div>
+          <div class="author-info">
+            <div class="author-name">${escHtml(a.nickname || '작가')}</div>
+            <div class="author-meta">${meta}</div>
+          </div>
+          <button class="follow-btn" onclick="event.stopPropagation();toggleFollow(${a.authorId || 0}, this)">팔로우</button>
+        </div>`;
+  }
+
+  /* NovelSimpleResponse: {novelId, title, authorNickname, tags} */
+  function renderSimpleNovelItem(n) {
+    const tagBadges = n.tags
+      ? n.tags.split(',').slice(0, 2).map(t => {
+          const label = TAG_MAP[t.trim()] || t.trim();
+          return `<span class="badge badge--paid">${escHtml(label)}</span>`;
+        }).join('')
+      : '';
+    const canNav = !!n.novelId;
+    return `
+        <div class="novel-item" ${canNav ? `onclick="window.location.href='/novel-detail.html?id=${n.novelId}'" style="cursor:pointer"` : 'style="cursor:default"'}>
+          <div class="novel-cover">📖</div>
+          <div class="novel-info">
+            <div class="novel-title">${escHtml(n.title)}</div>
+            <div class="novel-meta">${escHtml(n.authorNickname || '알 수 없음')}</div>
+            <div class="novel-badges">${tagBadges}</div>
+          </div>
+          ${canNav ? `<button class="view-btn"
+            onclick="event.stopPropagation();window.location.href='/novel-detail.html?id=${n.novelId}'">
+            보기
+          </button>` : ''}
+        </div>`;
+  }
+
   function renderEmpty(title, desc) {
     return `
         <div class="empty-result">
@@ -597,11 +650,16 @@
   async function toggleFollow(authorId, btn) {
     if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
     try {
-      const res = await api.post(`/auth/authors/${authorId}/follow`, {}, true);
-      const isFollowing = res?.following ?? false;
+      const res = await api.post(`/authors/${authorId}/follow`, {}, true);
+      // Java record boolean isFollowing → Jackson이 버전에 따라 'isFollowing' 또는 'following'으로 직렬화
+      const isFollowing = res?.isFollowing ?? res?.following ?? false;
       btn.textContent = isFollowing ? '팔로잉' : '팔로우';
       btn.classList.toggle('following', isFollowing);
-      Toast.success(isFollowing ? '팔로우했습니다!' : '팔로우를 취소했습니다');
+      if (isFollowing) {
+        Toast.success('팔로우했습니다!');
+      } else {
+        Toast.error('팔로우를 취소했습니다');
+      }
     } catch (e) {
       Toast.error(e.message || '실패');
     }
@@ -612,7 +670,7 @@
     const el = document.getElementById('popular-tags-list');
     if (!el) return;
     try {
-      const tags = await api.get('/search/tags/popular');
+      const tags = await api.get('/search/tags/popular', Auth.isLoggedIn());
       if (tags?.length) {
         el.innerHTML = tags.slice(0, 8).map(t => {
           const label = TAG_MAP[t] || t;
@@ -624,11 +682,11 @@
         return;
       }
     } catch {}
-    /* API 실패 시 기본 태그 */
+    /* API 실패 시 기본 태그 - TAG_MAP 레이블 사용 */
     const defaults = [
-      { label: '판타지' }, { label: '로판' }, { label: '회귀' },
-      { label: '무협' }, { label: '빙의' }, { label: '현대판타지' },
-      { label: '환생' }, { label: '액션' },
+      { label: '회귀' }, { label: '이세계' }, { label: '빙의' },
+      { label: '환생' }, { label: '먼치킨' }, { label: '아카데미' },
+      { label: '힐링' }, { label: '액션' },
     ];
     el.innerHTML = defaults.map(t =>
             `<div class="popular-tag-item"
@@ -662,12 +720,20 @@
         el.innerHTML = '<div class="recent-login-hint" style="color:var(--text3)">최근 검색어가 없습니다</div>';
         return;
       }
-      el.innerHTML = keywords.slice(0, 5).map(k => `
+      el.innerHTML = keywords.slice(0, 5).map(k => {
+        const tagLabel = TAG_MAP[k] || TAG_MAP[k.toUpperCase()];
+        const isTagKey = !!tagLabel;
+        const isTagLabel = Object.values(TAG_MAP).includes(k);
+        const isTag = isTagKey || isTagLabel;
+        const displayLabel = tagLabel || k;
+        const searchKw = isTagKey ? tagLabel : k;
+        const type = isTag ? 'tag' : currentType;
+        return `
           <div class="recent-keyword-item"
-            onclick="window.location.href='/search.html?keyword=${encodeURIComponent(k)}&type=${currentType}'">
-            <span class="recent-keyword-text">${escHtml(k)}</span>
-          </div>`
-      ).join('');
+            onclick="window.location.href='/search.html?keyword=${encodeURIComponent(searchKw)}&type=${type}'">
+            <span class="recent-keyword-text">${escHtml(displayLabel)}</span>
+          </div>`;
+      }).join('');
     } catch {
       el.innerHTML = '<div class="recent-login-hint" style="color:var(--text3)">불러올 수 없습니다</div>';
     }
@@ -743,16 +809,17 @@
         const newUrl = new URL(location.href);
         newUrl.searchParams.set('type', newType);
         history.pushState({}, '', newUrl.toString());
-        runSearch(currentKeyword, newType, 0);
+        runSearch(currentKeyword, newType, 0).finally(() => loadRecentKeywords());
       });
     });
 
     initPointOptions();
 
-    /* 데이터 로드 */
-    runSearch(currentKeyword, currentType, 0);
+    /* 데이터 로드 - runSearch 완료 후 최근 검색어 갱신 */
     loadPopularTags();
-    loadRecentKeywords();
+    runSearch(currentKeyword, currentType, 0).finally(() => {
+      loadRecentKeywords();
+    });
   });
   </script>
 </head>

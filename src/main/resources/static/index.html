@@ -870,7 +870,10 @@
             const res = await api.get('/ai/recommendation', Auth.isLoggedIn());
             const label = document.getElementById('rec-type-label');
             if (label) {
-                label.textContent = Auth.isLoggedIn() ? '맞춤 추천' : '트렌드 기반';
+                const type = res?.recommendationType;
+                label.textContent = type === 'PERSONALIZED' ? '맞춤 추천'
+                        : type === 'TREND' ? '트렌드 기반'
+                        : Auth.isLoggedIn() ? '맞춤 추천' : '트렌드 기반';
             }
             const novels = res?.novels || res?.items || res?.content || [];
             renderAiRec(novels.slice(0, 10));
@@ -892,7 +895,7 @@
             ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.parentElement.innerHTML='📖'">` : '📖'}
           </div>
           <div class="ai-rec-title">${escHtml(n.title)}</div>
-          <div class="ai-rec-author">${escHtml(n.authorName || '')}</div>
+          <div class="ai-rec-author">${escHtml(n.authorNickname || n.authorName || '')}</div>
           <div class="ai-rec-genre">${genreTag(n.genre)}</div>
         </div>
       `).join('');

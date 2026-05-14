@@ -82,6 +82,7 @@ public class JwtFilter extends OncePerRequestFilter {
             "/api/search/v2/novels"
             ,"/api/search/v2/tags"
             ,"/api/search/v2/authors"
+            ,"/api/ai/recommendation"
     );
 
     @Override
@@ -106,8 +107,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 || path.startsWith("/js/")
                 || path.startsWith("/images/")
                 || path.equals("/.well-known/appspecific/com.chrome.devtools.json")
-                || (path.startsWith("/api/search/") && !path.equals("/api/search/keywords/recent"))
-                || path.startsWith("/api/ai/recommendation")
                 || path.startsWith("/actuator");
     }
 
@@ -155,6 +154,12 @@ public class JwtFilter extends OncePerRequestFilter {
             // 비로그인 허용 GET 패턴이면 통과
             if ("GET".equalsIgnoreCase(request.getMethod()) &&
                     PUBLIC_GET_PATTERNS.stream().anyMatch(p -> PATH_MATCHER.match(p, requestURL))) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // 선택적 인증 URL (토큰 없어도 통과, 있으면 인증)
+            if (OPTIONAL_AUTH_URLS.contains(requestURL)) {
                 filterChain.doFilter(request, response);
                 return;
             }
