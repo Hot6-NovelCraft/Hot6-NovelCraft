@@ -200,7 +200,7 @@ class EpisodeCommentServiceTest {
     @Test
     void 댓글목록조회_캐시MISS이면_DB조회후_캐싱() {
         Page<EpisodeCommentListResponse> commentPage = new PageImpl<>(List.of(
-                new EpisodeCommentListResponse(1L, "테스트작가", "재밌어요!", null)
+                new EpisodeCommentListResponse(1L, 100L, "테스트작가", "재밌어요!", null)
         ));
 
         given(episodeCommentCacheService.getCommentCache(1L, 0)).willReturn(null);

@@ -158,6 +158,7 @@ function initNav() {
   const user = Auth.getUser();
   const isLoggedIn = Auth.isLoggedIn();
   const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   nav.innerHTML = `
     <div class="nc-nav__inner">
@@ -174,16 +175,18 @@ function initNav() {
           <button class="nc-alarm-btn" id="nav-alarm" onclick="window.location.href='/mypage.html?tab=notification'">
             🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
           </button>
-          <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+          ${!isAdmin ? `<button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>` : ''}
           ${isAuthorOrMentor ? `
             <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
             <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
           ` : ''}
+          ${isAdmin ? `<button class="nc-nav__btn nc-nav__btn--admin" onclick="window.location.href='/admin.html'">⚙ 관리자</button>` : ''}
           <div class="nc-user-menu" id="user-menu">
             <button class="nc-nav__btn" onclick="ncToggleUserMenu()" style="font-weight:600;user-select:none">
               ${user?.nickname || '내 프로필'} ▾
             </button>
             <div class="nc-user-dropdown" id="user-dropdown">
+              ${isAdmin ? '<a href="/admin.html" class="nc-user-dropdown__item nc-user-dropdown__item--admin">⚙ 관리자 대시보드</a>' : ''}
               ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
               <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
               <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
@@ -377,6 +380,9 @@ function injectCommonStyles() {
     .nc-nav__btn--active { border-color: var(--primary); color: var(--primary-light); }
     .nc-nav__btn--mentor { border-color: var(--accent); color: var(--accent); }
     .nc-nav__btn--mentee { border-color: var(--accent2); color: var(--accent2); }
+    .nc-nav__btn--admin { border-color: var(--warning); color: var(--warning); }
+    .nc-nav__btn--admin:hover { background: rgba(245,158,11,0.12); border-color: var(--warning); }
+    .nc-user-dropdown__item--admin { color: #fbbf24 !important; }
     .nc-point-badge {
       padding: 4px 12px; border-radius: 20px;
       background: linear-gradient(135deg, var(--accent)20, var(--accent)10);
@@ -637,8 +643,40 @@ function injectCommonStyles() {
   document.head.appendChild(style);
 }
 
+// ── 어드민 nav 패치 (커스텀 initNav를 override한 페이지에서도 동작) ──
+function patchAdminNav() {
+  const user = Auth.getUser();
+  if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.role)) return;
+
+  const navRight = document.querySelector('.nc-nav__right');
+  if (!navRight) return;
+
+  // 이미 추가된 경우 중복 방지
+  if (navRight.querySelector('.nc-nav__btn--admin')) return;
+
+  // ⚙ 관리자 버튼 — 유저 메뉴 바로 앞에 삽입
+  const userMenu = navRight.querySelector('.nc-user-menu');
+  const adminBtn = document.createElement('button');
+  adminBtn.className = 'nc-nav__btn nc-nav__btn--admin';
+  adminBtn.textContent = '⚙ 관리자';
+  adminBtn.onclick = () => window.location.href = '/admin.html';
+  if (userMenu) navRight.insertBefore(adminBtn, userMenu);
+  else navRight.appendChild(adminBtn);
+
+  // 드롭다운 맨 위에 관리자 링크 삽입
+  const dropdown = navRight.querySelector('.nc-user-dropdown');
+  if (dropdown && !dropdown.querySelector('.nc-user-dropdown__item--admin')) {
+    const adminLink = document.createElement('a');
+    adminLink.href = '/admin.html';
+    adminLink.className = 'nc-user-dropdown__item nc-user-dropdown__item--admin';
+    adminLink.textContent = '⚙ 관리자 대시보드';
+    dropdown.insertBefore(adminLink, dropdown.firstChild);
+  }
+}
+
 // 페이지 로드시 자동 실행
 document.addEventListener('DOMContentLoaded', () => {
   injectCommonStyles();
   initNav();
+  patchAdminNav();
 });
