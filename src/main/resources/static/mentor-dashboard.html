@@ -952,9 +952,15 @@
   async function viewManuscript(mentoringId) {
     try {
       const res = await api.get(`/v2/mentorings/${mentoringId}/documents`, true);
-      const url = res?.data?.manuscriptUrl || res?.manuscriptUrl || res?.data?.downloadUrl || res?.downloadUrl || res?.url;
-      if (url) window.open(url, '_blank');
-      else Toast.info('원고 URL을 가져올 수 없습니다');
+      const url = res?.manuscriptUrl || res?.data?.manuscriptUrl || res?.downloadUrl || res?.url;
+      if (!url) { Toast.info('원고 URL을 가져올 수 없습니다'); return; }
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (e) {
       Toast.error(e.message || '원고 조회 실패');
     }
@@ -987,8 +993,11 @@
     try {
       await api.patch(`/v2/mentorings/${mentoringId}/complete`, {}, true);
       Toast.success('멘토링이 종료되었습니다');
-      loadPage();
-    } catch (e) { Toast.error(e.message || '종료 실패'); }
+    } catch (e) {
+      // 멘티가 먼저 종료한 경우 등 이미 종료 상태일 수 있음 → 안내 후 갱신
+      Toast.error(e.message?.includes('수락') ? '이미 종료된 멘토링입니다.' : (e.message || '종료 실패'));
+    }
+    loadPage(); // 성공/실패 모두 최신 상태로 갱신
   }
 
   /* ─────────────────── 채팅 ─────────────────── */

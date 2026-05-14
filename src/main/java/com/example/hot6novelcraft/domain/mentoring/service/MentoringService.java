@@ -92,6 +92,10 @@ public class MentoringService {
         }
 
         mentorship.reject();
+
+        String mentorName = userRepository.findById(userId).map(User::getNickname).orElse("멘토");
+        eventPublisher.publishEvent(
+                NotificationEvent.mentorshipRejected(mentorship.getMenteeId(), mentorName, mentoringId));
     }
 
     @Transactional
@@ -132,6 +136,11 @@ public class MentoringService {
 
         mentor.increaseSlot();
         mentorship.complete();
+
+        // 멘티에게 종료 알림
+        String mentorName = userRepository.findById(userId).map(User::getNickname).orElse("멘토");
+        eventPublisher.publishEvent(
+                NotificationEvent.mentorshipCompleted(mentorship.getMenteeId(), mentorName, mentoringId));
     }
 
     // =====================================================================
@@ -150,6 +159,11 @@ public class MentoringService {
                 .orElseThrow(() -> new ServiceErrorException(MentorExceptionEnum.MENTOR_NOT_FOUND));
         mentor.increaseSlot();
         mentorship.complete();
+
+        // 멘토에게 종료 알림
+        String menteeName = userRepository.findById(menteeId).map(User::getNickname).orElse("멘티");
+        eventPublisher.publishEvent(
+                NotificationEvent.mentorshipCompleted(mentor.getUserId(), menteeName, mentoringId));
     }
 
     // 멘티가 자신의 멘토링 상세 조회 (피드백 포함)
