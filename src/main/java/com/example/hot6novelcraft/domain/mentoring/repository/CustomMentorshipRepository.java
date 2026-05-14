@@ -13,7 +13,7 @@ import java.util.List;
 public interface CustomMentorshipRepository {
 
     // V1: 멘토 목록 조회
-    Page<MentorWithNickname> findMentorList(String genre, CareerLevel careerLevel, Pageable pageable);
+    Page<MentorWithNickname> findMentorList(String genre, CareerLevel careerLevel, Long excludeUserId, Pageable pageable);
 
     // V2: 멘토링 이력 조회 - N+1 개선 (mentorRepository + userRepository 반복 쿼리 → QueryDSL JOIN 단일 쿼리)
     List<MentorshipHistoryResponse> findMyHistoryWithMentorNickname(Long menteeId, MentorshipStatus status);

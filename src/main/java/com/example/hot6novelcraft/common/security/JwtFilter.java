@@ -42,6 +42,17 @@ public class JwtFilter extends OncePerRequestFilter {
     private static final List<String> SOCIAL_TOKEN_ALLOWED_URLS
             = List.of("/api/auth/social/signup/**");
 
+    // 비로그인 GET 허용 패턴 (소설 상세, 에피소드 목록 등)
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+    private static final List<String> PUBLIC_GET_PATTERNS = List.of(
+            "/api/novels/*",
+            "/api/novels/*/episodes",
+            "/api/novels/*/episodes/*",
+            "/api/episodes/*/comments",
+            "/api/novels/ranking/**",
+            "/api/v2/episodes/*"
+    );
+
     // 토큰 없이 통과 가능한 URL
     private static final List<String> PUBLIC_URLS
             = List.of(
@@ -54,39 +65,48 @@ public class JwtFilter extends OncePerRequestFilter {
                     , "/api/auth/phone/verify"
                     , "/api/auth/users/restore"
                     , "/api/auth/users/abandon-recovery"
-                    , "/payment-test.html"
-                    , "/social-login-test.html"
-                    , "/chat-test.html"
-                    , "/ai-chat.html"
-                    , "/subscription-test.html"
-                    , "/notification-test.html"
                     , "/api/webhooks/portone"
                     , "/favicon.ico"
                     , "/login"          // 구글이 에러 시 여기로 리다이렉트
                     , "/login?error"
                     , "/api/novels/ranking"
-                    , "/api/search/v2/novels"
-                    , "/api/search/v2/tags"
-                    , "/api/search/v2/authors"
-                    , "/actuator/prometheus");
+                    , "/actuator/prometheus"
+                    , "/api/novels/new"             // 신작 목록
+                    , "/api/search/keywords/popular"   // 인기 검색어
+                    , "/api/search/tags/popular"
+                    , "/api/v2/novels");
+
+    // 토큰이 있으면 인증하고, 없어도 통과가능한 URL (선택적 인증)
+    private static final List<String> OPTIONAL_AUTH_URLS = List.of(
+            "/api/search/v2/novels"
+            ,"/api/search/v2/tags"
+            ,"/api/search/v2/authors"
+            ,"/api/ai/recommendation"
+    );
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/oauth2/authorize") // 소셜 로그인 시작
+        return path.startsWith("/oauth2/authorize")
                 || path.startsWith("/api/auth/login/oauth2")
                 || path.startsWith("/login/oauth2")
-                || path.equals("/ws-chat") || path.startsWith("/ws-chat/")     // WebSocket (SockJS info 포함) - 인증은 StompChannelInterceptor 처리
-                || path.equals("/login")          // 구글 에러 리다이렉트
+                || path.equals("/ws-chat") || path.startsWith("/ws-chat/")
+                || path.equals("/login")
                 || path.equals("/favicon.ico")
-                || path.equals("/social-login-test.html")
-                || path.equals("/chat-test.html")
-                || path.equals("/ai-chat.html")
-                || path.equals("/subscription-test.html")
-                || path.equals("/notification-test.html")
+                || path.equals("/login.html")
+                || path.equals("/index.html")
+                || path.equals("/signup.html")
                 || path.equals("/error")
+                || path.endsWith(".html")
+                || path.endsWith(".js")
+                || path.endsWith(".css")
+                || path.equals("/common.js")
+                || path.startsWith("/static/")
+                || path.startsWith("/css/")
+                || path.startsWith("/js/")
+                || path.startsWith("/images/")
+                || path.equals("/.well-known/appspecific/com.chrome.devtools.json")
                 || path.startsWith("/actuator");
-
     }
 
     @Override
@@ -116,7 +136,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 }
 
                 if (!setAuthentication(response, token, requestURL)) {
-                return;
+                    return;
                 }
             }
 
@@ -129,6 +149,19 @@ public class JwtFilter extends OncePerRequestFilter {
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader == null || !authorizationHeader.startsWith(JwtUtil.BEARER_PREFIX)) {
+
+            // 비로그인 허용 GET 패턴이면 통과
+            if ("GET".equalsIgnoreCase(request.getMethod()) &&
+                    PUBLIC_GET_PATTERNS.stream().anyMatch(p -> PATH_MATCHER.match(p, requestURL))) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // 선택적 인증 URL (토큰 없어도 통과, 있으면 인증)
+            if (OPTIONAL_AUTH_URLS.contains(requestURL)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             log.warn("JWT 토큰이 없거나 형식이 잘못되었습니다. URL : {}", requestURL);
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "JWT 토큰이 없거나 형식이 잘못되었습니다.");

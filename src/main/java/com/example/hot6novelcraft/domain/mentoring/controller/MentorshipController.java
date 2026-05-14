@@ -60,9 +60,11 @@ public class MentorshipController {
     public ResponseEntity<BaseResponse<Page<MentorshipListResponse>>> getMentorList(
             @RequestParam(required = false) String genre,
             @RequestParam(required = false) CareerLevel careerLevel,
-            @PageableDefault(size = 20) Pageable pageable
+            @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
-        Page<MentorshipListResponse> response = mentorshipService.getMentorList(genre, careerLevel, pageable);
+        Long currentUserId = userDetails != null ? userDetails.getUser().getId() : null;
+        Page<MentorshipListResponse> response = mentorshipService.getMentorList(genre, careerLevel, currentUserId, pageable);
         return ResponseEntity.ok(BaseResponse.success("200", "멘토 목록 조회 성공", response));
     }
 
@@ -101,6 +103,20 @@ public class MentorshipController {
         Long menteeId = userDetails.getUser().getId();
         List<MentorshipHistoryResponse> response = mentorshipService.getMyHistoryV2(menteeId, status);
         return ResponseEntity.ok(BaseResponse.success("200", "멘토링 이력 조회 성공", response));
+    }
+
+    /**
+     * 멘토링 신청 취소 (멘티 - PENDING 상태만)
+     * 정은식
+     */
+    @DeleteMapping("/{mentorshipId}")
+    public ResponseEntity<BaseResponse<Void>> cancelMentorship(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable Long mentorshipId) {
+
+        mentorshipService.cancelMentorship(userDetails.getUser().getId(), mentorshipId);
+
+        return ResponseEntity.ok(BaseResponse.success("200", "멘토링 신청이 취소되었습니다.", null));
     }
 
     /**

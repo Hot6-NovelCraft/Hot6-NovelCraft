@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>환전 내역 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        /* ── 네비 ── */
+        .nc-nav__inner { height: 62px; }
+        .nc-point-btn {
+            padding: 5px 14px; border-radius: 20px;
+            background: linear-gradient(135deg, rgba(240,200,66,.18), rgba(240,200,66,.08));
+            border: 1px solid rgba(240,200,66,.4); color: var(--accent);
+            font-size: .82rem; font-weight: 700; cursor: pointer;
+            transition: all .2s; white-space: nowrap; font-family: inherit;
+        }
+        .nc-alarm-btn {
+            position: relative; padding: 6px 10px; border-radius: 8px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text2); font-size: 1rem; cursor: pointer;
+            transition: all .2s; font-family: inherit;
+        }
+        .nc-alarm-btn:hover { background: var(--surface); }
+        .nc-user-menu { position: relative; }
+        .nc-user-dropdown {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--radius); min-width: 160px;
+            box-shadow: var(--shadow-lg); z-index: 300; display: none; overflow: hidden;
+        }
+        .nc-user-menu.open .nc-user-dropdown { display: block; }
+        .nc-user-dropdown__item {
+            display: block; width: 100%; padding: 11px 16px; text-align: left;
+            background: none; border: none; color: var(--text2); font-size: .875rem;
+            cursor: pointer; transition: background .15s; font-family: inherit; text-decoration: none;
+        }
+        .nc-user-dropdown__item:hover { background: var(--surface); color: var(--text); }
+        .nc-user-dropdown__item--danger { color: #f87171; }
+
+        /* ── 레이아웃 ── */
+        .wh-layout {
+            max-width: 1160px; margin: 0 auto; padding: 28px 24px;
+            display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start;
+        }
+        @media (max-width: 860px) {
+            .wh-layout { grid-template-columns: 1fr; }
+            .wh-sidebar { order: -1; }
+        }
+
+        /* ── 상단 요약 카드 4개 ── */
+        .summary-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;
+        }
+        @media (max-width: 700px) { .summary-grid { grid-template-columns: repeat(2,1fr); } }
+        .sum-card {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px 18px;
+        }
+        .sum-label { font-size: .75rem; color: var(--text3); margin-bottom: 8px; font-weight: 600; letter-spacing: .02em; }
+        .sum-value { font-size: 1.35rem; font-weight: 900; font-family: 'Noto Serif KR', serif; color: var(--text); }
+        .sum-value.accent { color: var(--accent); }
+        .sum-value.green  { color: var(--success); }
+        .sum-value.warn   { color: var(--warning); }
+        .sum-value.purple { color: var(--primary-light); }
+
+        /* ── 필터 바 ── */
+        .filter-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .filter-btns { display: flex; gap: 8px; }
+        .filter-btn {
+            padding: 7px 16px; border-radius: 20px; font-size: .82rem; font-weight: 700;
+            border: 1px solid var(--border); background: transparent; color: var(--text2);
+            cursor: pointer; transition: all .15s; font-family: inherit;
+        }
+        .filter-btn.active {
+            background: var(--primary); border-color: var(--primary); color: white;
+        }
+        .filter-btn:hover:not(.active) { border-color: var(--primary-light); color: var(--primary-light); }
+        .month-select {
+            padding: 7px 12px; border-radius: 8px; font-size: .82rem;
+            border: 1px solid var(--border); background: var(--surface);
+            color: var(--text); font-family: inherit; cursor: pointer;
+        }
+
+        /* ── 테이블 ── */
+        .wh-table-wrap {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+        }
+        .wh-table { width: 100%; border-collapse: collapse; }
+        .wh-table thead tr {
+            background: var(--surface); border-bottom: 1px solid var(--border);
+        }
+        .wh-table th {
+            padding: 13px 16px; text-align: left; font-size: .78rem;
+            font-weight: 700; color: var(--text3); white-space: nowrap;
+        }
+        .wh-table th:last-child { text-align: center; }
+        .wh-table td {
+            padding: 15px 16px; font-size: .875rem; color: var(--text);
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            vertical-align: middle;
+        }
+        .wh-table tbody tr:last-child td { border-bottom: none; }
+        .wh-table tbody tr:hover { background: rgba(255,255,255,.02); }
+        .wh-table td:last-child { text-align: center; }
+        .wd-num { font-size: .78rem; color: var(--text3); }
+        .wd-amount { font-weight: 700; }
+
+        /* ── 상태 뱃지 ── */
+        .badge {
+            display: inline-block; padding: 4px 14px; border-radius: 20px;
+            font-size: .78rem; font-weight: 700; border: 1px solid; white-space: nowrap;
+        }
+        .badge-pending    { background: rgba(240,200,66,.12); border-color: rgba(240,200,66,.3); color: #f0c842; }
+        .badge-processing { background: rgba(124,90,240,.12); border-color: rgba(124,90,240,.3); color: var(--primary-light); }
+        .badge-completed  { background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.3); color: #10b981; }
+        .badge-rejected   { background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.3); color: #f87171; }
+
+        /* ── 상세 버튼 ── */
+        .btn-detail {
+            padding: 6px 16px; border-radius: 8px; font-size: .8rem; font-weight: 700;
+            border: 1px solid var(--border); background: transparent; color: var(--text2);
+            cursor: pointer; transition: all .15s; font-family: inherit;
+        }
+        .btn-detail:hover { border-color: var(--primary-light); color: var(--primary-light); background: rgba(124,90,240,.06); }
+
+        /* ── 페이지네이션 ── */
+        .wh-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 4px; flex-wrap: wrap; gap: 10px;
+        }
+        .total-count { font-size: .82rem; color: var(--text3); }
+        .pagination { display: flex; align-items: center; gap: 4px; }
+        .page-btn {
+            width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+            background: transparent; color: var(--text2); font-size: .82rem; font-weight: 700;
+            cursor: pointer; transition: all .15s; font-family: inherit; display: flex;
+            align-items: center; justify-content: center;
+        }
+        .page-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .page-btn:hover:not(.active):not(:disabled) { border-color: var(--primary-light); color: var(--primary-light); }
+        .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-tax {
+            padding: 8px 20px; border-radius: 8px; font-size: .82rem; font-weight: 700;
+            border: 1px solid var(--border); background: transparent; color: var(--text2);
+            cursor: pointer; transition: all .15s; font-family: inherit;
+        }
+        .btn-tax:hover { border-color: var(--primary-light); color: var(--primary-light); }
+
+        /* ── 사이드바 ── */
+        .sidebar-card {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px; margin-bottom: 14px;
+        }
+        .sidebar-title {
+            font-size: .82rem; font-weight: 700; color: var(--text3);
+            margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+        }
+        .avail-label { font-size: .78rem; color: var(--text3); margin-bottom: 6px; }
+        .avail-value {
+            font-size: 1.8rem; font-weight: 900;
+            font-family: 'Noto Serif KR', serif; color: var(--accent); margin-bottom: 4px;
+        }
+        .avail-sub { font-size: .75rem; color: var(--text3); margin-bottom: 14px; }
+        .btn-go-settle {
+            width: 100%; padding: 11px; border-radius: 10px; font-size: .88rem; font-weight: 700;
+            background: var(--bg2); border: 1px solid var(--border); color: var(--text);
+            cursor: pointer; transition: all .15s; font-family: inherit;
+        }
+        .btn-go-settle:hover { border-color: var(--primary-light); color: var(--primary-light); }
+
+        /* ── 차트 ── */
+        .chart-wrap { position: relative; height: 110px; margin-top: 6px; }
+        .chart-bars {
+            display: flex; align-items: flex-end; gap: 6px; height: 90px; margin-bottom: 4px;
+        }
+        .chart-bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+        .chart-bar {
+            width: 100%; border-radius: 4px 4px 0 0;
+            background: linear-gradient(to top, var(--primary), var(--primary-light));
+            transition: height .4s ease; min-height: 4px;
+        }
+        .chart-bar:hover { opacity: 0.8; }
+        .chart-label { font-size: .65rem; color: var(--text3); margin-top: 4px; white-space: nowrap; }
+        .chart-empty { font-size: .78rem; color: var(--text3); text-align: center; padding: 20px 0; }
+
+        /* ── 정산 안내 ── */
+        .info-row {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: .82rem;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-row .k { color: var(--text3); }
+        .info-row .v { color: var(--text2); font-weight: 600; text-align: right; }
+
+        /* ── 빈 상태 / 로딩 ── */
+        .empty-state {
+            padding: 40px; text-align: center; color: var(--text3); font-size: .875rem;
+        }
+
+        /* ── 상세 모달 ── */
+        .det-modal {
+            position: fixed; inset: 0; z-index: 500; display: none; align-items: center; justify-content: center;
+        }
+        .det-modal.show { display: flex; }
+        .det-modal__backdrop {
+            position: absolute; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+        }
+        .det-modal__box {
+            position: relative; z-index: 1; width: min(480px, 94vw);
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 16px; padding: 28px;
+        }
+        .det-modal__title {
+            font-size: 1.05rem; font-weight: 700; margin-bottom: 20px;
+            padding-bottom: 14px; border-bottom: 1px solid var(--border);
+        }
+        .det-modal__close {
+            position: absolute; top: 16px; right: 16px;
+            background: none; border: none; color: var(--text3);
+            font-size: 1.2rem; cursor: pointer; padding: 4px 8px;
+        }
+        .det-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: .875rem;
+        }
+        .det-row:last-child { border-bottom: none; }
+        .det-row .dk { color: var(--text3); }
+        .det-row .dv { font-weight: 700; color: var(--text); }
+        .det-row .dv.accent { color: var(--accent); font-size: 1rem; }
+    </style>
+</head>
+<body>
+<nav class="nc-nav" id="nc-nav"></nav>
+
+<div class="wh-layout">
+    <!-- ── 메인 컨텐츠 ── -->
+    <div class="wh-main">
+
+        <!-- 요약 카드 4개 -->
+        <div class="summary-grid">
+            <div class="sum-card">
+                <div class="sum-label">총수익</div>
+                <div class="sum-value" id="sum-total-earned">—</div>
+            </div>
+            <div class="sum-card">
+                <div class="sum-label">총환전</div>
+                <div class="sum-value green" id="sum-total-withdrawn">—</div>
+            </div>
+            <div class="sum-card">
+                <div class="sum-label">대기 중</div>
+                <div class="sum-value warn" id="sum-pending">—</div>
+            </div>
+            <div class="sum-card">
+                <div class="sum-label">이번 달</div>
+                <div class="sum-value purple" id="sum-this-month">—</div>
+            </div>
+        </div>
+
+        <!-- 필터 바 -->
+        <div class="filter-bar">
+            <div class="filter-btns">
+                <button class="filter-btn active" data-status="" onclick="setFilter(this)">전체</button>
+                <button class="filter-btn" data-status="COMPLETED" onclick="setFilter(this)">완료</button>
+                <button class="filter-btn" data-status="PENDING,PROCESSING" onclick="setFilter(this)">처리중</button>
+                <button class="filter-btn" data-status="REJECTED" onclick="setFilter(this)">취소</button>
+            </div>
+            <select class="month-select" id="month-select" onchange="onMonthChange()">
+                <option value="">전체 기간</option>
+            </select>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="wh-table-wrap">
+            <table class="wh-table">
+                <thead>
+                    <tr>
+                        <th>신청일</th>
+                        <th>신청번호</th>
+                        <th>금액</th>
+                        <th>상태</th>
+                        <th>상세</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr><td colspan="5"><div class="loading-row"><div class="nc-spinner"></div></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 페이지네이션 + 세금계산서 -->
+        <div class="wh-footer">
+            <span class="total-count" id="total-count">총 0건</span>
+            <div class="pagination" id="pagination"></div>
+            <button class="btn-tax" onclick="downloadTax()">세금계산서 다운</button>
+        </div>
+    </div>
+
+    <!-- ── 사이드바 ── -->
+    <aside class="wh-sidebar">
+
+        <!-- 환전 가능 금액 -->
+        <div class="sidebar-card">
+            <div class="avail-label">환전 가능 금액</div>
+            <div class="avail-value" id="side-available">—</div>
+            <div class="avail-sub">이번 달 미신청 수익</div>
+            <button class="btn-go-settle" onclick="window.location.href='/settlement.html'">지금 환전 신청</button>
+        </div>
+
+        <!-- 수익 추이 -->
+        <div class="sidebar-card">
+            <div class="sidebar-title">수익 추이</div>
+            <div class="chart-wrap">
+                <div class="chart-bars" id="chart-bars">
+                    <div class="chart-empty">데이터 로딩 중...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 정산 안내 -->
+        <div class="sidebar-card">
+            <div class="sidebar-title">정산 안내</div>
+            <div class="info-row"><span class="k">신청 기간</span><span class="v">매월 1일~10일</span></div>
+            <div class="info-row"><span class="k">입금 기간</span><span class="v">신청 후 3~5 영업일</span></div>
+            <div class="info-row"><span class="k">최소 금액</span><span class="v">10,000원 이상</span></div>
+            <div class="info-row"><span class="k">수수료</span><span class="v">10%</span></div>
+        </div>
+    </aside>
+</div>
+
+<!-- ── 상세 모달 ── -->
+<div class="det-modal" id="modal-detail">
+    <div class="det-modal__backdrop" onclick="closeDetail()"></div>
+    <div class="det-modal__box">
+        <button class="det-modal__close" onclick="closeDetail()">✕</button>
+        <div class="det-modal__title">📋 환전 상세 내역</div>
+        <div id="detail-content">
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    /* ── 상태 ── */
+    let currentStatus = '';
+    let currentPage   = 0;
+    let totalPages    = 0;
+    let totalElements = 0;
+    let selectedMonth = '';
+    const PAGE_SIZE   = 10;
+
+    /* ── 유틸 ── */
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtDate(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return `${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function fmtDateTime(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+    function fmtWdNum(id, iso) {
+        if (!iso || !id) return `#WD-${String(id || 0).padStart(4,'0')}`;
+        const d = new Date(iso);
+        const date = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+        return `#WD-${date}-${String(id).padStart(4,'0')}`;
+    }
+    function statusBadge(status) {
+        const map = {
+            PENDING:    ['badge-pending',    '대기 중'],
+            PROCESSING: ['badge-processing', '처리중'],
+            COMPLETED:  ['badge-completed',  '완료'],
+            REJECTED:   ['badge-rejected',   '취소'],
+        };
+        const [cls, label] = map[status] || ['badge-pending', status];
+        return `<span class="badge ${cls}">${label}</span>`;
+    }
+
+    /* ── 네비 ── */
+    function initNav() {
+        const nav = document.getElementById('nc-nav');
+        if (!nav) return;
+        const user = Auth.getUser();
+        const isLoggedIn = Auth.isLoggedIn();
+        const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
+        nav.innerHTML = `
+      <div class="nc-nav__inner">
+        <a href="/index.html" class="nc-nav__logo"><span class="logo-icon">✦</span>NovelCraft</a>
+        <div class="nc-nav__search-wrap" id="nav-search-wrap">
+          <input type="text" class="nc-nav__search" id="nav-search" placeholder="소설, 작가, 태그 검색...">
+          <div class="nc-search-dropdown" id="search-dropdown"></div>
+        </div>
+        <div class="nc-nav__right">
+          ${isLoggedIn ? `
+            <button class="nc-point-btn" id="nav-point">···P</button>
+            <button class="nc-alarm-btn" id="nav-alarm" onclick="window.location.href='/mypage.html?tab=notification'">
+              🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
+            </button>
+            <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+            ${isAuthorOrMentor ? `
+              <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
+              <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+            ` : ''}
+            <div class="nc-user-menu" id="user-menu">
+              <button class="nc-nav__btn" onclick="toggleUserMenu()" style="font-weight:600;user-select:none">
+                ${esc(user?.nickname || '내 프로필')} ▾
+              </button>
+              <div class="nc-user-dropdown" id="user-dropdown">
+                ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
+                <a href="/settlement.html" class="nc-user-dropdown__item">환전 신청</a>
+                <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
+                <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
+                <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="Auth.logout()">로그아웃</button>
+              </div>
+            </div>
+          ` : `
+            <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
+            <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
+          `}
+        </div>
+      </div>`;
+
+        if (isLoggedIn) {
+            api.get('/points/balance', true).then(d => {
+                const el = document.getElementById('nav-point');
+                if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+            }).catch(() => {});
+            api.get('/notifications/unread-count', true).then(d => {
+                const dot = document.getElementById('alarm-dot');
+                if (dot) dot.style.display = (d?.count > 0) ? 'block' : 'none';
+            }).catch(() => {});
+        }
+
+        initSearch();
+        document.addEventListener('click', e => {
+            const menu = document.getElementById('user-menu');
+            if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+        });
+    }
+    function toggleUserMenu() { document.getElementById('user-menu')?.classList.toggle('open'); }
+
+    /* ── 월 셀렉터 초기화 ── */
+    function initMonthSelect() {
+        const sel = document.getElementById('month-select');
+        const now = new Date();
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+            sel.appendChild(opt);
+        }
+    }
+
+    /* ── 개요 로드 ── */
+    async function loadOverview() {
+        try {
+            const data = await api.get('/revenues/me', true);
+            const totalEarned    = data?.totalEarned    ?? 0;
+            const totalWithdrawn = data?.totalWithdrawn ?? 0;
+            const available      = data?.availableBalance ?? 0;
+            const pending        = Math.max(0, totalEarned - totalWithdrawn - available);
+
+            document.getElementById('sum-total-earned').textContent    = `${totalEarned.toLocaleString()}원`;
+            document.getElementById('sum-total-withdrawn').textContent  = `${totalWithdrawn.toLocaleString()}원`;
+            document.getElementById('sum-pending').textContent          = `${pending.toLocaleString()}원`;
+            document.getElementById('side-available').textContent       = `${available.toLocaleString()}원`;
+        } catch (e) {
+            console.error('[개요 로드 오류]', e?.message);
+        }
+    }
+
+    /* ── 이번 달 수익 + 차트 ── */
+    async function loadStatistics() {
+        try {
+            const year = new Date().getFullYear();
+            const data = await api.get(`/revenues/me/statistics?period=MONTHLY&year=${year}`, true);
+            const items = data?.items || [];
+
+            // 이번 달 수익
+            const now = new Date();
+            const thisMonthLabel = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            const thisMonthItem = items.find(it => it.label === thisMonthLabel);
+            const thisMonthAmt = thisMonthItem?.totalAmount ?? 0;
+            document.getElementById('sum-this-month').textContent = `${thisMonthAmt.toLocaleString()}원`;
+
+            // 차트 (최근 7개월)
+            const recent = [...items].slice(-7);
+            if (!recent.length) {
+                document.getElementById('chart-bars').innerHTML = '<div class="chart-empty">데이터가 없습니다</div>';
+                return;
+            }
+            const maxAmt = Math.max(...recent.map(it => it.totalAmount || 0), 1);
+            const barsHtml = recent.map(it => {
+                const pct = Math.max(4, Math.round(((it.totalAmount || 0) / maxAmt) * 90));
+                const label = it.label ? it.label.slice(5) + '월' : '';
+                return `<div class="chart-bar-col">
+                  <div class="chart-bar" style="height:${pct}%" title="${(it.totalAmount||0).toLocaleString()}원"></div>
+                  <div class="chart-label">${esc(label)}</div>
+                </div>`;
+            }).join('');
+            document.getElementById('chart-bars').innerHTML = barsHtml;
+        } catch (e) {
+            console.error('[통계 로드 오류]', e?.message);
+            document.getElementById('sum-this-month').textContent = '—';
+            document.getElementById('chart-bars').innerHTML = '<div class="chart-empty">데이터를 불러올 수 없습니다</div>';
+        }
+    }
+
+    /* ── 목록 로드 ── */
+    async function loadList(page = 0) {
+        currentPage = page;
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '<tr><td colspan="5"><div class="loading-row"><div class="nc-spinner"></div></div></td></tr>';
+
+        try {
+            const params = new URLSearchParams({ page, size: PAGE_SIZE });
+
+            // 필터: PENDING,PROCESSING 는 두 번 요청 후 합치거나, 각각 status param 으로 전달
+            // 백엔드가 단일 status 만 받으므로, PENDING+PROCESSING 은 전체에서 프론트 필터링
+            if (currentStatus && !currentStatus.includes(',')) {
+                params.set('status', currentStatus);
+            }
+
+            // 월 필터
+            if (selectedMonth) {
+                const [y, m] = selectedMonth.split('-').map(Number);
+                const start = new Date(y, m-1, 1);
+                const end   = new Date(y, m, 0, 23, 59, 59);
+                params.set('startDate', start.toISOString());
+                params.set('endDate',   end.toISOString());
+            }
+
+            const res = await api.get(`/revenues/me/exchanges?${params.toString()}`, true);
+            let list = res?.content || [];
+            totalPages    = res?.totalPages    ?? 0;
+            totalElements = res?.totalElements ?? 0;
+
+            // PENDING+PROCESSING 복합 필터 → 프론트에서 추가 필터링
+            if (currentStatus === 'PENDING,PROCESSING') {
+                list = list.filter(w => w.status === 'PENDING' || w.status === 'PROCESSING');
+                totalElements = list.length;
+            }
+
+            document.getElementById('total-count').textContent = `총 ${totalElements}건`;
+            renderTable(list);
+            renderPagination(totalPages, currentPage);
+        } catch (e) {
+            console.error('[목록 로드 오류]', e?.message);
+            tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">내역을 불러올 수 없습니다.</div></td></tr>';
+        }
+    }
+
+    function renderTable(list) {
+        const tbody = document.getElementById('table-body');
+        if (!list.length) {
+            tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">내역이 없습니다.</div></td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(w => `
+          <tr>
+            <td>${fmtDate(w.requestedAt)}</td>
+            <td><span class="wd-num">${esc(fmtWdNum(w.withdrawalId, w.requestedAt))}</span></td>
+            <td><span class="wd-amount">${(w.requestAmount || 0).toLocaleString()}원</span></td>
+            <td>${statusBadge(w.status)}</td>
+            <td><button class="btn-detail" onclick="openDetail(${w.withdrawalId})">상세</button></td>
+          </tr>`).join('');
+    }
+
+    function renderPagination(total, current) {
+        const el = document.getElementById('pagination');
+        if (total <= 1) { el.innerHTML = ''; return; }
+
+        const start = Math.max(0, current - 2);
+        const end   = Math.min(total - 1, current + 2);
+        let html = `<button class="page-btn" onclick="loadList(${current-1})" ${current===0?'disabled':''}>◀</button>`;
+        for (let i = start; i <= end; i++) {
+            html += `<button class="page-btn ${i===current?'active':''}" onclick="loadList(${i})">${i+1}</button>`;
+        }
+        html += `<button class="page-btn" onclick="loadList(${current+1})" ${current===total-1?'disabled':''}>▶</button>`;
+        el.innerHTML = html;
+    }
+
+    /* ── 필터 이벤트 ── */
+    function setFilter(btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStatus = btn.dataset.status;
+        loadList(0);
+    }
+    window.setFilter = setFilter;
+
+    function onMonthChange() {
+        selectedMonth = document.getElementById('month-select').value;
+        loadList(0);
+    }
+    window.onMonthChange = onMonthChange;
+
+    /* ── 상세 모달 ── */
+    async function openDetail(id) {
+        const modal = document.getElementById('modal-detail');
+        const content = document.getElementById('detail-content');
+        modal.classList.add('show');
+        content.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+        try {
+            const d = await api.get(`/revenues/me/exchanges/${id}`, true);
+            const bank = d?.bankAccount;
+            content.innerHTML = `
+              <div class="det-row"><span class="dk">신청번호</span><span class="dv">${esc(fmtWdNum(d.withdrawalId, d.requestedAt))}</span></div>
+              <div class="det-row"><span class="dk">신청 금액</span><span class="dv accent">${(d.requestAmount||0).toLocaleString()}원</span></div>
+              <div class="det-row"><span class="dk">수수료 (10%)</span><span class="dv" style="color:#f87171">-${(d.fee||0).toLocaleString()}원</span></div>
+              <div class="det-row"><span class="dk">실수령 금액</span><span class="dv" style="color:#10b981">${(d.actualAmount||0).toLocaleString()}원</span></div>
+              <div class="det-row"><span class="dk">상태</span><span class="dv">${statusBadge(d.status)}</span></div>
+              <div class="det-row"><span class="dk">신청일</span><span class="dv">${fmtDateTime(d.requestedAt)}</span></div>
+              <div class="det-row"><span class="dk">처리일</span><span class="dv">${fmtDateTime(d.processedAt)}</span></div>
+              ${d.rejectedReason ? `<div class="det-row"><span class="dk">거절 사유</span><span class="dv" style="color:#f87171">${esc(d.rejectedReason)}</span></div>` : ''}
+              ${bank ? `
+              <div class="det-row"><span class="dk">입금 은행</span><span class="dv">${esc(bank.bankName)}</span></div>
+              <div class="det-row"><span class="dk">계좌번호</span><span class="dv">${esc(bank.maskedAccountNumber)}</span></div>
+              <div class="det-row"><span class="dk">예금주</span><span class="dv">${esc(bank.accountHolder)}</span></div>
+              ` : ''}`;
+        } catch (e) {
+            content.innerHTML = `<div class="empty-state">상세 정보를 불러올 수 없습니다.</div>`;
+        }
+    }
+    window.openDetail = openDetail;
+
+    function closeDetail() {
+        document.getElementById('modal-detail').classList.remove('show');
+    }
+    window.closeDetail = closeDetail;
+
+    /* ── 세금계산서 다운 ── */
+    function downloadTax() {
+        Toast.info('세금계산서 다운로드는 준비 중입니다.');
+    }
+    window.downloadTax = downloadTax;
+
+    /* ── 초기화 ── */
+    async function init() {
+        if (!Auth.isLoggedIn()) {
+            window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+            return;
+        }
+        initNav();
+        initMonthSelect();
+        await Promise.all([
+            loadOverview(),
+            loadStatistics(),
+            loadList(0),
+        ]);
+    }
+
+    init();
+})();
+</script>
+</body>
+</html>

@@ -77,6 +77,15 @@ public class Subscription extends BaseEntity {
         this.endedAt = LocalDateTime.now();
     }
 
+    // 취소된 구독 재활성화 준비 — 새 billingKey는 complete 단계에서 주입
+    public void reactivate(String newSubscriptionKey) {
+        this.subscriptionKey = newSubscriptionKey;
+        this.subscriptionStatus = SubscriptionStatus.PENDING;
+        this.billingKey = null;
+        this.endedAt = null;
+        this.failReason = null;
+    }
+
     // 정기 결제 후 업데이트
     // 멱등성 보장: 같은 paymentId면 스킵 (웹훅 재전송 대응)
     public void updateAfterPayment(Long paymentId) {

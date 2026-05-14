@@ -285,6 +285,18 @@ public class EpisodeService {
         );
     }
 
+    // 작가용 회차 단건 조회 (에디터 본문 로드 - 포인트 차감 없음)
+    @Transactional(readOnly = true)
+    public AuthorEpisodeDetailResponse getAuthorEpisodeDetail(Long novelId, Long episodeId, UserDetailsImpl userDetails) {
+        validateAuthorRole(userDetails);
+        findNovelById(novelId, userDetails.getUser().getId());
+        Episode episode = findEpisodeById(episodeId);
+        if (!episode.getNovelId().equals(novelId)) {
+            throw new ServiceErrorException(EpisodeExceptionEnum.EPISODE_NOT_FOUND);
+        }
+        return AuthorEpisodeDetailResponse.from(episode);
+    }
+
     // 작가용 회차 목록 조회 (에디터용)
     @Transactional(readOnly = true)
     public PageResponse<AuthorEpisodeListResponse> getAuthorEpisodeList(Long novelId, UserDetailsImpl userDetails, Pageable pageable) {

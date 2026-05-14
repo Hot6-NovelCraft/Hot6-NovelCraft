@@ -33,4 +33,8 @@ public class SocialAuth extends BaseEntity {
               .userId(userId)
               .build();
     }
+
+    public void updateProviderId(String providerId) {
+        this.providerId = providerId;
+    }
 }

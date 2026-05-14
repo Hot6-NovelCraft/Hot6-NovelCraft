@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovelCraft - 소설의 모든 것</title>
+    <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+    <script src="/common.js"></script>
+    <style>
+        /* ── 네비게이션 커스텀 ── */
+        .nc-nav__inner { height: 62px; }
+        .nc-point-btn {
+            padding: 5px 14px; border-radius: 20px;
+            background: linear-gradient(135deg, rgba(240,200,66,0.18), rgba(240,200,66,0.08));
+            border: 1px solid rgba(240,200,66,0.4); color: var(--accent);
+            font-size: 0.82rem; font-weight: 700; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap; font-family: inherit;
+        }
+        .nc-point-btn:hover { background: rgba(240,200,66,0.25); border-color: var(--accent); }
+        .nc-alarm-btn {
+            position: relative; padding: 6px 10px; border-radius: 8px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text2); font-size: 1rem; cursor: pointer; transition: all 0.2s;
+        }
+        .nc-alarm-btn:hover { background: var(--surface); }
+        .nc-alarm-dot {
+            position: absolute; top: 4px; right: 4px;
+            width: 8px; height: 8px; border-radius: 50%; background: var(--error);
+            border: 2px solid var(--bg);
+        }
+        .nc-user-menu { position: relative; }
+        .nc-user-dropdown {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--radius); min-width: 160px;
+            box-shadow: var(--shadow-lg); z-index: 300;
+            display: none; overflow: hidden;
+        }
+        .nc-user-menu.open .nc-user-dropdown { display: block; }
+        .nc-user-dropdown__item:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+        .nc-user-dropdown__item:last-child { border-radius: 0 0 var(--radius) var(--radius); }
+        .nc-user-dropdown__item {
+            display: block; width: 100%; padding: 11px 16px; text-align: left;
+            background: none; border: none; color: var(--text2); font-size: 0.875rem;
+            cursor: pointer; transition: background 0.15s; font-family: inherit;
+            text-decoration: none;
+        }
+        .nc-user-dropdown__item:hover { background: var(--surface); color: var(--text); }
+        .nc-user-dropdown__item--danger { color: #f87171; }
+        .nc-user-dropdown__item--danger:hover { background: rgba(239,68,68,0.08); }
+
+        /* ── 알림 드로어 ── */
+        .notif-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 900; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .notif-backdrop.open { opacity: 1; pointer-events: all; }
+        .notif-drawer {
+            position: fixed; top: 0; right: -440px; width: 420px; height: 100vh;
+            background: var(--surface2); border-left: 1px solid var(--border);
+            z-index: 950; transition: right 0.3s ease;
+            display: flex; flex-direction: column;
+        }
+        .notif-drawer.open { right: 0; }
+        .notif-drawer__header {
+            padding: 20px 24px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .notif-drawer__title { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 1.1rem; }
+        .notif-drawer__actions { display: flex; gap: 8px; align-items: center; }
+        .notif-drawer__close {
+            background: none; border: none; color: var(--text3);
+            font-size: 1.25rem; cursor: pointer; padding: 4px 8px;
+            border-radius: 6px; transition: background 0.2s;
+        }
+        .notif-drawer__close:hover { background: var(--surface); color: var(--text); }
+        .notif-drawer__read-all {
+            font-size: 0.75rem; color: var(--primary-light); background: none;
+            border: 1px solid var(--primary); border-radius: 6px; padding: 4px 10px;
+            cursor: pointer; font-family: inherit; transition: all 0.2s;
+        }
+        .notif-drawer__read-all:hover { background: var(--primary); color: white; }
+        .notif-drawer__body { flex: 1; overflow-y: auto; padding: 12px 0; }
+        .notif-item {
+            padding: 14px 24px; cursor: pointer; transition: background 0.15s;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .notif-item:hover { background: rgba(255,255,255,0.03); }
+        .notif-item.unread { background: rgba(124,90,240,0.05); }
+        .notif-item__row { display: flex; gap: 10px; align-items: flex-start; }
+        .notif-item__dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--primary);
+            flex-shrink: 0; margin-top: 6px;
+        }
+        .notif-item__dot.read { background: transparent; }
+        .notif-item__content { flex: 1; font-size: 0.875rem; line-height: 1.5; color: var(--text); }
+        .notif-item.unread .notif-item__content { font-weight: 500; }
+        .notif-item__time { font-size: 0.72rem; color: var(--text3); margin-top: 4px; }
+        .notif-empty { padding: 60px 24px; text-align: center; color: var(--text3); }
+        .notif-empty__icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+        /* ── 레이아웃 ── */
+        .page-layout {
+            max-width: 1280px; margin: 0 auto; padding: 28px 24px;
+            display: grid; grid-template-columns: 1fr 280px; gap: 28px;
+        }
+        .page-left {}
+        .page-right {}
+
+        /* ── AI 추천 섹션 ── */
+        .ai-rec-section {
+            background: linear-gradient(135deg, rgba(124,90,240,0.1), rgba(240,104,66,0.06));
+            border: 1px solid rgba(124,90,240,0.22); border-radius: 16px;
+            padding: 20px 22px; margin-bottom: 24px;
+        }
+        .ai-rec-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .ai-rec-label {
+            display: flex; align-items: center; gap: 7px;
+            font-size: 0.82rem; font-weight: 700; color: var(--primary-light);
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .ai-rec-type {
+            font-size: 0.72rem; padding: 2px 10px; border-radius: 10px;
+            background: rgba(124,90,240,0.2); color: var(--primary-light);
+            border: 1px solid rgba(124,90,240,0.3);
+        }
+        .ai-rec-scroll {
+            display: flex; gap: 14px; overflow-x: auto; padding-bottom: 4px;
+            scrollbar-width: none;
+        }
+        .ai-rec-scroll::-webkit-scrollbar { display: none; }
+        .ai-rec-card {
+            flex-shrink: 0; width: 118px; cursor: pointer; transition: transform 0.2s;
+        }
+        .ai-rec-card:hover { transform: translateY(-4px); }
+        .ai-rec-cover {
+            width: 118px; height: 168px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--surface), var(--surface2));
+            border: 1px solid var(--border); display: flex; align-items: center;
+            justify-content: center; font-size: 2rem; margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .ai-rec-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .ai-rec-title {
+            font-size: 0.78rem; font-weight: 600; line-height: 1.35; color: var(--text);
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
+        .ai-rec-author { font-size: 0.7rem; color: var(--text3); margin-top: 3px; }
+        .ai-rec-genre { margin-top: 4px; }
+
+        /* ── 장르 탭 ── */
+        .genre-tabs {
+            display: flex; gap: 7px; margin-bottom: 22px; flex-wrap: wrap;
+        }
+        .genre-tab {
+            padding: 6px 16px; border-radius: 20px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text2); font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+            font-family: inherit;
+        }
+        .genre-tab:hover { border-color: var(--primary); color: var(--primary-light); }
+        .genre-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .genre-tab--special {
+            background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.35);
+            color: #f87171;
+        }
+        .genre-tab--special.active,
+        .genre-tab--special:hover { background: #ef4444; border-color: #ef4444; color: white; }
+
+        /* ── 섹션 헤더 + 랭킹 ── */
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-family: 'Noto Serif KR', serif; font-size: 1.1rem; font-weight: 700;
+        }
+        .rank-toggle { display: flex; gap: 6px; }
+        .rank-toggle-btn {
+            padding: 5px 14px; border-radius: 6px; border: 1px solid var(--border);
+            background: transparent; color: var(--text3); font-size: 0.78rem; cursor: pointer;
+            font-family: inherit; transition: all 0.2s;
+        }
+        .rank-toggle-btn.active {
+            background: var(--surface2); border-color: var(--primary);
+            color: var(--primary-light); font-weight: 600;
+        }
+        .ranking-list { display: flex; flex-direction: column; gap: 10px; }
+        .ranking-item {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; border-radius: 12px;
+            background: var(--bg2); border: 1px solid var(--border);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .ranking-item:hover { border-color: rgba(124,90,240,0.35); background: var(--surface); }
+        .ranking-num {
+            font-family: 'Noto Serif KR', serif; font-size: 1.35rem;
+            font-weight: 900; color: var(--border); min-width: 30px; text-align: center;
+        }
+        .ranking-num.top3 { color: var(--primary); }
+        .ranking-cover {
+            width: 46px; height: 65px; border-radius: 7px; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--surface), var(--surface2));
+            border: 1px solid var(--border); display: flex; align-items: center;
+            justify-content: center; font-size: 1.2rem; overflow: hidden;
+        }
+        .ranking-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .ranking-info { flex: 1; min-width: 0; }
+        .ranking-title {
+            font-weight: 700; font-size: 0.95rem; margin-bottom: 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ranking-meta { font-size: 0.75rem; color: var(--text3); margin-bottom: 6px; }
+        .ranking-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+        .ranking-view-btn {
+            padding: 7px 16px; border-radius: 8px; flex-shrink: 0;
+            background: rgba(124,90,240,0.12); border: 1px solid rgba(124,90,240,0.28);
+            color: var(--primary-light); font-size: 0.8rem; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap; font-family: inherit;
+        }
+        .ranking-view-btn:hover { background: var(--primary); color: white; }
+
+        /* ── 신작 섹션 ── */
+        .new-section { margin-top: 32px; }
+        .novel-list { display: flex; flex-direction: column; gap: 10px; }
+        .novel-list-item {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; border-radius: 12px;
+            background: var(--bg2); border: 1px solid var(--border);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .novel-list-item:hover { border-color: rgba(124,90,240,0.35); background: var(--surface); }
+        .novel-list-cover {
+            width: 46px; height: 65px; border-radius: 7px; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--surface), var(--surface2));
+            border: 1px solid var(--border); display: flex; align-items: center;
+            justify-content: center; font-size: 1.2rem; overflow: hidden;
+        }
+        .novel-list-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .novel-list-info { flex: 1; min-width: 0; }
+        .novel-list-title {
+            font-weight: 700; font-size: 0.95rem; margin-bottom: 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .novel-list-meta { font-size: 0.75rem; color: var(--text3); margin-bottom: 6px; }
+        .novel-list-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+        .fav-btn {
+            padding: 7px 14px; border-radius: 8px; flex-shrink: 0;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text3); font-size: 0.82rem; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap; font-family: inherit;
+        }
+        .fav-btn:hover { border-color: #f0c842; color: #f0c842; background: rgba(240,200,66,0.08); }
+        .fav-btn.bookmarked { color: #f0c842; border-color: #f0c842; background: rgba(240,200,66,0.1); }
+
+        /* ── 우측 사이드바 ── */
+        .realtime-panel {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden; margin-bottom: 14px;
+        }
+        .realtime-header {
+            padding: 13px 18px; background: rgba(124,90,240,0.07);
+            border-bottom: 1px solid var(--border);
+            font-weight: 700; font-size: 0.88rem;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .live-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #ef4444;
+            animation: livePulse 1.5s infinite;
+        }
+        @keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .realtime-list { padding: 6px 0; }
+        .realtime-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 18px; cursor: pointer; transition: background 0.15s;
+        }
+        .realtime-item:hover { background: rgba(255,255,255,0.03); }
+        .realtime-rank { font-size: 0.8rem; font-weight: 700; color: var(--text3); min-width: 20px; }
+        .realtime-rank.top3 { color: var(--accent); }
+        .realtime-title {
+            font-size: 0.875rem; font-weight: 500; flex: 1; min-width: 0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .live-badge {
+            font-size: 0.62rem; padding: 2px 6px; border-radius: 4px;
+            background: rgba(239,68,68,0.14); color: #ef4444;
+            border: 1px solid rgba(239,68,68,0.3); font-weight: 700;
+        }
+
+        /* 우측 패널 버튼들 */
+        .side-btn {
+            display: block; width: 100%; padding: 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--bg2);
+            color: var(--text); font-size: 0.9rem; font-weight: 700; text-align: center;
+            cursor: pointer; transition: all 0.2s; margin-bottom: 14px;
+            font-family: inherit; text-decoration: none;
+        }
+        .side-btn:hover { border-color: var(--primary); background: var(--surface); }
+        .side-btn--novel { font-size: 0.88rem; }
+        .side-btn--sub {
+            background: linear-gradient(135deg, rgba(124,90,240,0.25), rgba(240,104,66,0.15));
+            border-color: rgba(124,90,240,0.4); color: var(--primary-light);
+        }
+        .side-btn--sub:hover { background: linear-gradient(135deg, rgba(124,90,240,0.4), rgba(240,104,66,0.25)); }
+        .side-btn--ai {
+            background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.35);
+            color: #10b981; font-size: 0.82rem;
+        }
+        .side-btn--ai:hover { background: rgba(16,185,129,0.2); }
+
+        /* ── AI 고객센터 모달 ── */
+        #modal-ai .nc-modal__box {
+            width: min(600px, 96vw);
+            height: min(700px, 90vh);
+            max-width: none;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+        .ai-chat__header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .ai-chat__title { font-weight: 700; font-size: 1rem; }
+        .ai-chat__actions { display: flex; gap: 8px; align-items: center; }
+        .ai-chat__reset {
+            font-size: 0.72rem; color: var(--text3); background: none;
+            border: 1px solid var(--border); border-radius: 6px;
+            padding: 4px 10px; cursor: pointer; font-family: inherit;
+            transition: all 0.2s;
+        }
+        .ai-chat__reset:hover { border-color: var(--error); color: var(--error); }
+        .ai-chat__messages {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 14px;
+            scroll-behavior: smooth;
+        }
+        .ai-chat__messages::-webkit-scrollbar { width: 4px; }
+        .ai-chat__messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .ai-msg-row { display: flex; gap: 9px; align-items: flex-end; max-width: 82%; }
+        .ai-msg-row--user { align-self: flex-end; flex-direction: row-reverse; }
+        .ai-msg-row--ai   { align-self: flex-start; }
+        .ai-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; flex-shrink: 0;
+        }
+        .ai-avatar--ai   { background: rgba(16,185,129,0.2); color: #10b981; }
+        .ai-avatar--user { background: rgba(124,90,240,0.2); color: var(--primary-light); }
+        .ai-bubble {
+            padding: 10px 14px; border-radius: 14px;
+            font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+        }
+        .ai-msg-row--user .ai-bubble {
+            background: rgba(124,90,240,0.15);
+            border: 1px solid rgba(124,90,240,0.25);
+            border-bottom-right-radius: 4px;
+        }
+        .ai-msg-row--ai .ai-bubble {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+        .ai-typing { display: inline-flex; gap: 4px; align-items: center; padding: 2px 0; }
+        .ai-typing span {
+            width: 5px; height: 5px; background: var(--text3); border-radius: 50%;
+            animation: ai-blink 1.2s infinite;
+        }
+        .ai-typing span:nth-child(2) { animation-delay: .2s; }
+        .ai-typing span:nth-child(3) { animation-delay: .4s; }
+        @keyframes ai-blink {
+            0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+            40%            { opacity: 1;   transform: scale(1); }
+        }
+        .ai-chat__shortcuts {
+            padding: 8px 16px; display: flex; gap: 6px; flex-wrap: wrap;
+            border-top: 1px solid var(--border); flex-shrink: 0;
+        }
+        .ai-shortcut {
+            font-size: 0.72rem; padding: 4px 10px; border-radius: 12px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text3); cursor: pointer; font-family: inherit; transition: all 0.2s;
+        }
+        .ai-shortcut:hover { border-color: #10b981; color: #10b981; }
+        .ai-chat__input-bar {
+            padding: 12px 16px; border-top: 1px solid var(--border);
+            display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+        }
+        #ai-msg-input {
+            flex: 1; padding: 9px 13px;
+            background: var(--bg3, var(--surface));
+            border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text1, var(--text)); font-family: inherit; font-size: 0.875rem;
+            resize: none; outline: none; transition: border-color 0.2s;
+            min-height: 40px; max-height: 100px; line-height: 1.5;
+        }
+        #ai-msg-input:focus { border-color: #10b981; }
+        #ai-msg-input::placeholder { color: var(--text3); }
+        .ai-chat__send {
+            padding: 9px 16px; background: #10b981; color: #fff;
+            border: none; border-radius: 10px; font-family: inherit; font-size: 0.875rem;
+            cursor: pointer; transition: opacity 0.2s; white-space: nowrap; align-self: flex-end;
+        }
+        .ai-chat__send:hover { opacity: 0.85; }
+        .ai-chat__send:disabled { opacity: 0.4; cursor: not-allowed; }
+        .ai-chat__welcome {
+            text-align: center; padding: 28px 16px; color: var(--text3);
+        }
+        .ai-chat__welcome-icon { font-size: 2rem; margin-bottom: 10px; }
+        .ai-chat__welcome p { font-size: 0.82rem; line-height: 1.7; }
+
+        /* ── 포인트 충전 모달 ── */
+        .point-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.point-opt {
+            padding: 14px; border-radius: 10px; border: 1px solid var(--border);
+            background: transparent; cursor: pointer; transition: all 0.2s;
+            text-align: center; font-family: inherit; color: var(--text2);
+        }
+        .point-opt:hover { border-color: var(--primary); }
+        .point-opt.selected { border-color: var(--primary); background: rgba(124,90,240,0.1); color: var(--primary-light); }
+        .point-opt__amount { font-size: 1rem; font-weight: 700; }
+        .point-opt__price { font-size: 0.78rem; color: var(--text3); margin-top: 3px; }
+        .point-opt.selected .point-opt__price { color: var(--primary-light); opacity: 0.8; }
+
+        /* ── 로딩 / 빈 상태 ── */
+        .loading-row { padding: 40px; display: flex; align-items: center; justify-content: center; }
+        .empty-row { padding: 40px; text-align: center; color: var(--text3); font-size: 0.875rem; }
+
+        /* ── AI 플로팅 버튼 ── */
+        .ai-float {
+            position: fixed; bottom: 28px; right: 28px; z-index: 200;
+            display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+        }
+        .ai-float__bubble {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px 16px; max-width: 220px;
+            font-size: 0.8rem; color: var(--text2); line-height: 1.5;
+            display: none; animation: fadeUp 0.2s ease;
+        }
+        .ai-float__bubble.show { display: block; }
+        .ai-float__btn {
+            width: 54px; height: 54px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #f06842);
+            border: none; color: white; font-size: 1.4rem; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(124,90,240,0.45); transition: all 0.2s;
+        }
+        .ai-float__btn:hover { transform: scale(1.1); }
+
+        /* ── 배지 공통 ── */
+        .badge {
+            display: inline-block; padding: 2px 9px; border-radius: 12px;
+            font-size: 0.72rem; font-weight: 600;
+        }
+        .badge--free { background: rgba(16,185,129,0.14); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge--paid { background: rgba(124,90,240,0.14); color: var(--primary-light); border: 1px solid rgba(124,90,240,0.3); }
+
+        /* ── 반응형 ── */
+        @media (max-width: 960px) {
+            .page-layout { grid-template-columns: 1fr; }
+            .page-right { order: -1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .realtime-panel { margin-bottom: 0; }
+        }
+        @media (max-width: 600px) {
+            .page-layout { padding: 16px; }
+            .page-right { grid-template-columns: 1fr; }
+            .notif-drawer { width: 100%; right: -100%; }
+        }
+    </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<!-- 알림 드로어 -->
+<div class="notif-backdrop" id="notif-backdrop" onclick="closeNotifDrawer()"></div>
+<aside class="notif-drawer" id="notif-drawer">
+    <div class="notif-drawer__header">
+        <div class="notif-drawer__title">🔔 알림</div>
+        <div class="notif-drawer__actions">
+            <button class="notif-drawer__read-all" onclick="markAllRead()">모두 읽음</button>
+            <button class="notif-drawer__close" onclick="closeNotifDrawer()">✕</button>
+        </div>
+    </div>
+    <div class="notif-drawer__body" id="notif-list">
+        <div class="loading-row"><div class="nc-spinner"></div></div>
+    </div>
+</aside>
+
+<!-- 메인 레이아웃 -->
+<div class="page-layout">
+    <!-- 왼쪽 콘텐츠 -->
+    <div class="page-left">
+
+        <!-- AI 맞춤 추천 -->
+        <div class="ai-rec-section">
+            <div class="ai-rec-header">
+                <div class="ai-rec-label">
+                    🤖 AI 맞춤 추천
+                </div>
+                <span class="ai-rec-type" id="rec-type-label">트렌드 기반</span>
+            </div>
+            <div class="ai-rec-scroll" id="ai-rec-list">
+                <div class="loading-row"><div class="nc-spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- 장르 탭 -->
+        <div class="genre-tabs" id="genre-tabs">
+            <button class="genre-tab active" data-genre="" data-status="">전체</button>
+            <button class="genre-tab" data-genre="FANTASY" data-status="">판타지</button>
+            <button class="genre-tab" data-genre="ROMANCE_FANTASY" data-status="">로판</button>
+            <button class="genre-tab" data-genre="MODERN" data-status="">현대</button>
+            <button class="genre-tab" data-genre="CHIVALROUS" data-status="">무협</button>
+            <button class="genre-tab" data-genre="BL" data-status="">BL</button>
+            <button class="genre-tab" data-genre="SF" data-status="">SF</button>
+            <button class="genre-tab" data-genre="HORROR" data-status="">공포</button>
+            <button class="genre-tab genre-tab--special" data-genre="" data-status="COMPLETED">완결</button>
+        </div>
+
+        <!-- 주간/실시간 랭킹 -->
+        <div class="section-header">
+            <div class="section-title">📊 랭킹</div>
+            <div class="rank-toggle">
+                <button class="rank-toggle-btn active" data-type="weekly">주간</button>
+                <button class="rank-toggle-btn" data-type="realtime">실시간</button>
+            </div>
+        </div>
+        <div class="ranking-list" id="ranking-list">
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+        </div>
+
+        <!-- 신작 추천 -->
+        <div class="new-section">
+            <div class="section-header">
+                <div class="section-title">✨ 신작 추천</div>
+                <a href="/novel-list.html" class="nc-btn nc-btn--sm nc-btn--outline">전체 보기</a>
+            </div>
+            <div class="novel-list" id="new-novel-list">
+                <div class="loading-row"><div class="nc-spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 오른쪽 사이드바 -->
+    <div class="page-right">
+
+        <!-- 실시간 TOP 5 -->
+        <div class="realtime-panel">
+            <div class="realtime-header">
+                <div class="live-dot"></div> 실시간 TOP 5
+            </div>
+            <div class="realtime-list" id="realtime-list">
+                <div class="loading-row"><div class="nc-spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- 소설 목록 -->
+        <a href="/novel-list.html" class="side-btn side-btn--novel">
+            📚 소설 목록
+        </a>
+
+        <!-- 구독 페이지 -->
+        <button class="side-btn side-btn--sub" onclick="window.location.href='/subscription.html'">
+            🌟 구독 페이지
+        </button>
+
+        <!-- AI 고객센터 -->
+        <button class="side-btn side-btn--ai" id="ai-support-side-btn" style="display:none"
+                onclick="Modal.open('modal-ai');setTimeout(()=>document.getElementById('ai-msg-input')?.focus(),300)">
+            🤖 AI 고객센터<br><span style="font-size:0.72rem;font-weight:400;opacity:0.8">AI를 활용하여 고객센터 구현 (채팅)</span>
+        </button>
+    </div>
+</div>
+
+<!-- AI 플로팅 버튼 (로그인 시만) -->
+<div class="ai-float" id="ai-float" style="display:none">
+    <div class="ai-float__bubble" id="ai-bubble">
+        AI를 활용해 궁금한 점을 물어보세요!
+    </div>
+    <button class="ai-float__btn" onclick="toggleAiBubble()" title="AI 고객센터">🤖</button>
+</div>
+
+<!-- AI 고객센터 모달 -->
+<div class="nc-modal" id="modal-ai">
+    <div class="nc-modal__backdrop" onclick="Modal.close('modal-ai')"></div>
+    <div class="nc-modal__box">
+        <div class="ai-chat__header">
+            <div class="ai-chat__title">🤖 AI 고객센터</div>
+            <div class="ai-chat__actions">
+                <button class="ai-chat__reset" onclick="aiResetSession()">대화 초기화</button>
+                <button class="nc-modal__close" onclick="Modal.close('modal-ai')">✕</button>
+            </div>
+        </div>
+        <div class="ai-chat__messages" id="ai-messages">
+            <div class="ai-chat__welcome">
+                <div class="ai-chat__welcome-icon">✦</div>
+                <p>결제, 포인트, 구독, 멘토링 등<br>궁금한 점을 편하게 물어보세요.</p>
+            </div>
+        </div>
+        <div class="ai-chat__shortcuts">
+            <button class="ai-shortcut" onclick="aiAskShortcut('포인트 충전은 어떻게 하나요?')">포인트 충전</button>
+            <button class="ai-shortcut" onclick="aiAskShortcut('구독 해지는 어떻게 하나요?')">구독 해지</button>
+            <button class="ai-shortcut" onclick="aiAskShortcut('환불 정책을 알고 싶어요.')">환불 정책</button>
+            <button class="ai-shortcut" onclick="aiAskShortcut('멘토링 신청 방법을 알려주세요.')">멘토링 신청</button>
+            <button class="ai-shortcut" onclick="aiAskShortcut('결제 실패 원인이 뭔가요?')">결제 실패</button>
+        </div>
+        <div class="ai-chat__input-bar">
+            <textarea id="ai-msg-input" rows="1" placeholder="질문을 입력하세요... (Shift+Enter 줄바꿈)"
+                onkeydown="aiHandleKey(event)" oninput="aiAutoResize(this)"></textarea>
+            <button class="ai-chat__send" id="ai-send-btn" onclick="aiSendMessage()">전송</button>
+        </div>
+    </div>
+</div>
+
+<!-- 포인트 충전 모달 -->
+<div class="nc-modal" id="modal-point">
+    <div class="nc-modal__backdrop" onclick="Modal.close('modal-point')"></div>
+    <div class="nc-modal__box">
+        <button class="nc-modal__close" onclick="Modal.close('modal-point')">✕</button>
+        <div class="nc-modal__title">💎 포인트 충전</div>
+        <div style="margin-bottom:16px">
+            <div style="font-size:0.82rem;color:var(--text3);margin-bottom:12px">충전할 포인트를 선택하세요</div>
+            <div class="point-options" id="point-options">
+                <button class="point-opt selected" data-amount="1000">
+                    <div class="point-opt__amount">1,000P</div>
+                    <div class="point-opt__price">₩1,000</div>
+                </button>
+                <button class="point-opt" data-amount="5000">
+                    <div class="point-opt__amount">5,000P</div>
+                    <div class="point-opt__price">₩5,000</div>
+                </button>
+                <button class="point-opt" data-amount="10000">
+                    <div class="point-opt__amount">10,000P</div>
+                    <div class="point-opt__price">₩10,000</div>
+                </button>
+                <button class="point-opt" data-amount="30000">
+                    <div class="point-opt__amount">30,000P</div>
+                    <div class="point-opt__price">₩30,000</div>
+                </button>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 14px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+            <span style="font-size:0.85rem;color:var(--text3)">현재 잔여 포인트</span>
+            <span style="font-weight:700;color:var(--accent)" id="modal-current-point">-</span>
+        </div>
+        <button class="nc-btn nc-btn--primary nc-btn--full" onclick="chargePoint()">충전하기</button>
+    </div>
+</div>
+
+<script>
+    /* ──────────────────────────────────
+       장르 한글 매핑
+    ────────────────────────────────── */
+    const GENRE_MAP = {
+        FANTASY: { label: '판타지', color: '#7c3aed' },
+        ROMANCE_FANTASY: { label: '로판', color: '#db2777' },
+        MODERN: { label: '현대', color: '#0891b2' },
+        CHIVALROUS: { label: '무협', color: '#92400e' },
+        BL: { label: 'BL', color: '#6d28d9' },
+        SF: { label: 'SF', color: '#1d4ed8' },
+        HORROR: { label: '공포', color: '#374151' },
+        CLASSIC: { label: '고전', color: '#065f46' },
+        DAILY_LIFE: { label: '일상물', color: '#059669' },
+    };
+    function genreTag(genre) {
+        const g = GENRE_MAP[genre];
+        if (!g) return '';
+        return `<span class="badge" style="background:${g.color}18;color:${g.color};border:1px solid ${g.color}35">${g.label}</span>`;
+    }
+    const STATUS_LABELS = {
+        ONGOING: { label: '연재중', color: '#10b981' },
+        COMPLETED: { label: '완결', color: '#6366f1' },
+        HIATUS: { label: '중단', color: '#f59e0b' },
+        PENDING: { label: '보류', color: '#9ca3af' },
+    };
+    function statusTag(status) {
+        const s = STATUS_LABELS[status];
+        if (!s) return '';
+        return `<span class="badge" style="background:${s.color}18;color:${s.color};border:1px solid ${s.color}35">${s.label}</span>`;
+    }
+
+    /* ──────────────────────────────────
+       네비게이션 (common.js initNav 오버라이드)
+    ────────────────────────────────── */
+    function initNav() {
+        const nav = document.getElementById('nc-nav');
+        if (!nav) return;
+        const user = Auth.getUser();
+        const isLoggedIn = Auth.isLoggedIn();
+        const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
+
+        nav.innerHTML = `
+        <div class="nc-nav__inner">
+          <a href="/index.html" class="nc-nav__logo">
+            <span class="logo-icon">✦</span>NovelCraft
+          </a>
+          <div class="nc-nav__search-wrap" id="nav-search-wrap">
+            <input type="text" class="nc-nav__search" id="nav-search" placeholder="소설, 작가, 태그 검색...">
+            <div class="nc-search-dropdown" id="search-dropdown"></div>
+          </div>
+          <div class="nc-nav__right">
+            ${isLoggedIn ? `
+              <button class="nc-point-btn" id="nav-point" onclick="openPointModal()">···P</button>
+              <button class="nc-alarm-btn" id="nav-alarm" onclick="openNotifDrawer()">
+                🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
+              </button>
+              <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+              ${isAuthorOrMentor ? `
+              <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
+              <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+              ` : ''}
+              <div class="nc-user-menu" id="user-menu">
+                <button class="nc-nav__btn" onclick="toggleUserMenu()"
+                        style="font-weight:600;user-select:none">
+                  ${user?.nickname || '내 프로필'} ▾
+                </button>
+                <div class="nc-user-dropdown" id="user-dropdown">
+                  ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
+                  <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
+                  <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
+                  <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="doLogout()">로그아웃</button>
+                </div>
+              </div>
+            ` : `
+              <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
+              <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
+            `}
+          </div>
+        </div>
+      `;
+
+        if (isLoggedIn) {
+            // 포인트 로드
+            api.get('/points/balance', true).then(d => {
+                const el = document.getElementById('nav-point');
+                if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+                const mcp = document.getElementById('modal-current-point');
+                if (mcp) mcp.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+            }).catch(() => {});
+
+            // 읽지 않은 알림 수
+            loadUnreadCount();
+
+            // AI 고객센터 버튼 표시
+            const aiSide = document.getElementById('ai-support-side-btn');
+            if (aiSide) aiSide.style.display = 'block';
+            const aiFloat = document.getElementById('ai-float');
+            if (aiFloat) aiFloat.style.display = 'flex';
+        }
+
+        initSearch();
+
+        // 외부 클릭 시 유저 메뉴 닫기
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('user-menu');
+            if (menu && !menu.contains(e.target)) {
+                menu.classList.remove('open');
+            }
+        });
+    }
+
+    function toggleUserMenu() {
+        document.getElementById('user-menu')?.classList.toggle('open');
+    }
+
+    async function doLogout() {
+        await Auth.logout();
+    }
+
+    function openPointModal() {
+        // 현재 포인트 갱신
+        api.get('/points/balance', true).then(d => {
+            const el = document.getElementById('modal-current-point');
+            if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+        }).catch(() => {});
+        Modal.open('modal-point');
+    }
+
+    /* ──────────────────────────────────
+       알림 드로어
+    ────────────────────────────────── */
+    function openNotifDrawer() {
+        document.getElementById('notif-drawer')?.classList.add('open');
+        document.getElementById('notif-backdrop')?.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        loadNotifications();
+    }
+
+    function closeNotifDrawer() {
+        document.getElementById('notif-drawer')?.classList.remove('open');
+        document.getElementById('notif-backdrop')?.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    async function loadUnreadCount() {
+        try {
+            const d = await api.get('/notifications/unread-count', true);
+            const dot = document.getElementById('alarm-dot');
+            if (dot) dot.style.display = (d?.count > 0) ? 'block' : 'none';
+        } catch {}
+    }
+
+    async function loadNotifications() {
+        const el = document.getElementById('notif-list');
+        if (!el) return;
+        if (!Auth.isLoggedIn()) {
+            el.innerHTML = `<div class="notif-empty"><div class="notif-empty__icon">🔒</div><div>로그인이 필요합니다</div></div>`;
+            return;
+        }
+        el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+        try {
+            const res = await api.get('/notifications?page=1&size=30', true);
+            const list = res?.content || res || [];
+            if (!list.length) {
+                el.innerHTML = '<div class="notif-empty"><div class="notif-empty__icon">🔔</div><div>새 알림이 없습니다</div></div>';
+                return;
+            }
+            el.innerHTML = list.map(n => `
+          <div class="notif-item ${!n.isRead ? 'unread' : ''}" onclick="markRead(${n.notificationId || n.id}, this)">
+            <div class="notif-item__row">
+              <div class="notif-item__dot ${n.isRead ? 'read' : ''}"></div>
+              <div>
+                <div class="notif-item__content">${n.message || n.content || '알림'}</div>
+                <div class="notif-item__time">${formatDate(n.createdAt)}</div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        } catch {
+            el.innerHTML = '<div class="notif-empty"><div>알림을 불러올 수 없습니다</div></div>';
+        }
+    }
+
+    async function markRead(id, el) {
+        if (!id) return;
+        try {
+            await api.patch(`/notifications/${id}/read`, {}, true);
+            el.classList.remove('unread');
+            el.querySelector('.notif-item__dot')?.classList.add('read');
+            loadUnreadCount();
+        } catch {}
+    }
+
+    async function markAllRead() {
+        try {
+            await api.patch('/notifications/read-all', {}, true);
+            document.querySelectorAll('.notif-item.unread').forEach(el => {
+                el.classList.remove('unread');
+                el.querySelector('.notif-item__dot')?.classList.add('read');
+            });
+            const dot = document.getElementById('alarm-dot');
+            if (dot) dot.style.display = 'none';
+            Toast.success('모든 알림을 읽었습니다');
+        } catch (e) {
+            Toast.error(e.message || '실패');
+        }
+    }
+
+    /* ──────────────────────────────────
+       AI 추천 로드
+    ────────────────────────────────── */
+    async function loadAiRecommendation() {
+        try {
+            const res = await api.get('/ai/recommendation', Auth.isLoggedIn());
+            const label = document.getElementById('rec-type-label');
+            if (label) {
+                const type = res?.recommendationType;
+                label.textContent = type === 'PERSONALIZED' ? '맞춤 추천'
+                        : type === 'TREND' ? '트렌드 기반'
+                        : Auth.isLoggedIn() ? '맞춤 추천' : '트렌드 기반';
+            }
+            const novels = res?.novels || res?.items || res?.content || [];
+            renderAiRec(novels.slice(0, 10));
+        } catch {
+            renderAiRec([]);
+        }
+    }
+
+    function renderAiRec(list) {
+        const el = document.getElementById('ai-rec-list');
+        if (!el) return;
+        if (!list.length) {
+            el.innerHTML = '<div style="color:var(--text3);font-size:0.82rem;padding:16px 4px">인기 소설을 확인해보세요</div>';
+            return;
+        }
+        el.innerHTML = list.map(n => `
+        <div class="ai-rec-card" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
+          <div class="ai-rec-cover">
+            ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.src='/images/default-cover.svg'">` : `<img src="/images/default-cover.svg" alt="표지 없음">`}
+          </div>
+          <div class="ai-rec-title">${escHtml(n.title)}</div>
+          <div class="ai-rec-author">${escHtml(n.authorNickname || n.authorName || '')}</div>
+          <div class="ai-rec-genre">${genreTag(n.genre)}</div>
+        </div>
+      `).join('');
+    }
+
+    /* ──────────────────────────────────
+       랭킹 로드
+    ────────────────────────────────── */
+    let currentRankType = 'weekly';
+
+    async function loadRanking(type) {
+        currentRankType = type;
+        const el = document.getElementById('ranking-list');
+        el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+        try {
+            const list = await api.get(`/novels/ranking?type=${type}`);
+            if (!list?.length) {
+                el.innerHTML = '<div class="empty-row">랭킹 데이터가 없습니다</div>';
+                return;
+            }
+            el.innerHTML = list.slice(0, 10).map((n, i) => `
+          <div class="ranking-item" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
+            <span class="ranking-num ${i < 3 ? 'top3' : ''}">${i + 1}</span>
+            <div class="ranking-cover">
+              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.src='/images/default-cover.svg'">` : `<img src="/images/default-cover.svg" alt="표지 없음">`}
+            </div>
+            <div class="ranking-info">
+              <div class="ranking-title">${escHtml(n.title)}</div>
+              <div class="ranking-meta">${escHtml(n.authorName || '알 수 없음')} · ${n.episodeCount || 0}화</div>
+              <div class="ranking-badges">
+                ${genreTag(n.genre)}
+                ${n.isFree !== false ? '<span class="badge badge--free">무료</span>' : '<span class="badge badge--paid">유료</span>'}
+                ${statusTag(n.status)}
+              </div>
+            </div>
+            <button class="ranking-view-btn" onclick="event.stopPropagation();window.location.href='/novel-detail.html?id=${n.novelId}'">보기</button>
+          </div>
+        `).join('');
+        } catch {
+            el.innerHTML = '<div class="empty-row">랭킹을 불러오지 못했습니다</div>';
+        }
+    }
+
+    async function loadRealtimeTop5() {
+        const el = document.getElementById('realtime-list');
+        try {
+            const list = await api.get('/novels/ranking?type=realtime');
+            if (!list?.length) {
+                el.innerHTML = '<div class="empty-row" style="padding:16px;font-size:0.8rem">데이터 없음</div>';
+                return;
+            }
+            el.innerHTML = list.slice(0, 5).map((n, i) => `
+          <div class="realtime-item" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
+            <span class="realtime-rank ${i < 3 ? 'top3' : ''}">${i + 1}</span>
+            <span class="realtime-title">${escHtml(n.title)}</span>
+            ${i < 3 ? '<span class="live-badge">LIVE</span>' : ''}
+          </div>
+        `).join('');
+        } catch {
+            el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:0.8rem">로드 실패</div>';
+        }
+    }
+
+    /* ──────────────────────────────────
+       신작 소설 로드
+    ────────────────────────────────── */
+    let currentGenreFilter = '';
+    let currentStatusFilter = '';
+
+    async function loadNewNovels(genre = '', status = '') {
+        const el = document.getElementById('new-novel-list');
+        el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+        try {
+            const params = new URLSearchParams({ page: '0', size: '12' });
+            if (genre) params.append('genre', genre);
+            if (status) params.append('status', status);
+            const res = await api.get(`/v2/novels?${params}`);
+            const list = res?.content || [];
+            if (!list.length) {
+                el.innerHTML = '<div class="empty-row">소설이 없습니다</div>';
+                return;
+            }
+            el.innerHTML = list.map(n => `
+          <div class="novel-list-item" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
+            <div class="novel-list-cover">
+              ${n.coverImageUrl ? `<img src="${n.coverImageUrl}" alt="${n.title}" onerror="this.src='/images/default-cover.svg'">` : `<img src="/images/default-cover.svg" alt="표지 없음">`}
+            </div>
+            <div class="novel-list-info">
+              <div class="novel-list-title">${escHtml(n.title)}</div>
+              <div class="novel-list-meta">${escHtml(n.authorName || '')} · ${n.episodeCount || 1}화 업로드</div>
+              <div class="novel-list-badges">
+                ${genreTag(n.genre)}
+                ${n.isFree !== false ? '<span class="badge badge--free">무료</span>' : '<span class="badge badge--paid">유료</span>'}
+              </div>
+            </div>
+            ${Auth.isLoggedIn() ? `
+              <button class="fav-btn" onclick="event.stopPropagation();toggleBookmark(${n.novelId}, this)" title="찜하기">찜</button>
+            ` : `
+              <button class="fav-btn" onclick="event.stopPropagation();window.location.href='/login.html'">찜</button>
+            `}
+          </div>
+        `).join('');
+        } catch {
+            el.innerHTML = '<div class="empty-row">신작을 불러오지 못했습니다</div>';
+        }
+    }
+
+    async function toggleBookmark(novelId, btn) {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        try {
+            const res = await api.post(`/novels/${novelId}/bookmark`, {}, true);
+            const isBookmarked = res?.bookmarked ?? res?.isBookmarked ?? false;
+            btn.textContent = isBookmarked ? '❤️' : '찜';
+            btn.classList.toggle('bookmarked', isBookmarked);
+            Toast.success(isBookmarked ? '찜했습니다!' : '찜을 취소했습니다');
+        } catch (e) {
+            Toast.error(e.message || '실패');
+        }
+    }
+
+    /* ──────────────────────────────────
+       포인트 충전
+    ────────────────────────────────── */
+    const PORTONE_STORE_ID    = 'store-6dd586c4-bbae-4fc5-a1b1-920f1850b300';
+    const PORTONE_CHANNEL_KEY = 'channel-key-70f0f4c2-74c5-4c38-b275-c2c01e2c3660';
+
+    let selectedPointAmt = 1000;
+
+    function initPointOptions() {
+        document.querySelectorAll('.point-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.point-opt').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedPointAmt = parseInt(btn.dataset.amount);
+            });
+        });
+    }
+
+    async function chargePoint() {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+
+        try {
+            // Step 1: 서버 PENDING Payment 생성 → paymentKey 발급
+            const [prepare, meInfo] = await Promise.all([
+                api.post('/payments/prepare', { amount: selectedPointAmt }, true),
+                api.get('/auth/users/me', true),
+            ]);
+            const paymentKey = prepare.paymentKey;
+            const phoneNo = meInfo.phoneNo?.replace(/-/g, '') || '';
+
+            Modal.close('modal-point');
+            Toast.info('결제창을 불러오는 중...');
+
+            // Step 2: PortOne V2 결제창 오픈
+            const me = Auth.getUser();
+            const portoneRes = await PortOne.requestPayment({
+                storeId: PORTONE_STORE_ID,
+                channelKey: PORTONE_CHANNEL_KEY,
+                paymentId: paymentKey,
+                orderName: `NovelCraft ${selectedPointAmt.toLocaleString()}P 포인트 충전`,
+                totalAmount: selectedPointAmt,
+                currency: 'CURRENCY_KRW',
+                payMethod: 'CARD',
+                customer: {
+                    fullName: me?.nickname || '구매자',
+                    phoneNumber: phoneNo,
+                    ...(me?.email ? { email: me.email } : {}),
+                },
+            });
+
+            // Step 3: 취소 / 실패 처리
+            if (portoneRes.code) {
+                Toast.error(`결제 실패: ${portoneRes.message}`);
+                return;
+            }
+
+            // Step 4: 서버 confirm → 포인트 충전
+            await api.post('/payments/confirm', {
+                paymentId: portoneRes.paymentId,
+                amount: selectedPointAmt,
+            }, true);
+
+            Toast.success(`${selectedPointAmt.toLocaleString()}P가 충전되었습니다!`);
+
+            // Step 5: 네비 포인트 잔액 갱신
+            api.get('/points/balance', true).then(d => {
+                const el = document.getElementById('nav-point');
+                if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+            }).catch(() => {});
+        } catch (e) {
+            Toast.error(e.message || '충전 중 오류가 발생했습니다.');
+        }
+    }
+
+    /* ──────────────────────────────────
+       AI 플로팅 버튼
+    ────────────────────────────────── */
+    let aiBubbleTimer;
+    function toggleAiBubble() {
+        Modal.open('modal-ai');
+        setTimeout(() => document.getElementById('ai-msg-input')?.focus(), 300);
+    }
+
+    /* ──────────────────────────────────
+       AI 고객센터 채팅
+    ────────────────────────────────── */
+    let aiStreaming = false;
+
+    function aiAppendUser(text) {
+        const el = document.getElementById('ai-messages');
+        const row = document.createElement('div');
+        row.className = 'ai-msg-row ai-msg-row--user';
+        row.innerHTML = `<div class="ai-avatar ai-avatar--user">나</div>
+            <div class="ai-bubble">${escHtml(text)}</div>`;
+        el.appendChild(row);
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function aiAppendAI() {
+        const el = document.getElementById('ai-messages');
+        const row = document.createElement('div');
+        row.className = 'ai-msg-row ai-msg-row--ai';
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-bubble';
+        bubble.innerHTML = '<div class="ai-typing"><span></span><span></span><span></span></div>';
+        row.innerHTML = `<div class="ai-avatar ai-avatar--ai">AI</div>`;
+        row.appendChild(bubble);
+        el.appendChild(row);
+        el.scrollTop = el.scrollHeight;
+        return bubble;
+    }
+
+    async function aiSendMessage() {
+        if (aiStreaming) return;
+        const input = document.getElementById('ai-msg-input');
+        const message = input.value.trim();
+        if (!message) return;
+        input.value = '';
+        aiAutoResize(input);
+        aiAppendUser(message);
+        await aiStream(message);
+    }
+
+    async function aiAskShortcut(q) {
+        if (aiStreaming) return;
+        aiAppendUser(q);
+        await aiStream(q);
+    }
+
+    async function aiStream(message) {
+        const bubble = aiAppendAI();
+        aiStreaming = true;
+        document.getElementById('ai-send-btn').disabled = true;
+        let fullText = '';
+        try {
+            const res = await fetch('/api/ai-support/chat', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + Auth.getToken(),
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream'
+                },
+                body: JSON.stringify({ message })
+            });
+            if (res.status === 401) {
+                bubble.textContent = '로그인이 필요합니다.';
+                return;
+            }
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const events = buffer.split('\n\n');
+                buffer = events.pop();
+                for (const event of events) {
+                    for (const line of event.split('\n')) {
+                        if (!line.startsWith('data:')) continue;
+                        const token = line.slice(5);
+                        if (token === '[DONE]') break;
+                        fullText += token;
+                        bubble.textContent = fullText;
+                        document.getElementById('ai-messages').scrollTop = 9999;
+                    }
+                }
+            }
+            if (buffer.startsWith('data:')) {
+                const last = buffer.slice(5);
+                if (last && last !== '[DONE]') { fullText += last; bubble.textContent = fullText; }
+            }
+            if (!fullText) bubble.textContent = '응답을 받지 못했습니다. 다시 시도해 주세요.';
+        } catch {
+            if (!fullText) bubble.textContent = '오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+        } finally {
+            aiStreaming = false;
+            document.getElementById('ai-send-btn').disabled = false;
+        }
+    }
+
+    async function aiResetSession() {
+        try {
+            await fetch('/api/ai-support/chat/session', {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
+            });
+        } catch {}
+        document.getElementById('ai-messages').innerHTML = `
+            <div class="ai-chat__welcome">
+                <div class="ai-chat__welcome-icon">✦</div>
+                <p>대화가 초기화되었습니다.<br>새로운 질문을 입력해 주세요.</p>
+            </div>`;
+    }
+
+    function aiHandleKey(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); aiSendMessage(); }
+    }
+
+    function aiAutoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+    }
+
+    /* ──────────────────────────────────
+       유틸 함수
+    ────────────────────────────────── */
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ── 소셜 로그인 OAuth2 콜백 처리 ──
+       OAuth2SuccessHandler → index.html?accessToken=xxx&refreshToken=yyy 로 리다이렉트됨 */
+    (async () => {
+        const _p = new URLSearchParams(location.search);
+        const _at = _p.get('accessToken');
+        const _rt = _p.get('refreshToken');
+        if (_at) {
+            Auth.setToken(decodeURIComponent(_at).replace('Bearer ', ''));
+            if (_rt) {
+                localStorage.setItem('refreshToken', decodeURIComponent(_rt).replace('Bearer ', ''));
+            }
+            try {
+                const me = await api.get('/auth/users/me', true);
+                Auth.setUser({ id: me.uerId || me.id, nickname: me.nickname, email: me.email, role: me.role });
+            } catch (_) {}
+            history.replaceState({}, '', location.pathname);
+        }
+    })();
+
+    /* ──────────────────────────────────
+       이벤트 바인딩 + 초기 로드
+    ────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', () => {
+        // 장르 탭
+        document.querySelectorAll('.genre-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.genre-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentGenreFilter = btn.dataset.genre;
+                currentStatusFilter = btn.dataset.status;
+                loadNewNovels(currentGenreFilter, currentStatusFilter);
+            });
+        });
+
+        // 랭킹 토글
+        document.querySelectorAll('.rank-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.rank-toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                loadRanking(btn.dataset.type);
+            });
+        });
+
+        // 포인트 옵션
+        initPointOptions();
+
+        // 데이터 로드
+        loadAiRecommendation();
+        loadRanking('weekly');
+        loadRealtimeTop5();
+        loadNewNovels();
+    });
+</script>
+</body>
+</html>
+

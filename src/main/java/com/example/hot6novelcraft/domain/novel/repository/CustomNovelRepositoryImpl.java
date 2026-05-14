@@ -95,6 +95,7 @@ public class CustomNovelRepositoryImpl implements CustomNovelRepository {
                         novel.viewCount,
                         novel.bookmarkCount,
                         user.nickname,
+                        user.id,
                         novel.createdAt
                 ))
                 .from(novel)
@@ -130,6 +131,8 @@ public class CustomNovelRepositoryImpl implements CustomNovelRepository {
                                         episode.novelId.eq(novel.id),
                                         episode.isDeleted.eq(false)
                                 ),
+                        novel.viewCount,
+                        novel.bookmarkCount,
                         novel.updatedAt
                 ))
                 .from(novel)

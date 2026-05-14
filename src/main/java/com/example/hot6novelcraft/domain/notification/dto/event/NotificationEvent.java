@@ -52,6 +52,20 @@ public record NotificationEvent(
                 mentorshipId, "MENTORSHIP");
     }
 
+    public static NotificationEvent mentorshipRejected(Long applicantUserId, String mentorName, Long mentorshipId) {
+        return new NotificationEvent(newId(), applicantUserId, NotificationType.MENTORSHIP_REJECTED,
+                "멘토링 거절",
+                String.format("%s 멘토님이 멘토링 신청을 거절했습니다.", mentorName),
+                mentorshipId, "MENTORSHIP");
+    }
+
+    public static NotificationEvent mentorshipCompleted(Long targetUserId, String otherPartyName, Long mentorshipId) {
+        return new NotificationEvent(newId(), targetUserId, NotificationType.MENTORSHIP_COMPLETED,
+                "멘토링 종료",
+                String.format("%s님과의 멘토링이 종료되었습니다.", otherPartyName),
+                mentorshipId, "MENTORSHIP");
+    }
+
     public static NotificationEvent episodePublished(Long followerId, String authorName, String novelTitle, Long episodeId) {
         return new NotificationEvent(newId(), followerId, NotificationType.EPISODE_PUBLISHED,
                 "구독 작가 신작 발행",

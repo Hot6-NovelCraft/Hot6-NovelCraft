@@ -105,23 +105,24 @@ public class SearchController {
 
     /** ============ 인기 검색어 랭킹 =============== */
     @GetMapping("/keywords/popular")
-    public ResponseEntity<List<String>> getPopularKeywords() {
-        return ResponseEntity.ok(searchService.getTopSearchKeywords());
+    public ResponseEntity<BaseResponse<List<String>>> getPopularKeywords() {
+        return ResponseEntity.ok(BaseResponse.success("200", "인기 검색어 조회 성공", searchService.getTopSearchKeywords()));
     }
 
     /** ============ 인기 테그 랭킹 =============== */
     @GetMapping("/tags/popular")
-    public ResponseEntity<List<String>> getPopularTags() {
-        return ResponseEntity.ok(searchService.getTopTagsKeywords());
+    public ResponseEntity<BaseResponse<List<String>>> getPopularTags() {
+        return ResponseEntity.ok(BaseResponse.success("200", "인기 태그 조회 성공", searchService.getTopTagsKeywords()));
     }
 
     /** ===== 내 최근 검색어 조회 (로그인 필수) ====== */
     @GetMapping("/keywords/recent")
-    public ResponseEntity<List<String>> getRecentSearchKeywords(
+    public ResponseEntity<BaseResponse<List<String>>> getRecentSearchKeywords(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
         if(userDetails == null) {
             throw new ServiceErrorException(SearchExceptionEnum.ERR_SIGN_IN_SERVICE);
         }
-        return ResponseEntity.ok(searchService.getRecentSearchKeywords(userDetails.getUser().getId()));
+        return ResponseEntity.ok(BaseResponse.success("200", "최근 검색어 조회 성공",
+                searchService.getRecentSearchKeywords(userDetails.getUser().getId())));
     }
 }

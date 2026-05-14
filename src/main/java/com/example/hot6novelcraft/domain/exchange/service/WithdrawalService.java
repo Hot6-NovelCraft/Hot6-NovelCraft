@@ -198,6 +198,7 @@ public class WithdrawalService {
         Withdrawal withdrawal = withdrawalRepository.findById(withdrawalId)
                 .orElseThrow(() -> new ServiceErrorException(ExchangeExceptionEnum.WITHDRAWAL_NOT_FOUND));
 
+        withdrawal.processing();
         withdrawal.complete();
 
         log.info("환전 승인 완료 - withdrawalId: {}, authorId: {}", withdrawalId, withdrawal.getAuthorId());

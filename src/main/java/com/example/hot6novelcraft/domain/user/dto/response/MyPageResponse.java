@@ -5,12 +5,15 @@ import com.example.hot6novelcraft.domain.user.entity.ReaderProfile;
 import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
 
+import java.time.LocalDate;
+
 public record MyPageResponse(
         Long uerId,
         String email,
         String nickname,
         UserRole role,
         String phoneNo,
+        LocalDate birthday,
         AuthorUpdateResponse authorProfile,
         ReaderUpdateResponse readerProfile
 
@@ -22,6 +25,7 @@ public record MyPageResponse(
                 user.getNickname(),
                 user.getRole(),
                 user.getPhoneNo(),
+                user.getBirthday(),
                 AuthorUpdateResponse.of(authorProfile),
                 null
         );
@@ -33,6 +37,7 @@ public record MyPageResponse(
                 user.getNickname(),
                 user.getRole(),
                 user.getPhoneNo(),
+                user.getBirthday(),
                 null,
                 ReaderUpdateResponse.of(readerProfile)
         );
@@ -44,6 +49,7 @@ public record MyPageResponse(
                 user.getNickname(),
                 user.getRole(),
                 user.getPhoneNo(),
+                user.getBirthday(),
                 null,
                 null
         );

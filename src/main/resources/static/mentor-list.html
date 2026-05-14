@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>멘토 찾기 - NovelCraft</title>
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+  <script src="/common.js"></script>
+  <style>
+    /* ── 포인트 버튼 ── */
+    .nc-point-btn {
+      padding: 5px 14px; border-radius: 20px;
+      background: linear-gradient(135deg,rgba(240,200,66,.18),rgba(240,200,66,.08));
+      border: 1px solid rgba(240,200,66,.4); color: var(--accent);
+      font-size: .82rem; font-weight: 700; cursor: pointer;
+      transition: all .2s; white-space: nowrap; font-family: inherit;
+    }
+    .nc-point-btn:hover { background: rgba(240,200,66,.25); border-color: var(--accent); }
+
+    /* ── 알림 버튼 ── */
+    .nc-alarm-btn {
+      position: relative; padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 1rem; cursor: pointer; transition: all 0.2s;
+    }
+    .nc-alarm-btn:hover { background: var(--surface); }
+    .nc-alarm-dot {
+      position: absolute; top: 4px; right: 4px;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--error);
+      border: 2px solid var(--bg);
+    }
+
+    /* ── 유저 드롭다운 ── */
+    .nc-user-menu { position: relative; }
+    .nc-user-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); min-width: 148px;
+      box-shadow: var(--shadow-lg); z-index: 300; display: none; overflow: hidden;
+    }
+    .nc-user-menu.open .nc-user-dropdown { display: block; }
+    .nc-user-dropdown__item {
+      display: block; width: 100%; padding: 11px 16px; text-align: left;
+      background: none; border: none; color: var(--text2); font-size: 0.875rem;
+      cursor: pointer; transition: background 0.15s; font-family: inherit; text-decoration: none;
+    }
+    .nc-user-dropdown__item:hover { background: var(--surface); color: var(--text1); }
+    .nc-user-dropdown__item--danger { color: #f87171; }
+    .nc-user-dropdown__item--danger:hover { background: rgba(239,68,68,0.08); }
+
+    /* ── 알림 드로어 ── */
+    .notif-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 900; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .notif-backdrop.open { opacity: 1; pointer-events: all; }
+    .notif-drawer {
+      position: fixed; top: 0; right: -440px; width: 420px; height: 100vh;
+      background: var(--surface2); border-left: 1px solid var(--border);
+      z-index: 950; transition: right 0.3s ease; display: flex; flex-direction: column;
+    }
+    .notif-drawer.open { right: 0; }
+    .notif-drawer__header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .notif-drawer__title { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 1.1rem; }
+    .notif-drawer__actions { display: flex; gap: 8px; align-items: center; }
+    .notif-drawer__close {
+      background: none; border: none; color: var(--text3); font-size: 1.25rem;
+      cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;
+    }
+    .notif-drawer__close:hover { background: var(--surface); }
+    .notif-drawer__read-all {
+      font-size: 0.75rem; color: var(--primary-light); background: none;
+      border: 1px solid var(--primary); border-radius: 6px; padding: 4px 10px;
+      cursor: pointer; font-family: inherit; transition: all 0.2s;
+    }
+    .notif-drawer__read-all:hover { background: var(--primary); color: white; }
+    .notif-drawer__body { flex: 1; overflow-y: auto; padding: 12px 0; }
+    .notif-item { padding: 14px 24px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .notif-item:hover { background: rgba(255,255,255,0.03); }
+    .notif-item.unread { background: rgba(124,90,240,0.05); }
+    .notif-item__row { display: flex; gap: 10px; align-items: flex-start; }
+    .notif-item__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); flex-shrink: 0; margin-top: 6px; }
+    .notif-item__dot.read { background: transparent; }
+    .notif-item__content { flex: 1; font-size: 0.875rem; line-height: 1.5; }
+    .notif-item.unread .notif-item__content { font-weight: 500; }
+    .notif-item__time { font-size: 0.72rem; color: var(--text3); margin-top: 4px; }
+    .notif-empty { padding: 60px 24px; text-align: center; color: var(--text3); }
+    .notif-empty__icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+    /* ── 포인트 모달 ── */
+    .point-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .point-opt {
+      padding: 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: transparent; cursor: pointer; transition: all .2s;
+      text-align: center; font-family: inherit; color: var(--text2);
+    }
+    .point-opt:hover { border-color: var(--primary); }
+    .point-opt.selected { border-color: var(--primary); background: rgba(124,90,240,.1); color: var(--primary-light); }
+    .point-opt__amount { font-size: 1rem; font-weight: 700; }
+    .point-opt__price  { font-size: .78rem; color: var(--text3); margin-top: 3px; }
+    .point-opt.selected .point-opt__price { color: var(--primary-light); opacity: .8; }
+
+    /* ── 레이아웃 ── */
+    body { background: var(--bg); color: var(--text1); font-family: var(--font-sans); }
+    .page-wrap {
+      max-width: 1100px; margin: 0 auto;
+      padding: 82px 20px 60px;
+      display: grid;
+      grid-template-columns: 1fr 270px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* ── 왼쪽 메인 ── */
+    .main-col {}
+
+    /* ── 필터 바 ── */
+    .filter-bar {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .filter-select {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text1);
+      border-radius: 10px; padding: 8px 14px; font-size: .88rem; font-family: inherit;
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 34px; min-width: 140px; transition: border-color .2s;
+    }
+    .filter-select:focus { outline: none; border-color: var(--primary); }
+    .filter-count { font-size: .82rem; color: var(--text3); margin-left: auto; }
+
+    /* ── 멘토 카드 ── */
+    .mentor-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 18px 20px; margin-bottom: 12px; transition: border-color .2s;
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .mentor-card:hover { border-color: rgba(124,90,240,.4); }
+    .mentor-card.is-full { opacity: .65; }
+
+    .card-avatar {
+      width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700; color: white;
+    }
+    .card-body { flex: 1; min-width: 0; }
+    .card-row1 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+    .card-name { font-size: .98rem; font-weight: 700; }
+    .level-badge {
+      padding: 2px 8px; border-radius: 12px; font-size: .68rem; font-weight: 700;
+      background: rgba(124,90,240,.15); color: var(--primary-light); border: 1px solid rgba(124,90,240,.3);
+    }
+    .level-badge--intro  { background: rgba(148,163,184,.12); color: #94a3b8; border-color: rgba(148,163,184,.3); }
+    .level-badge--elem   { background: rgba(52,211,153,.12);  color: #34d399; border-color: rgba(52,211,153,.3); }
+    .level-badge--inter  { background: rgba(251,191,36,.12);  color: #fbbf24; border-color: rgba(251,191,36,.3); }
+    .level-badge--prof   { background: rgba(124,90,240,.15);  color: var(--primary-light); border-color: rgba(124,90,240,.3); }
+    .card-slot { font-size: .8rem; color: var(--text3); }
+    .card-slot .slot-full { color: #f87171; }
+
+    .card-desc { font-size: .82rem; color: var(--text3); margin-bottom: 8px; line-height: 1.5; }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+    .card-tag {
+      padding: 3px 10px; border-radius: 12px; font-size: .74rem;
+      background: var(--bg3); color: var(--text3); border: 1px solid var(--border);
+    }
+
+    .card-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; min-width: 90px; align-items: stretch; }
+    .btn-apply {
+      padding: 8px 14px; border-radius: 8px;
+      background: var(--primary); border: none; color: white;
+      font-size: .82rem; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: opacity .2s; white-space: nowrap;
+    }
+    .btn-apply:hover { opacity: .88; }
+    .btn-apply:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; opacity: 1; }
+    .btn-apply--full { background: var(--surface2); color: var(--text3); cursor: not-allowed; }
+    .btn-chat {
+      padding: 8px 14px; border-radius: 8px;
+      background: transparent; border: 1px solid rgba(52,211,153,.5); color: #34d399;
+      font-size: .82rem; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: all .2s; white-space: nowrap;
+    }
+    .btn-chat:hover { background: rgba(52,211,153,.08); }
+    .btn-detail {
+      padding: 7px 14px; border-radius: 8px;
+      background: transparent; border: 1px solid var(--border); color: var(--text3);
+      font-size: .78rem; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap;
+    }
+    .btn-detail:hover { border-color: var(--text2); color: var(--text2); }
+    .btn-cancel-apply {
+      padding: 7px 14px; border-radius: 8px;
+      background: transparent; border: 1px solid rgba(248,113,113,.4); color: #f87171;
+      font-size: .78rem; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: all .2s; white-space: nowrap;
+    }
+    .btn-cancel-apply:hover { background: rgba(248,113,113,.1); border-color: #f87171; }
+
+    /* ── 매칭됨 뷰 ── */
+    .matched-view {}
+    .matched-hero {
+      background: var(--surface); border: 1px solid rgba(124,90,240,.4); border-radius: 16px;
+      padding: 24px; margin-bottom: 16px; position: relative; overflow: hidden;
+    }
+    .matched-hero::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary), #34d399);
+    }
+    .matched-hero-top { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .matched-avatar {
+      width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 700; color: white;
+    }
+    .matched-info { flex: 1; }
+    .matched-name { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+    .matched-sub { font-size: .82rem; color: var(--text3); }
+    .matched-badge {
+      padding: 4px 12px; border-radius: 12px; font-size: .72rem; font-weight: 700;
+      background: rgba(52,211,153,.15); color: #34d399; border: 1px solid rgba(52,211,153,.3);
+      white-space: nowrap;
+    }
+    .matched-btn-row { display: flex; gap: 10px; }
+    .btn-chat-main {
+      flex: 1; padding: 11px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), #a78bfa); border: none; color: white;
+      font-size: .9rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity .2s;
+    }
+    .btn-chat-main:hover { opacity: .88; }
+
+    .apply-detail-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px 22px; margin-bottom: 12px;
+    }
+    .detail-section-title {
+      font-size: .72rem; font-weight: 700; color: var(--text3);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px;
+    }
+    .detail-body {
+      font-size: .88rem; color: var(--text2); line-height: 1.75;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .detail-body--empty { color: var(--text3); font-style: italic; }
+    .manuscript-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px;
+      border: 1px solid rgba(124,90,240,.4); color: var(--primary-light);
+      background: rgba(124,90,240,.06); font-size: .85rem; font-weight: 600;
+      text-decoration: none; cursor: pointer; transition: all .2s;
+    }
+    .manuscript-link:hover { background: rgba(124,90,240,.12); }
+
+    /* 멘티 신청 이력 탭 (매칭 전) */
+    .history-list { margin-top: 24px; }
+    .history-title { font-size: .88rem; font-weight: 700; color: var(--text2); margin-bottom: 12px; }
+    .history-item {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 16px; margin-bottom: 8px;
+    }
+    .history-mentor-name { font-size: .88rem; font-weight: 600; flex: 1; }
+    .history-date { font-size: .75rem; color: var(--text3); white-space: nowrap; }
+    .status-pill {
+      padding: 3px 10px; border-radius: 12px; font-size: .72rem; font-weight: 700; white-space: nowrap;
+    }
+    .status-pill--pending  { background: rgba(251,191,36,.12);  color: #fbbf24; border: 1px solid rgba(251,191,36,.3); }
+    .status-pill--accepted { background: rgba(52,211,153,.12);  color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+    .status-pill--rejected { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+    .status-pill--completed{ background: rgba(148,163,184,.12); color: #94a3b8; border: 1px solid rgba(148,163,184,.3); }
+
+    /* ── 오른쪽 사이드바 ── */
+    .side-col {}
+    .side-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 18px 18px; margin-bottom: 14px;
+    }
+    .side-card__title {
+      font-size: .72rem; font-weight: 700; color: var(--text3);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px;
+    }
+
+    /* 내 멘토 */
+    .my-mentor-card {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+    }
+    .my-mentor-avatar {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 700; color: white;
+    }
+    .my-mentor-info {}
+    .my-mentor-name { font-size: .9rem; font-weight: 700; }
+    .my-mentor-genres { font-size: .75rem; color: var(--text3); margin-top: 2px; }
+    .no-match-text {
+      text-align: center; padding: 16px 0;
+      font-size: .85rem; color: var(--text3); font-style: italic;
+    }
+    .no-match-text .no-match-icon { font-size: 1.4rem; margin-bottom: 6px; }
+    .side-btn {
+      width: 100%; padding: 10px; border-radius: 9px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text2); font-size: .85rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all .2s;
+    }
+    .side-btn:hover { border-color: var(--primary); color: var(--primary-light); }
+    .side-btn--primary {
+      background: var(--primary); border-color: var(--primary); color: white;
+    }
+    .side-btn--primary:hover { opacity: .88; color: white; border-color: var(--primary); }
+
+    /* 신청 현황 */
+    .status-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; }
+    .status-row + .status-row { border-top: 1px solid var(--border); }
+    .status-label { font-size: .85rem; color: var(--text2); }
+    .status-count {
+      min-width: 26px; height: 22px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 700; padding: 0 8px;
+    }
+    .status-count--pending  { background: rgba(251,191,36,.15); color: #fbbf24; }
+    .status-count--accepted { background: rgba(52,211,153,.15); color: #34d399; }
+    .status-count--rejected { background: rgba(248,113,113,.12); color: #f87171; }
+
+    /* ── 신청 모달 ── */
+    .apply-form-group { margin-bottom: 16px; }
+    .apply-form-label { font-size: .82rem; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; }
+    .apply-form-label span { color: var(--text3); font-weight: 400; }
+    .apply-textarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+      color: var(--text1); font-family: var(--font-sans); font-size: .88rem;
+      line-height: 1.7; padding: 10px 12px; resize: vertical; min-height: 90px;
+      transition: border-color .2s;
+    }
+    .apply-textarea:focus { outline: none; border-color: var(--primary); }
+    .apply-select {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+      color: var(--text1); font-family: var(--font-sans); font-size: .88rem;
+      padding: 10px 12px; appearance: none; cursor: pointer; transition: border-color .2s;
+    }
+    .apply-select:focus { outline: none; border-color: var(--primary); }
+    .apply-file-wrap {
+      border: 1px dashed var(--border); border-radius: 9px; padding: 14px;
+      text-align: center; cursor: pointer; transition: border-color .2s;
+    }
+    .apply-file-wrap:hover { border-color: var(--primary); }
+    .apply-file-input { display: none; }
+    .apply-file-hint { font-size: .78rem; color: var(--text3); margin-top: 4px; }
+    .apply-file-name { font-size: .82rem; color: var(--primary-light); margin-top: 6px; font-weight: 600; }
+    .char-count { font-size: .74rem; color: var(--text3); text-align: right; margin-top: 4px; }
+
+    /* ── 로딩 ── */
+    .loading-wrap {
+      display: flex; align-items: center; justify-content: center;
+      gap: 12px; padding: 60px 0; color: var(--text3);
+    }
+    .loading-wrap::before {
+      content: ''; width: 20px; height: 20px;
+      border: 2px solid var(--border); border-top-color: var(--primary);
+      border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    .spin {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: white;
+      border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--text3);
+    }
+    .empty-state__icon { font-size: 2rem; margin-bottom: 10px; }
+    .empty-state__text { font-size: .9rem; }
+
+    /* 멘토 상세 모달 */
+    .detail-modal-body { padding: 4px 0; }
+    .detail-bio {
+      font-size: .88rem; color: var(--text2); line-height: 1.75;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+      padding: 12px 14px; margin-bottom: 14px;
+    }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .detail-cell__label { font-size: .7rem; color: var(--text3); margin-bottom: 3px; }
+    .detail-cell__value { font-size: .88rem; font-weight: 600; color: var(--text1); }
+    .detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .detail-tag {
+      padding: 3px 10px; border-radius: 12px; font-size: .76rem;
+      background: var(--bg3); color: var(--text2); border: 1px solid var(--border);
+    }
+    .detail-tag--genre { background: rgba(59,130,246,.1); color: #60a5fa; border-color: rgba(59,130,246,.25); }
+    .detail-tag--field { background: rgba(124,90,240,.1); color: var(--primary-light); border-color: rgba(124,90,240,.25); }
+    .detail-tag--style { background: rgba(52,211,153,.1); color: #34d399; border-color: rgba(52,211,153,.25); }
+    .detail-section-label {
+      font-size: .7rem; font-weight: 700; color: var(--text3);
+      text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px;
+    }
+
+    /* ── 내 멘토링 현황 드로어 ── */
+    .history-drawer-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 900; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .history-drawer-backdrop.open { opacity: 1; pointer-events: all; }
+    .history-drawer {
+      position: fixed; top: 0; right: -520px; width: 500px; height: 100vh;
+      background: var(--surface2); border-left: 1px solid var(--border);
+      z-index: 950; transition: right 0.3s ease; display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .history-drawer.open { right: 0; }
+    .history-drawer__header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .history-drawer__title { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 1.1rem; }
+    .history-drawer__close {
+      background: none; border: none; color: var(--text3); font-size: 1.25rem;
+      cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;
+    }
+    .history-drawer__close:hover { background: var(--surface); }
+    .history-drawer__body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+    /* 멘토링 이력 카드 */
+    .mh-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 18px; margin-bottom: 12px;
+    }
+    .mh-card__top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .mh-card__avatar {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary), #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; font-weight: 700; color: white;
+    }
+    .mh-card__info { flex: 1; min-width: 0; }
+    .mh-card__mentor { font-size: .92rem; font-weight: 700; }
+    .mh-card__date { font-size: .75rem; color: var(--text3); margin-top: 1px; }
+
+    /* 별점 */
+    .star-row { display: flex; align-items: center; gap: 4px; margin: 10px 0 6px; }
+    .star-btn {
+      background: none; border: none; font-size: 1.4rem; cursor: pointer;
+      padding: 0; line-height: 1; transition: transform 0.1s; color: #d1d5db;
+    }
+    .star-btn.active { color: #fbbf24; }
+    .star-btn:hover { transform: scale(1.2); }
+    .star-review-input {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text1); font-family: var(--font-sans); font-size: .85rem;
+      line-height: 1.6; padding: 8px 10px; resize: none; height: 60px;
+      transition: border-color .2s; margin-bottom: 8px;
+    }
+    .star-review-input:focus { outline: none; border-color: var(--primary); }
+    .btn-submit-review {
+      padding: 7px 18px; border-radius: 8px;
+      background: var(--primary); border: none; color: white;
+      font-size: .82rem; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: opacity .2s;
+    }
+    .btn-submit-review:hover { opacity: .88; }
+    .review-done {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .82rem; color: #fbbf24; margin-top: 8px;
+    }
+
+    /* 내 멘토링 현황 버튼 */
+    .btn-my-mentoring {
+      display: flex; align-items: center; gap: 6px;
+      width: 100%; padding: 10px 14px; border-radius: 9px;
+      background: linear-gradient(135deg, rgba(124,90,240,.15), rgba(124,90,240,.05));
+      border: 1px solid rgba(124,90,240,.35); color: var(--primary-light);
+      font-size: .85rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; transition: all .2s; margin-bottom: 14px;
+    }
+    .btn-my-mentoring:hover { background: rgba(124,90,240,.2); border-color: var(--primary); }
+
+    @media (max-width: 700px) {
+      .page-wrap { grid-template-columns: 1fr; }
+      .side-col { order: -1; }
+      .history-drawer { width: 100%; right: -100%; }
+    }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="page-wrap">
+  <!-- ── 왼쪽 메인 ── -->
+  <div class="main-col">
+    <div id="main-content">
+      <div class="loading-wrap">불러오는 중</div>
+    </div>
+  </div>
+
+  <!-- ── 오른쪽 사이드바 ── -->
+  <div class="side-col">
+    <!-- 내 멘토링 현황 버튼 -->
+    <button class="btn-my-mentoring" onclick="openHistoryDrawer()">
+      📋 내 멘토링 현황
+    </button>
+
+    <!-- 내 멘토 -->
+    <div class="side-card">
+      <div class="side-card__title">내 멘토</div>
+      <div id="my-mentor-section">
+        <div class="loading-wrap" style="padding:16px 0;font-size:.8rem">로딩 중</div>
+      </div>
+    </div>
+
+    <!-- 신청 현황 -->
+    <div class="side-card" id="apply-status-card">
+      <div class="side-card__title">신청 현황</div>
+      <div id="apply-status-section">
+        <div class="loading-wrap" style="padding:16px 0;font-size:.8rem">로딩 중</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 내 멘토링 현황 드로어 ── -->
+<div class="history-drawer-backdrop" id="history-drawer-backdrop" onclick="closeHistoryDrawer()"></div>
+<div class="history-drawer" id="history-drawer">
+  <div class="history-drawer__header">
+    <span class="history-drawer__title">내 멘토링 현황</span>
+    <button class="history-drawer__close" onclick="closeHistoryDrawer()">✕</button>
+  </div>
+  <div class="history-drawer__body" id="history-drawer-body">
+    <div class="loading-wrap" style="padding:40px 0">불러오는 중</div>
+  </div>
+</div>
+
+<!-- ── 멘토링 종료 확인 모달 ── -->
+<div class="nc-modal" id="modal-complete-confirm">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-complete-confirm')"></div>
+  <div class="nc-modal__box" style="max-width:360px">
+    <div class="nc-modal__title">멘토링 종료</div>
+    <p style="font-size:.87rem;color:var(--text3);margin-bottom:20px;line-height:1.6">
+      멘토링을 종료하시겠습니까?<br>종료 후 <strong style="color:var(--text2)">별점 평가</strong>를 남길 수 있습니다.
+    </p>
+    <div style="display:flex;gap:10px">
+      <button class="nc-btn nc-btn--secondary nc-btn--full" onclick="Modal.close('modal-complete-confirm')">아니요</button>
+      <button id="confirm-complete-ok" class="nc-btn nc-btn--primary nc-btn--full">네, 종료합니다</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 신청 취소 확인 모달 ── -->
+<div class="nc-modal" id="modal-cancel-confirm">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-cancel-confirm')"></div>
+  <div class="nc-modal__box" style="max-width:360px">
+    <div class="nc-modal__title">신청 취소</div>
+    <p style="font-size:.87rem;color:var(--text3);margin-bottom:20px;line-height:1.6">
+      정말 신청을 취소하시겠습니까?<br>취소 후 다시 신청할 수 있습니다.
+    </p>
+    <div style="display:flex;gap:10px">
+      <button class="nc-btn nc-btn--secondary nc-btn--full" onclick="Modal.close('modal-cancel-confirm')">아니요</button>
+      <button id="confirm-cancel-ok" class="nc-btn nc-btn--full"
+        style="background:#f87171;border:none;color:white;font-weight:700">네, 취소합니다</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 알림 드로어 ── -->
+<div class="notif-backdrop" id="notif-backdrop" onclick="closeNotifDrawer()"></div>
+<div class="notif-drawer" id="notif-drawer">
+  <div class="notif-drawer__header">
+    <span class="notif-drawer__title">알림</span>
+    <div class="notif-drawer__actions">
+      <button class="notif-drawer__read-all" onclick="markAllRead()">모두 읽음</button>
+      <button class="notif-drawer__close" onclick="closeNotifDrawer()">✕</button>
+    </div>
+  </div>
+  <div class="notif-drawer__body" id="notif-list"></div>
+</div>
+
+<!-- ── 포인트 충전 모달 ── -->
+<div class="nc-modal" id="modal-point">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-point')"></div>
+  <div class="nc-modal__box">
+    <button class="nc-modal__close" onclick="Modal.close('modal-point')">✕</button>
+    <div class="nc-modal__title">💎 포인트 충전</div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:.82rem;color:var(--text3);margin-bottom:12px">충전할 포인트를 선택하세요</div>
+      <div class="point-options" id="point-options">
+        <button class="point-opt selected" data-amount="1000"><div class="point-opt__amount">1,000P</div><div class="point-opt__price">₩1,000</div></button>
+        <button class="point-opt" data-amount="5000"><div class="point-opt__amount">5,000P</div><div class="point-opt__price">₩5,000</div></button>
+        <button class="point-opt" data-amount="10000"><div class="point-opt__amount">10,000P</div><div class="point-opt__price">₩10,000</div></button>
+        <button class="point-opt" data-amount="30000"><div class="point-opt__amount">30,000P</div><div class="point-opt__price">₩30,000</div></button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 14px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+      <span style="font-size:.85rem;color:var(--text3)">현재 잔여 포인트</span>
+      <span style="font-weight:700;color:var(--accent)" id="modal-current-point">-</span>
+    </div>
+    <button class="nc-btn nc-btn--primary nc-btn--full" onclick="chargePoint()">충전하기</button>
+  </div>
+</div>
+
+<!-- ── 멘토 상세 모달 ── -->
+<div class="nc-modal" id="modal-detail">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-detail')"></div>
+  <div class="nc-modal__box" style="max-width:560px">
+    <button class="nc-modal__close" onclick="Modal.close('modal-detail')">✕</button>
+    <div class="nc-modal__title" id="detail-modal-title">멘토 상세</div>
+    <div id="detail-modal-body" class="detail-modal-body"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="nc-btn nc-btn--secondary nc-btn--full" onclick="Modal.close('modal-detail')">닫기</button>
+      <button class="nc-btn nc-btn--primary nc-btn--full" id="detail-apply-btn">멘토링 신청하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 멘토링 신청 모달 ── -->
+<div class="nc-modal" id="modal-apply">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-apply')"></div>
+  <div class="nc-modal__box" style="max-width:520px">
+    <button class="nc-modal__close" onclick="Modal.close('modal-apply')">✕</button>
+    <div class="nc-modal__title" id="apply-modal-title">멘토링 신청</div>
+    <div style="font-size:.82rem;color:var(--text3);margin-bottom:18px" id="apply-modal-sub"></div>
+
+    <div class="apply-form-group">
+      <label class="apply-form-label">신청 동기 <span>(선택 · 최대 500자)</span></label>
+      <textarea class="apply-textarea" id="apply-motivation" maxlength="500"
+        placeholder="이 멘토에게 신청하는 이유나 목표를 자유롭게 적어주세요"
+        oninput="document.getElementById('apply-motivation-count').textContent=this.value.length+' / 500'"></textarea>
+      <div class="char-count" id="apply-motivation-count">0 / 500</div>
+    </div>
+
+    <div class="apply-form-group">
+      <label class="apply-form-label">내 소설 선택 <span>(선택)</span></label>
+      <select class="apply-select" id="apply-novel-select">
+        <option value="">소설 선택 안 함</option>
+      </select>
+    </div>
+
+    <div class="apply-form-group">
+      <label class="apply-form-label">원고 첨부 <span>(선택 · txt, hwp)</span></label>
+      <div class="apply-file-wrap" onclick="document.getElementById('apply-file-input').click()">
+        <div style="font-size:1.3rem;margin-bottom:4px">📎</div>
+        <div style="font-size:.85rem;color:var(--text2)">클릭하여 파일 선택</div>
+        <div class="apply-file-hint">원고 파일을 업로드하면 멘토가 검토할 수 있어요</div>
+        <div class="apply-file-name" id="apply-file-name" style="display:none"></div>
+      </div>
+      <input type="file" id="apply-file-input" class="apply-file-input" accept=".txt,.hwp" onchange="handleFileSelect(this)">
+    </div>
+
+    <button class="nc-btn nc-btn--primary nc-btn--full" id="apply-submit-btn" onclick="submitApply()">
+      신청하기
+    </button>
+  </div>
+</div>
+
+<script>
+  /* ── 라벨 매핑 ── */
+  const GENRE_LABELS = {
+    FANTASY:'판타지', ROMANCE_FANTASY:'로판', MODERN:'현대', CHIVALROUS:'무협',
+    BL:'BL', SF:'SF', HORROR:'호러', CLASSIC:'고전', DAILY_LIFE:'일상',
+  };
+  const CAREER_FULL = {
+    INTRODUCTION:'입문', ELEMENTARY:'초급', INTERMEDIATE:'중급', PROFICIENT:'전문',
+  };
+  const CAREER_CLS = {
+    INTRODUCTION:'level-badge--intro', ELEMENTARY:'level-badge--elem',
+    INTERMEDIATE:'level-badge--inter', PROFICIENT:'level-badge--prof',
+  };
+
+  /* ── 상태 ── */
+  let myHistory       = [];   // 전체 신청 이력
+  let matchedRecord   = null; // status === ACCEPTED인 이력
+  let _matchedMentorDetail = null; // 매칭된 멘토 상세 (renderMatchedView에서 채움)
+  let currentApplyMentorId = null;
+  let uploadedManuscriptUrl = null;
+  let myNovels        = [];
+
+  /* ── 초기화 ── */
+  async function init() {
+    bindCancelConfirmBtn();
+    bindCompleteConfirmBtn();
+    initNav();
+    const loggedIn = Auth.isLoggedIn();
+    await Promise.all([
+      loadMentorList(),
+      loggedIn ? loadMyHistory() : Promise.resolve(),
+    ]);
+    renderSidebar();
+    renderMainContent();
+  }
+
+  /* ── 네비게이션 ── */
+  function initNav() {
+    const nav = document.getElementById('nc-nav');
+    if (!nav) return;
+    const user = Auth.getUser();
+    const isLoggedIn = Auth.isLoggedIn();
+    const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
+    nav.innerHTML = `
+      <div class="nc-nav__inner">
+        <a href="/index.html" class="nc-nav__logo"><span class="logo-icon">✦</span>NovelCraft</a>
+        <div class="nc-nav__right">
+          ${isLoggedIn ? `
+            <button class="nc-point-btn" id="nav-point" onclick="openPointModal()">···P</button>
+            <button class="nc-alarm-btn" id="nav-alarm" onclick="openNotifDrawer()">
+              🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
+            </button>
+            <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+            ${isAuthorOrMentor ? `
+            <button class="nc-nav__btn nc-nav__btn--mentee active" onclick="window.location.href='/mentor-list.html'">멘티</button>
+            <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+            ` : ''}
+            <div class="nc-user-menu" id="user-menu">
+              <button class="nc-nav__btn" onclick="toggleUserMenu()" style="font-weight:600;user-select:none">
+                ${user?.nickname || '내 프로필'} ▾
+              </button>
+              <div class="nc-user-dropdown">
+                ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
+                <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
+                <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
+                <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="doLogout()">로그아웃</button>
+              </div>
+            </div>
+          ` : `
+            <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
+            <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
+          `}
+        </div>
+      </div>`;
+    if (isLoggedIn) {
+      loadPoint();
+      loadUnreadCount();
+    }
+    document.addEventListener('click', e => {
+      const menu = document.getElementById('user-menu');
+      if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+    });
+  }
+  function toggleUserMenu() { document.getElementById('user-menu')?.classList.toggle('open'); }
+  async function doLogout() {
+    try { await api.post('/auth/logout', {}, true); } catch {}
+    Auth.logout(); location.href = '/index.html';
+  }
+
+  /* ── 알림 드로어 ── */
+  function openNotifDrawer() {
+    document.getElementById('notif-drawer')?.classList.add('open');
+    document.getElementById('notif-backdrop')?.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    loadNotifications();
+  }
+  function closeNotifDrawer() {
+    document.getElementById('notif-drawer')?.classList.remove('open');
+    document.getElementById('notif-backdrop')?.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  async function loadUnreadCount() {
+    try {
+      const res = await api.get('/notifications/unread-count', true);
+      const dot = document.getElementById('alarm-dot');
+      if (dot) dot.style.display = (res?.count > 0) ? 'block' : 'none';
+    } catch {}
+  }
+  async function loadNotifications() {
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    list.innerHTML = '<div class="notif-empty"><div class="notif-empty__icon">🔔</div>불러오는 중...</div>';
+    try {
+      const res = await api.get('/notifications?page=0&size=30', true);
+      const items = res?.content || res?.data?.content || [];
+      if (!items.length) {
+        list.innerHTML = '<div class="notif-empty"><div class="notif-empty__icon">🔔</div>새 알림이 없습니다</div>';
+        return;
+      }
+      list.innerHTML = items.map(n => `
+        <div class="notif-item ${n.isRead ? '' : 'unread'}" onclick="markRead(${n.id}, this)">
+          <div class="notif-item__row">
+            <div class="notif-item__dot ${n.isRead ? 'read' : ''}"></div>
+            <div>
+              <div class="notif-item__content">${n.message || n.content || ''}</div>
+              <div class="notif-item__time">${formatRelTime(n.createdAt)}</div>
+            </div>
+          </div>
+        </div>`).join('');
+    } catch {
+      list.innerHTML = '<div class="notif-empty">알림을 불러올 수 없습니다</div>';
+    }
+  }
+  async function markRead(id, el) {
+    try { await api.patch(`/notifications/${id}/read`, {}, true); } catch {}
+    el?.classList.remove('unread');
+    el?.querySelector('.notif-item__dot')?.classList.add('read');
+  }
+  async function markAllRead() {
+    try { await api.patch('/notifications/read-all', {}, true); Toast.success('모두 읽음 처리'); loadNotifications(); } catch {}
+  }
+  function formatRelTime(dt) {
+    if (!dt) return '';
+    const m = Math.floor((Date.now() - new Date(dt)) / 60000);
+    if (m < 1) return '방금 전';
+    if (m < 60) return `${m}분 전`;
+    if (m < 1440) return `${Math.floor(m/60)}시간 전`;
+    return `${Math.floor(m/1440)}일 전`;
+  }
+
+  async function loadPoint() {
+    try {
+      const d = await api.get('/points/balance', true);
+      const el = document.getElementById('nav-point');
+      if (el) el.textContent = `${(d?.data?.balance ?? d?.balance ?? 0).toLocaleString()}P`;
+    } catch {}
+  }
+
+  /* ── 이력 로드 ── */
+  async function loadMyHistory() {
+    try {
+      const res = await api.get('/mentorships/v2/me/history', true);
+      myHistory = res?.data || res || [];
+      matchedRecord = myHistory.find(h => h.status === 'ACCEPTED') || null;
+    } catch {
+      myHistory = []; matchedRecord = null;
+    }
+  }
+
+  /* ── 멘토 목록 로드 & 렌더 ── */
+  let allMentors = [];
+  let currentPage = 0;
+  let totalPages  = 1;
+  let currentGenre = '';
+  let currentLevel = '';
+
+  async function loadMentorList(page = 0) {
+    const main = document.getElementById('main-content');
+    if (page === 0) main.innerHTML = '<div class="loading-wrap">멘토 목록 불러오는 중</div>';
+
+    try {
+      const params = new URLSearchParams({ page, size: 10 });
+      if (currentGenre) params.set('genre', currentGenre);
+      if (currentLevel) params.set('careerLevel', currentLevel);
+
+      const res  = await api.get(`/mentorships/mentors?${params}`, false);
+      const data = res?.data || res;
+      const content = data?.content || data || [];
+      totalPages  = data?.totalPages ?? 1;
+      currentPage = page;
+      allMentors  = content;
+
+      renderMainContent();
+    } catch {
+      document.getElementById('main-content').innerHTML =
+        '<div class="empty-state"><div class="empty-state__icon">⚠️</div><div class="empty-state__text">멘토 목록을 불러오지 못했습니다</div></div>';
+    }
+  }
+
+  function renderMainContent() {
+    const main = document.getElementById('main-content');
+
+    /* 매칭된 멘토가 있으면 → 신청 상세 화면 */
+    if (matchedRecord) {
+      renderMatchedView(main);
+      return;
+    }
+
+    /* 매칭 전 → 멘토 목록 */
+    const pendingCount = myHistory.filter(h => h.status === 'PENDING').length;
+
+    main.innerHTML = `
+      <!-- 페이지 제목 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+        <h1 style="font-family:'Noto Serif KR',serif;font-size:1.35rem;font-weight:700">멘토 찾기</h1>
+        ${pendingCount > 0 ? `<span style="font-size:.8rem;color:var(--text3)">현재 <strong style="color:var(--primary-light)">${pendingCount}개</strong> 신청 대기 중</span>` : ''}
+      </div>
+
+      <!-- 필터 -->
+      <div class="filter-bar">
+        <select class="filter-select" id="filter-level" onchange="applyFilter()">
+          <option value="">전체 등급</option>
+          <option value="INTRODUCTION">입문</option>
+          <option value="ELEMENTARY">초급</option>
+          <option value="INTERMEDIATE">중급</option>
+          <option value="PROFICIENT">전문</option>
+        </select>
+        <select class="filter-select" id="filter-genre" onchange="applyFilter()">
+          <option value="">전체 장르</option>
+          ${Object.entries(GENRE_LABELS).map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}
+        </select>
+        <span class="filter-count" id="mentor-count">${allMentors.length}명</span>
+      </div>
+
+      <!-- 멘토 카드 목록 -->
+      <div id="mentor-list"></div>
+
+      <!-- 페이징 -->
+      ${totalPages > 1 ? `
+      <div style="display:flex;justify-content:center;gap:8px;margin-top:20px" id="paging">
+        ${Array.from({length:totalPages},(_,i)=>`
+          <button onclick="loadMentorList(${i})"
+            style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);
+            background:${i===currentPage?'var(--primary)':'var(--surface)'};
+            color:${i===currentPage?'white':'var(--text2)'};cursor:pointer;font-family:inherit;font-size:.82rem">
+            ${i+1}
+          </button>
+        `).join('')}
+      </div>` : ''}
+
+      <!-- 신청 이력 -->
+      ${myHistory.length > 0 ? renderHistorySection() : ''}
+    `;
+
+    /* 필터 값 복원 */
+    const ls = document.getElementById('filter-level');
+    const gs = document.getElementById('filter-genre');
+    if (ls) ls.value = currentLevel;
+    if (gs) gs.value = currentGenre;
+
+    renderMentorCards();
+  }
+
+  function renderMentorCards() {
+    const list = document.getElementById('mentor-list');
+    if (!list) return;
+
+    if (!allMentors.length) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-state__icon">🔍</div><div class="empty-state__text">조건에 맞는 멘토가 없습니다</div></div>';
+      return;
+    }
+
+    /* 이미 신청한 mentor ID 목록 */
+    const appliedIds = new Set(myHistory.filter(h => ['PENDING','ACCEPTED'].includes(h.status)).map(h => h.mentorId));
+    const pendingRecord = myHistory.find(h => h.status === 'PENDING') || null;
+    const hasPending = pendingRecord != null;
+
+    /* PENDING 신청이 있으면 안내 배너 */
+    const pendingBanner = hasPending ? `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;
+                  background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);
+                  border-radius:10px;padding:12px 16px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:1rem">⏳</span>
+          <span style="font-size:.87rem;color:var(--text2)">
+            <strong style="color:#fbbf24">${esc(pendingRecord.mentorNickname)}</strong> 멘토님께 신청 중입니다. 수락 전까지 다른 멘토에게 신청할 수 없습니다.
+          </span>
+        </div>
+        <button onclick="confirmCancel(${pendingRecord.mentorshipId})"
+          style="padding:6px 14px;border-radius:8px;border:1px solid rgba(248,113,113,.4);
+                 background:transparent;color:#f87171;font-size:.8rem;font-weight:600;
+                 cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .2s"
+          onmouseover="this.style.background='rgba(248,113,113,.1)'"
+          onmouseout="this.style.background='transparent'">
+          신청 취소
+        </button>
+      </div>` : '';
+
+    list.innerHTML = pendingBanner + allMentors.map(m => {
+      const initial    = (m.nickname || '?').charAt(0).toUpperCase();
+      const careerTxt  = CAREER_FULL[m.careerLevel] || m.careerLevel || '';
+      const levelCls   = CAREER_CLS[m.careerLevel]  || '';
+      const isFull     = m.maxMentees <= 0;
+      const isApplied  = appliedIds.has(m.mentorId);
+      const isAccepted = matchedRecord != null;
+
+      const genreTags = (m.mainGenres || []).map(g =>
+        `<span class="card-tag">${GENRE_LABELS[g] || g}</span>`).join('');
+      const fieldTags = (m.specialFields || []).slice(0,3).map(f =>
+        `<span class="card-tag">${f}</span>`).join('');
+
+      const descParts = [];
+      if (m.mainGenres?.length) descParts.push((m.mainGenres).map(g => GENRE_LABELS[g]||g).join('/'));
+      if (m.awardsCareer) descParts.push(m.awardsCareer.slice(0,30) + (m.awardsCareer.length > 30 ? '…' : ''));
+
+      let applyBtnHtml = '';
+      if (isAccepted) {
+        applyBtnHtml = `<button class="btn-apply" disabled>매칭 완료</button>`;
+      } else if (isFull) {
+        applyBtnHtml = `<button class="btn-apply btn-apply--full" disabled>정원 마감</button>`;
+      } else if (isApplied) {
+        /* 내가 신청한 바로 그 멘토 → 취소 버튼 */
+        const myApply = myHistory.find(h => h.mentorId === m.mentorId && h.status === 'PENDING');
+        if (myApply) {
+          applyBtnHtml = `
+            <button class="btn-apply" disabled style="margin-bottom:4px">신청 완료</button>
+            <button class="btn-cancel-apply" onclick="confirmCancel(${myApply.mentorshipId})">취소하기</button>`;
+        } else {
+          applyBtnHtml = `<button class="btn-apply" disabled>신청 완료</button>`;
+        }
+      } else if (hasPending) {
+        /* 다른 멘토에게 PENDING 중 → 신청 불가 */
+        applyBtnHtml = `<button class="btn-apply" disabled title="이미 신청 중인 멘토가 있습니다">신청 불가</button>`;
+      } else {
+        applyBtnHtml = `<button class="btn-apply" onclick="goApply(${m.mentorId})">신청하기</button>`;
+      }
+
+      return `
+        <div class="mentor-card ${isFull ? 'is-full' : ''}">
+          <div class="card-avatar">${esc(initial)}</div>
+          <div class="card-body">
+            <div class="card-row1">
+              <span class="card-name">${esc(m.nickname || '멘토')}</span>
+              <span class="level-badge ${levelCls}">${careerTxt}</span>
+              <span class="card-slot">${isFull ? '<span class="slot-full">정원 마감</span>' : m.maxMentees + '명 모집 중'}</span>
+            </div>
+            ${descParts.length ? `<div class="card-desc">${esc(descParts.join(' · '))}</div>` : ''}
+            <div class="card-tags">${genreTags}${fieldTags}</div>
+          </div>
+          <div class="card-actions">
+            ${applyBtnHtml}
+            <button class="btn-detail" onclick="openDetailModal(${m.mentorId})">상세 보기</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderHistorySection() {
+    const shown = myHistory.slice(0, 5);
+    if (!shown.length) return '';
+
+    return `
+      <div class="history-list">
+        <div class="history-title">내 신청 이력</div>
+        ${shown.map(h => `
+          <div class="history-item">
+            <div class="history-mentor-name">${esc(h.mentorNickname)}</div>
+            <span class="status-pill status-pill--${h.status.toLowerCase()}">${statusLabel(h.status)}</span>
+            <div class="history-date">${fmtDate(h.appliedAt)}</div>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  /* ── 매칭됨 뷰 ── */
+  async function renderMatchedView(main) {
+    const h = matchedRecord;
+    const initial = (h.mentorNickname || '?').charAt(0).toUpperCase();
+
+    // 멘토 정보 + 피드백(멘티용 상세)을 병렬 조회
+    let mentorDetail = null;
+    let mentoringDetail = null;
+    const [detailRes, mentoringRes] = await Promise.allSettled([
+      api.get(`/mentorships/mentors/${h.mentorId}`, false),
+      api.get(`/v2/mentorings/${h.mentorshipId}/mentee`, true),
+    ]);
+    if (detailRes.status === 'fulfilled')    mentorDetail    = detailRes.value?.data    || detailRes.value;
+    if (mentoringRes.status === 'fulfilled') mentoringDetail = mentoringRes.value?.data || mentoringRes.value;
+    _matchedMentorDetail = mentorDetail; // 사이드바 프로필 표시용 캐시
+
+    // 서버 실제 상태 확인 — 멘토가 먼저 종료/거절했을 때 멘티 뷰가 어긋나는 것 방지
+    const serverStatus = mentoringDetail?.status;
+    if (serverStatus && serverStatus !== 'ACCEPTED') {
+      // 상태가 더 이상 ACCEPTED 아님 → 이력 갱신 후 메인 재렌더
+      matchedRecord = null;
+      await loadMyHistory();
+      renderSidebar();
+      renderMainContent();
+      return;
+    }
+
+    const genreStr = (mentorDetail?.mainGenres || []).map(g => GENRE_LABELS[g]||g).join(' · ');
+    const motivation    = h.motivation || null;
+    const manuscriptUrl = h.manuscriptUrl || null;
+    const feedbacks     = mentoringDetail?.feedbacks || [];
+
+    main.innerHTML = `
+      <div class="matched-view">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+          <h1 style="font-family:'Noto Serif KR',serif;font-size:1.35rem;font-weight:700">나의 멘토링</h1>
+          <span style="font-size:.8rem;color:var(--text3)">수락일 <strong style="color:var(--text2)">${fmtDate(mentoringDetail?.startDate || h.appliedAt)}</strong></span>
+        </div>
+
+        <!-- 매칭된 멘토 카드 -->
+        <div class="matched-hero">
+          <div class="matched-hero-top">
+            <div class="matched-avatar">${esc(initial)}</div>
+            <div class="matched-info">
+              <div class="matched-name">${esc(h.mentorNickname)}</div>
+              <div class="matched-sub">${genreStr ? esc(genreStr) : '장르 정보 없음'}</div>
+            </div>
+            <span class="matched-badge">✓ 매칭됨</span>
+          </div>
+          <div class="matched-btn-row">
+            <button class="btn-chat-main" onclick="openChat(${h.mentorshipId})" style="flex:1">
+              💬 멘토와 채팅하기
+            </button>
+            <button onclick="confirmCompleteMentoring(${h.mentorshipId})"
+              style="padding:11px 16px;border-radius:10px;border:1px solid rgba(248,113,113,.4);
+                     background:transparent;color:#f87171;font-size:.85rem;font-weight:600;
+                     cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .2s"
+              onmouseover="this.style.background='rgba(248,113,113,.08)'"
+              onmouseout="this.style.background='transparent'">
+              🏁 멘토링 종료
+            </button>
+          </div>
+        </div>
+
+        <!-- 멘토 피드백 -->
+        <div class="apply-detail-card">
+          <div class="detail-section-title">멘토 피드백 (${feedbacks.length}건)</div>
+          ${feedbacks.length === 0
+            ? `<div class="detail-body detail-body--empty">아직 피드백이 없습니다</div>`
+            : feedbacks.map(f => `
+              <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--bg)">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <span style="font-size:.72rem;font-weight:700;color:var(--primary-light);
+                    background:rgba(124,90,240,.1);padding:2px 8px;border-radius:10px">
+                    ${f.sessionNumber}회차
+                  </span>
+                  ${f.title ? `<span style="font-size:.85rem;font-weight:600;color:var(--text1)">${esc(f.title)}</span>` : ''}
+                  <span style="font-size:.72rem;color:var(--text3);margin-left:auto">${fmtDate(f.createdAt)}</span>
+                </div>
+                <div style="font-size:.85rem;color:var(--text2);line-height:1.65;white-space:pre-wrap">${esc(f.content)}</div>
+              </div>`).join('')
+          }
+        </div>
+
+        <!-- 신청 동기 -->
+        <div class="apply-detail-card">
+          <div class="detail-section-title">내가 작성한 신청 동기</div>
+          <div class="detail-body ${motivation ? '' : 'detail-body--empty'}">
+            ${motivation ? esc(motivation) : '신청 동기를 작성하지 않았습니다'}
+          </div>
+        </div>
+
+        <!-- 첨부한 원고 -->
+        <div class="apply-detail-card">
+          <div class="detail-section-title">첨부한 원고</div>
+          ${manuscriptUrl
+            ? `<a class="manuscript-link" href="${esc(manuscriptUrl)}" target="_blank" rel="noopener">📄 원고 파일 열기</a>`
+            : `<div class="detail-body detail-body--empty">원고를 첨부하지 않았습니다</div>`
+          }
+        </div>
+      </div>`;
+
+    // 멘토 상세 로드 완료 후 사이드바 프로필 갱신
+    renderMyMentorSection();
+  }
+
+  /* ── 채팅 열기 (query param 방식) ── */
+  async function openChat(mentorshipId) {
+    try {
+      const res = await api.post(`/chatrooms?mentorshipId=${mentorshipId}`, null, true);
+      const roomId = res?.chatRoomId ?? res?.id ?? res?.data?.chatRoomId ?? res?.data?.id;
+      if (roomId) {
+        location.href = `/chat.html?roomId=${roomId}`;
+      } else {
+        Toast.error('채팅방을 찾을 수 없습니다.');
+      }
+    } catch (e) {
+      Toast.error(e?.message || '채팅방 연결 중 오류가 발생했습니다.');
+    }
+  }
+
+  /* ── 멘토링 종료 확인 ── */
+  let _pendingCompleteId = null;
+  function confirmCompleteMentoring(mentorshipId) {
+    _pendingCompleteId = mentorshipId;
+    Modal.open('modal-complete-confirm');
+  }
+  function bindCompleteConfirmBtn() {
+    document.getElementById('confirm-complete-ok')?.addEventListener('click', async () => {
+      Modal.close('modal-complete-confirm');
+      if (_pendingCompleteId == null) return;
+      const id = _pendingCompleteId;
+      _pendingCompleteId = null;
+      try {
+        await api.patch(`/v2/mentorings/${id}/complete-by-mentee`, {}, true);
+        Toast.success('멘토링이 종료되었습니다.');
+      } catch (e) {
+        // 멘토가 먼저 종료한 경우 이미 COMPLETED → 안내 후 상태 갱신
+        Toast.error(e?.message?.includes('수락') ? '이미 종료된 멘토링입니다.' : (e?.message || '종료 중 오류가 발생했습니다.'));
+      }
+      // 성공/실패 모두 최신 상태로 갱신
+      await loadMyHistory();
+      renderSidebar();
+      renderMainContent();
+    });
+  }
+
+  /* ── 사이드바 렌더 ── */
+  function renderSidebar() {
+    renderMyMentorSection();
+    renderApplyStatusSection();
+  }
+
+  function renderMyMentorSection() {
+    const sec = document.getElementById('my-mentor-section');
+    if (!sec) return;
+
+    if (!Auth.isLoggedIn()) {
+      sec.innerHTML = `<div class="no-match-text">
+        <div class="no-match-icon">🔒</div>로그인이 필요합니다
+      </div>`;
+      return;
+    }
+
+    if (matchedRecord) {
+      const initial = (matchedRecord.mentorNickname || '?').charAt(0).toUpperCase();
+      const detail = _matchedMentorDetail;
+      const genreStr = detail ? (detail.mainGenres || []).map(g => GENRE_LABELS[g]||g).join(', ') : '';
+      const levelTxt = detail ? (CAREER_FULL[detail.careerLevel] || detail.careerLevel || '') : '';
+      sec.innerHTML = `
+        <div class="my-mentor-card" style="cursor:default">
+          <div class="my-mentor-avatar" style="font-size:1.1rem">${esc(initial)}</div>
+          <div class="my-mentor-info">
+            <div class="my-mentor-name">${esc(matchedRecord.mentorNickname)}</div>
+            <div class="my-mentor-genres">1:1 멘토링 진행 중</div>
+          </div>
+        </div>
+        ${levelTxt ? `<div style="font-size:.78rem;color:var(--text3);margin-top:4px">
+          <span style="font-weight:600;color:var(--text2)">${levelTxt}</span> 등급
+        </div>` : ''}
+        ${genreStr ? `<div style="font-size:.78rem;color:var(--text3);margin-top:3px">📚 ${esc(genreStr)}</div>` : ''}
+        ${detail?.awardsCareer ? `<div style="font-size:.77rem;color:var(--text3);margin-top:3px;line-height:1.5;white-space:pre-line">${esc(detail.awardsCareer.length > 60 ? detail.awardsCareer.slice(0, 60) + '…' : detail.awardsCareer)}</div>` : ''}
+        <div style="margin-top:10px;padding:6px 10px;border-radius:8px;background:rgba(124,90,240,.1);
+             border:1px solid rgba(124,90,240,.2);text-align:center;font-size:.78rem;font-weight:600;color:var(--primary-light)">
+          ✓ 매칭됨
+        </div>`;
+    } else {
+      sec.innerHTML = `<div class="no-match-text">
+        <div class="no-match-icon">🔍</div>
+        매칭 전<br>
+        <span style="font-size:.78rem">멘토에게 신청해 보세요</span>
+      </div>`;
+    }
+  }
+
+  function renderApplyStatusSection() {
+    const sec = document.getElementById('apply-status-section');
+    if (!sec) return;
+
+    if (!Auth.isLoggedIn()) {
+      sec.innerHTML = `<div style="font-size:.82rem;color:var(--text3);text-align:center;padding:8px 0">로그인이 필요합니다</div>`;
+      return;
+    }
+
+    const pending   = myHistory.filter(h => h.status === 'PENDING').length;
+    const accepted  = myHistory.filter(h => h.status === 'ACCEPTED').length;
+    const rejected  = myHistory.filter(h => h.status === 'REJECTED').length;
+    const completed = myHistory.filter(h => h.status === 'COMPLETED').length;
+    const cancelled = myHistory.filter(h => h.status === 'CANCELLED').length;
+
+    if (!myHistory.length) {
+      sec.innerHTML = `<div style="font-size:.82rem;color:var(--text3);text-align:center;padding:8px 0">신청 내역이 없습니다</div>`;
+      return;
+    }
+
+    sec.innerHTML = `
+      <div class="status-row">
+        <span class="status-label">대기 중</span>
+        <span class="status-count status-count--pending">${pending}</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">수락됨</span>
+        <span class="status-count status-count--accepted">${accepted}</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">거절됨</span>
+        <span class="status-count status-count--rejected">${rejected}</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">완료</span>
+        <span class="status-count" style="color:var(--primary-light)">${completed}</span>
+      </div>
+      ${cancelled > 0 ? `<div class="status-row">
+        <span class="status-label">취소됨</span>
+        <span class="status-count" style="color:var(--text3)">${cancelled}</span>
+      </div>` : ''}`;
+  }
+
+  /* ── 내 멘토링 현황 드로어 ── */
+  const _reviewedIds = new Set(); // 이번 세션에 평가한 ID 기억
+
+  async function openHistoryDrawer() {
+    if (!Auth.isLoggedIn()) { Toast.error('로그인이 필요합니다.'); return; }
+    document.getElementById('history-drawer')?.classList.add('open');
+    document.getElementById('history-drawer-backdrop')?.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    // 서버에서 최신 이력 조회 후 렌더 (멘토가 종료/거절해도 즉시 반영)
+    await loadMyHistory();
+    renderHistoryDrawer();
+  }
+  function closeHistoryDrawer() {
+    document.getElementById('history-drawer')?.classList.remove('open');
+    document.getElementById('history-drawer-backdrop')?.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function renderHistoryDrawer() {
+    const body = document.getElementById('history-drawer-body');
+    if (!body) return;
+    _fbhLoaded = {}; // 재렌더 시 캐시 초기화
+    if (!myHistory.length) {
+      body.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3)">멘토링 이력이 없습니다</div>';
+      return;
+    }
+
+    body.innerHTML = myHistory.map((h, idx) => {
+      const initial = (h.mentorNickname || '?').charAt(0).toUpperCase();
+      const statusCls = { PENDING:'pending', ACCEPTED:'accepted', REJECTED:'rejected', COMPLETED:'completed', CANCELLED:'rejected' }[h.status] || 'pending';
+      const isCompleted = h.status === 'COMPLETED';
+      const isAccepted  = h.status === 'ACCEPTED';
+      const alreadyReviewed = h.hasReview || _reviewedIds.has(h.mentorshipId);
+
+      return `
+        <div class="mh-card" id="mhcard-${h.mentorshipId}">
+          <div class="mh-card__top">
+            <div class="mh-card__avatar">${esc(initial)}</div>
+            <div class="mh-card__info">
+              <div class="mh-card__mentor">${esc(h.mentorNickname)}</div>
+              <div class="mh-card__date">${fmtDate(h.appliedAt)}</div>
+            </div>
+            <span class="status-pill status-pill--${statusCls}">${statusLabel(h.status)}</span>
+          </div>
+
+          ${isAccepted ? `
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button onclick="openChat(${h.mentorshipId})"
+                style="flex:1;padding:8px;border-radius:8px;border:none;
+                       background:var(--primary);color:white;font-size:.82rem;
+                       font-weight:600;cursor:pointer;font-family:inherit">
+                💬 채팅하기
+              </button>
+              <button onclick="confirmCompleteMentoring(${h.mentorshipId})"
+                style="padding:8px 12px;border-radius:8px;border:1px solid rgba(248,113,113,.4);
+                       background:transparent;color:#f87171;font-size:.82rem;font-weight:600;
+                       cursor:pointer;font-family:inherit;transition:all .2s"
+                onmouseover="this.style.background='rgba(248,113,113,.08)'"
+                onmouseout="this.style.background='transparent'">
+                🏁 종료
+              </button>
+            </div>` : ''}
+
+          ${(isAccepted || isCompleted) ? `
+            <div style="margin-top:8px">
+              <button onclick="toggleFeedbackHistory(${h.mentorshipId})"
+                style="width:100%;padding:7px;border-radius:8px;border:1px solid var(--border);
+                       background:var(--surface);color:var(--text2);font-size:.8rem;font-weight:600;
+                       cursor:pointer;font-family:inherit;text-align:left;transition:background .15s"
+                onmouseover="this.style.background='var(--surface2)'"
+                onmouseout="this.style.background='var(--surface)'"
+                id="fbh-toggle-${h.mentorshipId}">
+                📝 피드백 내역 보기 ▾
+              </button>
+              <div id="fbh-body-${h.mentorshipId}" style="display:none"></div>
+            </div>` : ''}
+
+          ${isCompleted && !alreadyReviewed ? `
+            <div id="star-section-${h.mentorshipId}" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+              <div style="font-size:.78rem;color:var(--text3);margin-bottom:6px">멘토 평가를 남겨주세요</div>
+              <div class="star-row" id="stars-${h.mentorshipId}">
+                ${[1,2,3,4,5].map(n =>
+                  `<button class="star-btn" data-val="${n}" data-mid="${h.mentorshipId}" onclick="setStars(${h.mentorshipId},${n})">★</button>`
+                ).join('')}
+                <span id="star-val-${h.mentorshipId}" style="font-size:.78rem;color:var(--text3);margin-left:4px">선택 없음</span>
+              </div>
+              <textarea class="star-review-input" id="review-text-${h.mentorshipId}"
+                placeholder="한 줄 평가 (선택, 최대 100자)" maxlength="100"></textarea>
+              <button class="btn-submit-review" onclick="submitReview(${h.mentorshipId})">평가 제출</button>
+            </div>` : ''}
+
+          ${isCompleted && alreadyReviewed ? `
+            <div class="review-done" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+              ★ 평가를 완료했습니다
+            </div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  /* ── 피드백 내역 펼치기/접기 ── */
+  let _fbhLoaded = {}; // 로드 완료 여부 (드로어 재렌더시 초기화)
+
+  async function toggleFeedbackHistory(mentorshipId) {
+    const body   = document.getElementById(`fbh-body-${mentorshipId}`);
+    const toggle = document.getElementById(`fbh-toggle-${mentorshipId}`);
+    if (!body) return;
+
+    const isOpen = body.style.display !== 'none';
+    if (isOpen) {
+      body.style.display = 'none';
+      if (toggle) toggle.textContent = '📝 피드백 내역 보기 ▾';
+      return;
+    }
+
+    body.style.display = 'block';
+    if (toggle) toggle.textContent = '📝 피드백 내역 접기 ▴';
+
+    if (_fbhLoaded[mentorshipId]) return; // 이미 로드됨
+
+    body.innerHTML = '<div style="padding:10px 4px;font-size:.8rem;color:var(--text3)">불러오는 중...</div>';
+    try {
+      const res = await api.get(`/v2/mentorings/${mentorshipId}/mentee`, true);
+      const feedbacks = res?.data?.feedbacks || res?.feedbacks || [];
+      _fbhLoaded[mentorshipId] = true;
+      if (!feedbacks.length) {
+        body.innerHTML = '<div style="padding:10px 4px;font-size:.8rem;color:var(--text3)">아직 피드백이 없습니다</div>';
+        return;
+      }
+      body.innerHTML = `<div style="margin-top:6px;display:flex;flex-direction:column;gap:6px">
+        ${feedbacks.map(f => `
+          <div style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg)">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-size:.7rem;font-weight:700;color:var(--primary-light);
+                background:rgba(124,90,240,.1);padding:2px 7px;border-radius:10px">${f.sessionNumber}회차</span>
+              ${f.title ? `<span style="font-size:.82rem;font-weight:600;color:var(--text1)">${esc(f.title)}</span>` : ''}
+              <span style="font-size:.7rem;color:var(--text3);margin-left:auto">${fmtDate(f.createdAt)}</span>
+            </div>
+            <div style="font-size:.82rem;color:var(--text2);line-height:1.6;white-space:pre-wrap">${esc(f.content)}</div>
+          </div>`).join('')}
+      </div>`;
+    } catch (e) {
+      body.innerHTML = `<div style="padding:10px 4px;font-size:.8rem;color:#f87171">${e?.message || '피드백을 불러오지 못했습니다'}</div>`;
+    }
+  }
+
+  let _starSelections = {}; // mentorshipId → rating
+
+  function setStars(mentorshipId, val) {
+    _starSelections[mentorshipId] = val;
+    const row = document.getElementById(`stars-${mentorshipId}`);
+    if (!row) return;
+    row.querySelectorAll('.star-btn').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.val) <= val);
+    });
+    const valEl = document.getElementById(`star-val-${mentorshipId}`);
+    if (valEl) valEl.textContent = `${val}점`;
+  }
+
+  async function submitReview(mentorshipId) {
+    const rating = _starSelections[mentorshipId];
+    if (!rating) { Toast.error('별점을 선택해 주세요.'); return; }
+    const content = document.getElementById(`review-text-${mentorshipId}`)?.value?.trim() || null;
+    try {
+      await api.post(`/mentorships/${mentorshipId}/reviews`, { rating, content }, true);
+      Toast.success('평가가 완료되었습니다!');
+      _reviewedIds.add(mentorshipId);
+      // myHistory 배열 반영 (새로고침 전까지 유지)
+      const idx = myHistory.findIndex(h => h.mentorshipId === mentorshipId);
+      if (idx !== -1) myHistory[idx] = { ...myHistory[idx], hasReview: true };
+      // 해당 카드만 갱신
+      const section = document.getElementById(`star-section-${mentorshipId}`);
+      if (section) section.outerHTML = `
+        <div class="review-done" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          ★ 평가를 완료했습니다
+        </div>`;
+    } catch (e) {
+      if (e?.message?.includes('이미 평가')) {
+        _reviewedIds.add(mentorshipId);
+        renderHistoryDrawer();
+      } else {
+        Toast.error(e?.message || '평가 제출 중 오류가 발생했습니다.');
+      }
+    }
+  }
+
+  /* ── 필터 적용 ── */
+  function applyFilter() {
+    currentLevel = document.getElementById('filter-level')?.value || '';
+    currentGenre = document.getElementById('filter-genre')?.value || '';
+    loadMentorList(0);
+  }
+
+  /* ── 멘토 상세 모달 ── */
+  async function openDetailModal(mentorId) {
+    Modal.open('modal-detail');
+    const body  = document.getElementById('detail-modal-body');
+    const title = document.getElementById('detail-modal-title');
+    const btn   = document.getElementById('detail-apply-btn');
+    body.innerHTML = '<div class="loading-wrap" style="padding:30px 0">불러오는 중</div>';
+
+    try {
+      const res    = await api.get(`/mentorships/mentors/${mentorId}`, false);
+      const m      = res?.data || res;
+      title.textContent = `${m.nickname || '멘토'} 상세 정보`;
+      const levelTxt = CAREER_FULL[m.careerLevel] || m.careerLevel || '';
+      const levelCls = CAREER_CLS[m.careerLevel]  || '';
+
+      body.innerHTML = `
+        ${m.bio ? `<div class="detail-bio">${esc(m.bio)}</div>` : ''}
+        <div class="detail-grid">
+          <div><div class="detail-cell__label">경력 등급</div>
+            <div class="detail-cell__value"><span class="level-badge ${levelCls}" style="font-size:.78rem">${levelTxt}</span></div></div>
+          <div><div class="detail-cell__label">최대 멘티 수</div>
+            <div class="detail-cell__value">${m.maxMentees ?? '-'}명</div></div>
+        </div>
+        ${m.mainGenres?.length ? `
+          <div class="detail-section-label">주력 장르</div>
+          <div class="detail-tags">${m.mainGenres.map(g=>`<span class="detail-tag detail-tag--genre">${GENRE_LABELS[g]||g}</span>`).join('')}</div>` : ''}
+        ${m.specialFields?.length ? `
+          <div class="detail-section-label">전문 분야</div>
+          <div class="detail-tags">${m.specialFields.map(f=>`<span class="detail-tag detail-tag--field">${f}</span>`).join('')}</div>` : ''}
+        ${m.mentoringStyle?.length ? `
+          <div class="detail-section-label">멘토링 스타일</div>
+          <div class="detail-tags">${m.mentoringStyle.map(s=>`<span class="detail-tag detail-tag--style">${s}</span>`).join('')}</div>` : ''}
+        ${m.awardsCareer ? `
+          <div class="detail-section-label">수상 · 출간 경력</div>
+          <div style="font-size:.85rem;color:var(--text2);line-height:1.65">${esc(m.awardsCareer)}</div>` : ''}`;
+
+      /* 신청 버튼 상태 */
+      if (!Auth.isLoggedIn()) {
+        btn.textContent = '로그인 후 신청 가능';
+        btn.onclick = () => { location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`; };
+      } else if (matchedRecord) {
+        btn.textContent = '이미 멘토와 매칭됨';
+        btn.disabled = true;
+      } else {
+        const isApplied = myHistory.some(h => h.mentorId === mentorId && ['PENDING','ACCEPTED'].includes(h.status));
+        if (isApplied) {
+          btn.textContent = '이미 신청함';
+          btn.disabled = true;
+        } else if (m.maxMentees <= 0) {
+          btn.textContent = '정원 마감';
+          btn.disabled = true;
+        } else {
+          btn.textContent = '멘토링 신청하기';
+          btn.disabled = false;
+          btn.onclick = () => { Modal.close('modal-detail'); goApply(mentorId); };
+        }
+      }
+    } catch {
+      body.innerHTML = '<div style="color:var(--text3);text-align:center;padding:20px">상세 정보를 불러오지 못했습니다</div>';
+    }
+  }
+
+  /* ── 신청 페이지로 이동 ── */
+  function goApply(mentorId) {
+    if (!Auth.isLoggedIn()) {
+      location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+      return;
+    }
+    const blockingRecord = myHistory.find(h => h.status === 'PENDING' || h.status === 'ACCEPTED');
+    if (blockingRecord) {
+      const msg = blockingRecord.status === 'PENDING'
+        ? `이미 ${blockingRecord.mentorNickname} 멘토님께 신청 중입니다. 취소 후 다시 신청해 주세요.`
+        : `${blockingRecord.mentorNickname} 멘토님과 멘토링이 진행 중입니다. 종료 후 신청해 주세요.`;
+      Toast.error(msg);
+      return;
+    }
+    location.href = `/mentorship-apply.html?mentorId=${mentorId}`;
+  }
+
+  /* ── 신청 취소 확인 ── */
+  let _pendingCancelId = null;
+
+  function confirmCancel(mentorshipId) {
+    _pendingCancelId = mentorshipId;
+    Modal.open('modal-cancel-confirm');
+  }
+
+  /* confirm 모달 확인 버튼 — DOMContentLoaded 후 단 한 번만 바인딩 */
+  function bindCancelConfirmBtn() {
+    document.getElementById('confirm-cancel-ok')?.addEventListener('click', async () => {
+      Modal.close('modal-cancel-confirm');
+      if (_pendingCancelId == null) return;
+      const id = _pendingCancelId;
+      _pendingCancelId = null;
+      await cancelApply(id);
+    });
+  }
+
+  /* ── 신청 취소 API 호출 ── */
+  async function cancelApply(mentorshipId) {
+    try {
+      await api.delete(`/mentorships/${mentorshipId}`, true);
+      Toast.success('멘토링 신청이 취소되었습니다.');
+      await loadMyHistory();
+      renderSidebar();
+      renderMainContent();
+    } catch (e) {
+      Toast.error(e?.message || '취소 중 오류가 발생했습니다.');
+    }
+  }
+
+  /* ── 신청 모달 (미사용, 하위호환 유지) ── */
+  async function openApplyModal(mentorId, mentorNickname) {
+    goApply(mentorId);
+  }
+
+  function handleFileSelect(input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    const nameEl = document.getElementById('apply-file-name');
+    nameEl.textContent = `📄 ${file.name}`;
+    nameEl.style.display = 'block';
+  }
+
+  async function submitApply() {
+    if (!currentApplyMentorId) return;
+    const btn       = document.getElementById('apply-submit-btn');
+    const motivation = document.getElementById('apply-motivation').value.trim() || null;
+    const novelId    = document.getElementById('apply-novel-select').value || null;
+    const fileInput  = document.getElementById('apply-file-input');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> 신청 중…';
+
+    try {
+      /* 원고 파일이 있으면 먼저 업로드 */
+      let manuscriptUrl = null;
+      if (fileInput.files?.[0]) {
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        const token = Auth.getToken?.() || localStorage.getItem('accessToken');
+        const uploadRes = await fetch('/api/files/manuscripts/upload', {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: formData,
+        });
+        const uploadJson = await uploadRes.json();
+        manuscriptUrl = uploadJson?.data?.fileUrl || uploadJson?.fileUrl || null;
+      }
+
+      const body = {
+        mentorId: currentApplyMentorId,
+        motivation: motivation || null,
+        currentNovelId: novelId ? Number(novelId) : null,
+        manuscriptUrl,
+      };
+
+      await api.post('/mentorships', body, true);
+      Modal.close('modal-apply');
+      Toast.success('멘토링 신청이 완료되었습니다!');
+
+      /* 이력 새로 고침 후 UI 갱신 */
+      await loadMyHistory();
+      renderSidebar();
+      renderMainContent();
+    } catch (e) {
+      Toast.error(e?.message || '신청 중 오류가 발생했습니다.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '신청하기';
+    }
+  }
+
+  /* ── 유틸 ── */
+  function statusLabel(s) {
+    return { PENDING:'대기 중', ACCEPTED:'수락됨', REJECTED:'거절됨', COMPLETED:'완료', CANCELLED:'취소됨' }[s] || s;
+  }
+  function fmtDate(dt) {
+    if (!dt) return '-';
+    const d = new Date(dt);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function esc(s) {
+    return String(s ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── 포인트 충전 ── */
+  const PORTONE_STORE_ID    = 'store-6dd586c4-bbae-4fc5-a1b1-920f1850b300';
+  const PORTONE_CHANNEL_KEY = 'channel-key-70f0f4c2-74c5-4c38-b275-c2c01e2c3660';
+  let selectedPointAmt = 1000;
+
+  function initPointOptions() {
+    document.querySelectorAll('.point-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.point-opt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedPointAmt = parseInt(btn.dataset.amount);
+      });
+    });
+  }
+  function openPointModal() {
+    api.get('/points/balance', true).then(d => {
+      const el = document.getElementById('modal-current-point');
+      if (el) el.textContent = `${(d?.data?.balance ?? d?.balance ?? 0).toLocaleString()}P`;
+    }).catch(() => {});
+    initPointOptions();
+    Modal.open('modal-point');
+  }
+  async function chargePoint() {
+    if (!Auth.isLoggedIn()) { location.href = '/login.html'; return; }
+    try {
+      const [prepare, meInfo] = await Promise.all([
+        api.post('/payments/prepare', { amount: selectedPointAmt }, true),
+        api.get('/auth/users/me', true),
+      ]);
+      const paymentKey = prepare?.data?.paymentKey ?? prepare?.paymentKey;
+      const phoneNo    = (meInfo?.data?.phoneNo ?? meInfo?.phoneNo ?? '').replace(/-/g,'');
+      Modal.close('modal-point');
+      Toast.info('결제창을 불러오는 중...');
+      const me = Auth.getUser();
+      const portoneRes = await PortOne.requestPayment({
+        storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+        paymentId: paymentKey,
+        orderName: `NovelCraft ${selectedPointAmt.toLocaleString()}P 포인트 충전`,
+        totalAmount: selectedPointAmt, currency: 'CURRENCY_KRW', payMethod: 'CARD',
+        customer: { fullName: me?.nickname||'구매자', phoneNumber: phoneNo,
+                    ...(me?.email?{email:me.email}:{}) },
+      });
+      if (portoneRes.code) { Toast.error(`결제 실패: ${portoneRes.message}`); return; }
+      await api.post('/payments/confirm', { paymentId: portoneRes.paymentId, amount: selectedPointAmt }, true);
+      Toast.success(`${selectedPointAmt.toLocaleString()}P가 충전되었습니다!`);
+      loadPoint();
+    } catch (e) { Toast.error(e?.message || '충전 중 오류가 발생했습니다.'); }
+  }
+
+  /* ── 시작 ── */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
+</body>
+</html>

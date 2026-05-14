@@ -6,8 +6,10 @@ import com.example.hot6novelcraft.domain.nationallibrary.dto.request.BookSaveReq
 import com.example.hot6novelcraft.domain.nationallibrary.dto.request.BookSearchRequest;
 import com.example.hot6novelcraft.domain.nationallibrary.dto.request.UserBookSaveRequest;
 import com.example.hot6novelcraft.domain.nationallibrary.dto.response.BookResponse;
+import com.example.hot6novelcraft.domain.nationallibrary.dto.response.MyShelfResponse;
 import com.example.hot6novelcraft.domain.nationallibrary.dto.response.NationalLibraryBookResponse;
 import com.example.hot6novelcraft.domain.nationallibrary.dto.response.UserBookResponse;
+import java.util.List;
 import com.example.hot6novelcraft.domain.nationallibrary.service.NationalLibraryService;
 import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
 import jakarta.validation.Valid;
@@ -58,16 +60,41 @@ public class NationalLibraryController {
         );
     }
 
+    @GetMapping("/books/shelf")
+    public ResponseEntity<BaseResponse<List<MyShelfResponse>>> getMyShelf(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        List<MyShelfResponse> data = nationalLibraryService.getMyShelf(userId);
+
+        return ResponseEntity.ok(
+                BaseResponse.success("200", "내 서재 조회에 성공했습니다", data)
+        );
+    }
+
     @PostMapping("/books/shelf")
     public ResponseEntity<BaseResponse<UserBookResponse>> saveUserBook(
-            @AuthenticationPrincipal UserDetailsImpl userDetails,  // ← 수정
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
             @Valid @RequestBody UserBookSaveRequest request) {
 
-        Long userId = userDetails.getUser().getId();  // ← 추가
+        Long userId = userDetails.getUser().getId();
         UserBookResponse data = nationalLibraryService.saveUserBook(userId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 BaseResponse.success("201", "내 서재에 도서가 저장되었습니다", data)
+        );
+    }
+
+    @DeleteMapping("/books/shelf/{userBookId}")
+    public ResponseEntity<BaseResponse<Void>> removeFromShelf(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @PathVariable Long userBookId) {
+
+        Long userId = userDetails.getUser().getId();
+        nationalLibraryService.removeFromShelf(userId, userBookId);
+
+        return ResponseEntity.ok(
+                BaseResponse.success("200", "도서가 서재에서 삭제되었습니다", null)
         );
     }
 }

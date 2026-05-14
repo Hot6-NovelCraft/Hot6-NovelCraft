@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>환전 관리 - NovelCraft Admin</title>
+  <script src="/common.js"></script>
+  <style>
+    .admin-layout { display: flex; min-height: calc(100vh - 60px); }
+
+    /* ── 사이드바 ── */
+    .admin-sidebar {
+      width: 220px; background: var(--bg2);
+      border-right: 1px solid var(--border); flex-shrink: 0;
+      padding: 24px 0; position: sticky; top: 60px;
+      height: calc(100vh - 60px); overflow-y: auto;
+    }
+    .admin-sidebar__logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    .admin-sidebar__logo-text { font-weight: 700; font-size: 0.9rem; color: var(--warning); }
+    .admin-sidebar__role { font-size: 0.7rem; color: var(--text3); margin-top: 2px; }
+    .admin-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; color: var(--text2); text-decoration: none;
+      font-size: 0.875rem; transition: all 0.2s; border-left: 3px solid transparent;
+    }
+    .admin-nav-item:hover { background: var(--surface); color: var(--text); }
+    .admin-nav-item.active { background: rgba(124,90,240,0.1); color: var(--primary-light); border-left-color: var(--primary); font-weight: 600; }
+    .admin-nav-item__icon { font-size: 1rem; width: 20px; text-align: center; }
+    .admin-sidebar__divider { height: 1px; background: var(--border); margin: 10px 20px; }
+    .admin-sidebar__section { padding: 8px 20px 4px; font-size: 0.68rem; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* ── 메인 ── */
+    .admin-main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
+    .admin-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+    .admin-title { font-family: 'Noto Serif KR', serif; font-size: 1.5rem; font-weight: 700; }
+    .admin-subtitle { color: var(--text3); font-size: 0.85rem; margin-top: 4px; }
+
+    /* ── 요약 카드 ── */
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; margin-bottom: 24px;
+    }
+    .summary-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px;
+      position: relative; overflow: hidden;
+    }
+    .summary-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+    .summary-card--pending::before   { background: #f59e0b; }
+    .summary-card--processing::before { background: #3b82f6; }
+    .summary-card--completed::before { background: #10b981; }
+    .summary-card--rejected::before  { background: #ef4444; }
+    .summary-card__label { font-size: 0.72rem; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .summary-card__value { font-size: 1.6rem; font-weight: 700; font-family: 'Noto Serif KR', serif; }
+    .summary-card--pending .summary-card__value   { color: #fbbf24; }
+    .summary-card--processing .summary-card__value { color: #60a5fa; }
+    .summary-card--completed .summary-card__value { color: #34d399; }
+    .summary-card--rejected .summary-card__value  { color: #f87171; }
+
+    /* ── 상태 탭 ── */
+    .status-tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+    .status-tab {
+      padding: 7px 18px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text3); font-size: 0.82rem; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .status-tab:hover { border-color: var(--primary); color: var(--primary-light); }
+    .status-tab.active { background: var(--primary); border-color: var(--primary); color: white; font-weight: 600; }
+
+    /* ── 필터 바 ── */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      margin-bottom: 20px; padding: 14px 18px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    }
+    .filter-bar label { font-size: 0.8rem; color: var(--text3); font-weight: 600; }
+    .filter-bar .nc-input { font-size: 0.85rem; padding: 7px 12px; }
+
+    /* ── 테이블 ── */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .table-header {
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-header-title { font-size: 0.9rem; font-weight: 700; }
+    .table-count { font-size: 0.78rem; color: var(--text3); padding: 3px 10px; background: var(--bg2); border-radius: 20px; border: 1px solid var(--border); }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { padding: 10px 16px; font-size: 0.72rem; font-weight: 700; color: var(--text3); text-align: left; background: var(--bg2); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+    .data-table td { padding: 13px 16px; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.025); }
+
+    /* ── 상태 뱃지 ── */
+    .st-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+    .st-pending    { background: rgba(245,158,11,0.15);  color: #f59e0b;  border: 1px solid rgba(245,158,11,0.3); }
+    .st-processing { background: rgba(59,130,246,0.15);  color: #60a5fa;  border: 1px solid rgba(59,130,246,0.3); }
+    .st-completed  { background: rgba(16,185,129,0.15);  color: #10b981;  border: 1px solid rgba(16,185,129,0.3); }
+    .st-rejected   { background: rgba(239,68,68,0.15);   color: #ef4444;  border: 1px solid rgba(239,68,68,0.3); }
+
+    /* ── 액션 버튼 ── */
+    .action-btns { display: flex; gap: 6px; }
+    .act-btn {
+      padding: 5px 12px; border-radius: 6px; font-size: 0.78rem;
+      font-family: inherit; cursor: pointer; font-weight: 600;
+      transition: all 0.2s; border: 1px solid;
+    }
+    .act-btn--approve { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.4); color: #10b981; }
+    .act-btn--approve:hover { background: rgba(16,185,129,0.25); }
+    .act-btn--reject  { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); color: #ef4444; }
+    .act-btn--reject:hover  { background: rgba(239,68,68,0.25); }
+    .act-btn--detail  { background: rgba(124,90,240,0.1); border-color: rgba(124,90,240,0.4); color: var(--primary-light); }
+    .act-btn--detail:hover  { background: rgba(124,90,240,0.2); }
+
+    /* ── 페이징 ── */
+    .pagination { display: flex; justify-content: center; gap: 6px; padding: 18px; }
+    .page-btn {
+      min-width: 34px; height: 34px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 0.82rem; cursor: pointer;
+      font-family: inherit; transition: all 0.2s; padding: 0 10px;
+    }
+    .page-btn:hover { border-color: var(--primary); color: var(--primary-light); }
+    .page-btn.active { background: var(--primary); border-color: var(--primary); color: white; font-weight: 700; }
+    .page-btn:disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+
+    /* ── 모달 ── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 28px; width: 480px; max-width: 95vw;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal__title { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; }
+    .modal__row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 12px; font-size: 0.875rem; }
+    .modal__key { color: var(--text3); font-weight: 600; min-width: 100px; flex-shrink: 0; }
+    .modal__val { color: var(--text); word-break: break-all; }
+    .modal__divider { height: 1px; background: var(--border); margin: 16px 0; }
+    .modal__footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .modal__section-title { font-size: 0.8rem; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+
+    /* ── 거절 모달 ── */
+    .reject-textarea {
+      width: 100%; min-height: 90px; resize: vertical;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); padding: 10px 12px;
+      font-family: inherit; font-size: 0.875rem;
+      transition: border-color 0.2s;
+    }
+    .reject-textarea:focus { outline: none; border-color: var(--primary); }
+
+    @media (max-width: 768px) {
+      .admin-sidebar { display: none; }
+      .admin-main { padding: 16px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="admin-layout">
+  <!-- 사이드바 -->
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar__logo">
+      <div>
+        <div class="admin-sidebar__logo-text">⚙ 관리자</div>
+        <div class="admin-sidebar__role" id="sidebar-role-label">ADMIN</div>
+      </div>
+    </div>
+    <div class="admin-sidebar__section">메뉴</div>
+    <a href="/admin.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">📊</span> 대시보드
+    </a>
+    <a href="/admin-reports.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🚨</span> 신고 관리
+    </a>
+    <a href="/admin-mentors.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🎓</span> 멘토 신청
+    </a>
+    <a href="/admin-exchanges.html" class="admin-nav-item active">
+      <span class="admin-nav-item__icon">💸</span> 환전 관리
+    </a>
+    <div class="admin-sidebar__divider"></div>
+    <a href="/admin-users.html" class="admin-nav-item" id="super-nav-users" style="display:none">
+      <span class="admin-nav-item__icon">👥</span> 사용자 관리
+    </a>
+    <div class="admin-sidebar__divider"></div>
+    <a href="/index.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🏠</span> 메인으로
+    </a>
+  </aside>
+
+  <!-- 메인 콘텐츠 -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div>
+        <div class="admin-title">💸 환전 관리</div>
+        <div class="admin-subtitle">작가 출금 신청 목록 조회 및 승인/거절 처리</div>
+      </div>
+    </div>
+
+    <!-- 요약 카드 -->
+    <div class="summary-grid">
+      <div class="summary-card summary-card--pending">
+        <div class="summary-card__label">대기</div>
+        <div class="summary-card__value" id="cnt-pending">—</div>
+      </div>
+      <div class="summary-card summary-card--processing">
+        <div class="summary-card__label">처리중</div>
+        <div class="summary-card__value" id="cnt-processing">—</div>
+      </div>
+      <div class="summary-card summary-card--completed">
+        <div class="summary-card__label">완료</div>
+        <div class="summary-card__value" id="cnt-completed">—</div>
+      </div>
+      <div class="summary-card summary-card--rejected">
+        <div class="summary-card__label">거절</div>
+        <div class="summary-card__value" id="cnt-rejected">—</div>
+      </div>
+    </div>
+
+    <!-- 상태 탭 -->
+    <div class="status-tabs">
+      <button class="status-tab active" data-status="" onclick="changeTab(this, '')">전체</button>
+      <button class="status-tab" data-status="PENDING" onclick="changeTab(this, 'PENDING')">대기</button>
+      <button class="status-tab" data-status="PROCESSING" onclick="changeTab(this, 'PROCESSING')">처리중</button>
+      <button class="status-tab" data-status="COMPLETED" onclick="changeTab(this, 'COMPLETED')">완료</button>
+      <button class="status-tab" data-status="REJECTED" onclick="changeTab(this, 'REJECTED')">거절</button>
+    </div>
+
+    <!-- 날짜 필터 -->
+    <div class="filter-bar">
+      <label>기간</label>
+      <input type="date" class="nc-input" id="filter-start" style="max-width:180px">
+      <span style="color:var(--text3);font-size:0.85rem">~</span>
+      <input type="date" class="nc-input" id="filter-end" style="max-width:180px">
+      <button class="nc-btn nc-btn--primary nc-btn--sm" onclick="applyFilter()">조회</button>
+      <button class="nc-btn nc-btn--sm" onclick="resetFilter()" style="color:var(--text3)">초기화</button>
+    </div>
+
+    <!-- 테이블 -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-header-title">환전 신청 목록</div>
+        <span class="table-count" id="total-count">0건</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>신청 금액</th>
+            <th>수수료</th>
+            <th>실수령액</th>
+            <th>상태</th>
+            <th>신청일시</th>
+            <th>처리일시</th>
+            <th>액션</th>
+          </tr>
+        </thead>
+        <tbody id="exchange-tbody">
+          <tr><td colspan="8" style="text-align:center;padding:40px">
+            <div class="nc-spinner" style="margin:auto"></div>
+          </td></tr>
+        </tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </main>
+</div>
+
+<!-- 상세 모달 -->
+<div class="modal-backdrop" id="detail-modal">
+  <div class="modal">
+    <div class="modal__title">📋 환전 신청 상세</div>
+    <div id="detail-content"></div>
+    <div class="modal__footer">
+      <button class="nc-btn" onclick="closeDetailModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 거절 모달 -->
+<div class="modal-backdrop" id="reject-modal">
+  <div class="modal">
+    <div class="modal__title">❌ 환전 거절</div>
+    <p style="font-size:0.875rem;color:var(--text3);margin-bottom:16px">
+      거절 사유를 입력해주세요. 작가에게 전달됩니다.
+    </p>
+    <textarea class="reject-textarea" id="reject-reason" placeholder="거절 사유를 입력하세요 (필수)"></textarea>
+    <div class="modal__footer">
+      <button class="nc-btn" onclick="closeRejectModal()">취소</button>
+      <button class="nc-btn nc-btn--danger" onclick="confirmReject()">거절 확정</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var currentPage = 0;
+  var totalPages  = 0;
+  var currentStatus = '';
+  var currentStartDate = '';
+  var currentEndDate   = '';
+  var rejectTargetId   = null;
+
+  function initExchangePage() {
+    var user = Auth.getUser();
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
+      Toast.error('관리자 권한이 필요합니다');
+      setTimeout(function() { window.location.href = '/index.html'; }, 1000);
+      return;
+    }
+    var roleLabel = document.getElementById('sidebar-role-label');
+    if (roleLabel) roleLabel.textContent = user.role;
+    if (user.role === 'SUPER_ADMIN') {
+      var navEl = document.getElementById('super-nav-users');
+      if (navEl) navEl.style.display = 'flex';
+    }
+    var detailModal = document.getElementById('detail-modal');
+    if (detailModal) detailModal.addEventListener('click', function(e) {
+      if (e.target === e.currentTarget) closeDetailModal();
+    });
+    var rejectModal = document.getElementById('reject-modal');
+    if (rejectModal) rejectModal.addEventListener('click', function(e) {
+      if (e.target === e.currentTarget) closeRejectModal();
+    });
+    loadSummaryCounts();
+    loadExchanges(0);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initExchangePage);
+  } else {
+    initExchangePage();
+  }
+
+  /* ── 요약 카드 ── */
+  async function loadSummaryCounts() {
+    const pairs = [
+      ['PENDING','pending'], ['PROCESSING','processing'],
+      ['COMPLETED','completed'], ['REJECTED','rejected']
+    ];
+    for (const [status, key] of pairs) {
+      try {
+        const res  = await api.get('/admin/exchanges?status=' + status + '&size=1&page=0', true);
+        const data = (res && res.content !== undefined) ? res : (res && res.data ? res.data : {});
+        const cnt  = data.totalElements != null ? Number(data.totalElements) : 0;
+        document.getElementById('cnt-' + key).textContent = cnt.toLocaleString();
+      } catch (err) {
+        document.getElementById('cnt-' + key).textContent = '—';
+      }
+    }
+  }
+
+  /* ── 탭 ── */
+  function changeTab(el, status) {
+    document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentStatus = status;
+    loadExchanges(0);
+  }
+
+  /* ── 날짜 필터 ── */
+  function applyFilter() {
+    const s = document.getElementById('filter-start').value;
+    const e = document.getElementById('filter-end').value;
+    if (s && e && s > e) { Toast.error('시작일이 종료일보다 클 수 없습니다'); return; }
+    currentStartDate = s;
+    currentEndDate   = e;
+    loadExchanges(0);
+  }
+  function resetFilter() {
+    document.getElementById('filter-start').value = '';
+    document.getElementById('filter-end').value   = '';
+    currentStartDate = '';
+    currentEndDate   = '';
+    loadExchanges(0);
+  }
+
+  /* ── 목록 로드 ── */
+  async function loadExchanges(page) {
+    currentPage = page;
+    const tbody = document.getElementById('exchange-tbody');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px"><div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div></td></tr>';
+
+    const params = new URLSearchParams({ page: currentPage, size: 20 });
+    if (currentStatus)    params.append('status',    currentStatus);
+    if (currentStartDate) params.append('startDate', currentStartDate + 'T00:00:00');
+    if (currentEndDate)   params.append('endDate',   currentEndDate   + 'T23:59:59');
+
+    try {
+      const res  = await api.get('/admin/exchanges?' + params.toString(), true);
+      const data = (res && res.content !== undefined) ? res : (res && res.data ? res.data : res);
+      const list = data?.content || [];
+      totalPages = data?.totalPages ?? 1;
+      document.getElementById('total-count').textContent = (data?.totalElements ?? list.length) + '건';
+
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">환전 신청이 없습니다</td></tr>';
+        document.getElementById('pagination').innerHTML = '';
+        return;
+      }
+
+      tbody.innerHTML = list.map(w => {
+        const pendingBtns = w.status === 'PENDING'
+          ? '<button class="act-btn act-btn--approve" onclick="approveWithdrawal(' + w.withdrawalId + ')">승인</button>'
+            + '<button class="act-btn act-btn--reject" onclick="openRejectModal(' + w.withdrawalId + ')">거절</button>'
+          : '';
+        return '<tr>'
+          + '<td style="color:var(--text3);font-size:0.78rem">#' + w.withdrawalId + '</td>'
+          + '<td style="font-weight:700">' + (w.requestAmount || 0).toLocaleString() + '원</td>'
+          + '<td style="color:var(--text3)">' + (w.fee || 0).toLocaleString() + '원</td>'
+          + '<td style="font-weight:700;color:var(--accent)">' + (w.actualAmount || 0).toLocaleString() + '원</td>'
+          + '<td>' + stBadge(w.status) + '</td>'
+          + '<td style="color:var(--text3);font-size:0.78rem;white-space:nowrap">' + formatDate(w.requestedAt) + '</td>'
+          + '<td style="color:var(--text3);font-size:0.78rem;white-space:nowrap">' + (w.processedAt ? formatDate(w.processedAt) : '—') + '</td>'
+          + '<td><div class="action-btns">'
+          +   '<button class="act-btn act-btn--detail" onclick="openDetail(' + w.withdrawalId + ')">상세</button>'
+          +   pendingBtns
+          + '</div></td>'
+          + '</tr>';
+      }).join('');
+
+      renderPagination();
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">로드 실패: ' + escHtml(err.message) + '</td></tr>';
+    }
+  }
+
+  /* ── 페이지네이션 ── */
+  function renderPagination() {
+    const el = document.getElementById('pagination');
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    const start = Math.max(0, currentPage - 2);
+    const end   = Math.min(totalPages - 1, currentPage + 2);
+    let html = '<button class="page-btn" onclick="loadExchanges(' + (currentPage - 1) + ')"' + (currentPage === 0 ? ' disabled' : '') + '>‹</button>';
+    for (let i = start; i <= end; i++) {
+      html += '<button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="loadExchanges(' + i + ')">' + (i + 1) + '</button>';
+    }
+    html += '<button class="page-btn" onclick="loadExchanges(' + (currentPage + 1) + ')"' + (currentPage >= totalPages - 1 ? ' disabled' : '') + '>›</button>';
+    el.innerHTML = html;
+  }
+
+  /* ── 승인 ── */
+  async function approveWithdrawal(id) {
+    if (!confirm('#' + id + ' 환전 신청을 승인하시겠습니까?')) return;
+    try {
+      await api.put('/admin/exchanges/' + id + '/approve', null, true);
+      Toast.success('환전이 승인되었습니다');
+      loadSummaryCounts();
+      loadExchanges(currentPage);
+    } catch (err) {
+      Toast.error('승인 실패: ' + (err.message || '서버 오류'));
+    }
+  }
+
+  /* ── 거절 모달 ── */
+  function openRejectModal(id) {
+    rejectTargetId = id;
+    document.getElementById('reject-reason').value = '';
+    document.getElementById('reject-modal').classList.add('open');
+  }
+  function closeRejectModal() {
+    rejectTargetId = null;
+    document.getElementById('reject-modal').classList.remove('open');
+  }
+  async function confirmReject() {
+    const reason = document.getElementById('reject-reason').value.trim();
+    if (!reason) { Toast.error('거절 사유를 입력해주세요'); return; }
+    try {
+      await api.put('/admin/exchanges/' + rejectTargetId + '/reject', { rejectedReason: reason }, true);
+      Toast.success('환전이 거절되었습니다');
+      closeRejectModal();
+      loadSummaryCounts();
+      loadExchanges(currentPage);
+    } catch (err) {
+      Toast.error('거절 실패: ' + (err.message || '서버 오류'));
+    }
+  }
+
+  /* ── 상세 모달 ── */
+  async function openDetail(id) {
+    document.getElementById('detail-content').innerHTML = '<div style="text-align:center;padding:30px"><div class="nc-spinner" style="margin:auto"></div></div>';
+    document.getElementById('detail-modal').classList.add('open');
+    try {
+      const res = await api.get('/admin/exchanges/' + id, true);
+      const w   = (res && res.withdrawalId !== undefined) ? res : (res && res.data ? res.data : res);
+      const ba  = w.bankAccount;
+      let html  = '<div class="modal__section-title">신청 정보</div>'
+        + makeRow('신청 ID', '#' + w.withdrawalId)
+        + makeRow('신청 금액', '<strong>' + (w.requestAmount || 0).toLocaleString() + '원</strong>')
+        + makeRow('수수료', (w.fee || 0).toLocaleString() + '원')
+        + makeRow('실수령액', '<strong style="color:var(--accent)">' + (w.actualAmount || 0).toLocaleString() + '원</strong>')
+        + makeRow('상태', stBadge(w.status))
+        + makeRow('신청일시', formatDate(w.requestedAt))
+        + makeRow('처리일시', w.processedAt ? formatDate(w.processedAt) : '—');
+      if (w.rejectedReason) html += makeRow('거절 사유', '<span style="color:#f87171">' + escHtml(w.rejectedReason) + '</span>');
+      if (ba) {
+        html += '<div class="modal__divider"></div><div class="modal__section-title">계좌 정보</div>'
+          + makeRow('은행', escHtml(ba.bankName || '—'))
+          + makeRow('계좌번호', escHtml(ba.maskedAccountNumber || '—'))
+          + makeRow('예금주', escHtml(ba.accountHolder || '—'))
+          + makeRow('인증 여부', ba.isVerified ? '<span style="color:#10b981;font-weight:600">✓ 인증됨</span>' : '<span style="color:#ef4444">미인증</span>');
+      }
+      if (w.status === 'PENDING') {
+        html += '<div class="modal__divider"></div>'
+          + '<div style="display:flex;gap:10px;justify-content:flex-end">'
+          + '<button class="act-btn act-btn--approve" onclick="approveWithdrawal(' + w.withdrawalId + ');closeDetailModal()">승인</button>'
+          + '<button class="act-btn act-btn--reject" onclick="closeDetailModal();openRejectModal(' + w.withdrawalId + ')">거절</button>'
+          + '</div>';
+      }
+      document.getElementById('detail-content').innerHTML = html;
+    } catch (err) {
+      document.getElementById('detail-content').innerHTML = '<p style="text-align:center;padding:20px;color:var(--text3)">불러오기 실패: ' + escHtml(err.message) + '</p>';
+    }
+  }
+  function closeDetailModal() {
+    document.getElementById('detail-modal').classList.remove('open');
+  }
+
+  /* ── 유틸 ── */
+  function makeRow(key, val) {
+    return '<div class="modal__row"><span class="modal__key">' + key + '</span><span class="modal__val">' + val + '</span></div>';
+  }
+
+  const ST = { PENDING:'st-pending', PROCESSING:'st-processing', COMPLETED:'st-completed', REJECTED:'st-rejected' };
+  const SL = { PENDING:'대기', PROCESSING:'처리중', COMPLETED:'완료', REJECTED:'거절' };
+  function stBadge(s) {
+    return '<span class="st-badge ' + (ST[s] || '') + '">' + (SL[s] || s || '—') + '</span>';
+  }
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

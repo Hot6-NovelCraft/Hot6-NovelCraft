@@ -61,17 +61,32 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         if(!isExisting) {
 
-            // 신규 유저 : 플랫폼에서 받은 정보만 임시로 만들어 SuccessHandler로 전달
-            user = userRepository.findByEmail(email)
-                    .orElseGet(() -> {
-                        // 진짜 없을 때만 새로 생성 & 저장
-                        return User.socialUser(
-                                email,
-                                "SOCIAL_" + System.currentTimeMillis(),
-                                UserRole.TEMP
-                        );
-                    });
-            log.info("[소셜 로그인] 신규 유저 감지 (임시 정보), email: {}", email);
+            java.util.Optional<User> userByEmail = userRepository.findByEmail(email);
+
+            if (userByEmail.isPresent()) {
+                User existingUser = userByEmail.get();
+                java.util.Optional<SocialAuth> existingSocialAuth =
+                        socialAuthRepository.findByUserId(existingUser.getId());
+
+                if (existingSocialAuth.isPresent() && existingSocialAuth.get().getProvider() == provider) {
+                    // 동일 provider이지만 providerId가 null이었던 기존 유저 → providerId 갱신 후 로그인 처리
+                    existingSocialAuth.get().updateProviderId(providerId);
+                    log.info("[소셜 로그인] 동일 provider 기존 유저 providerId 갱신. email: {}", email);
+                    user = existingUser;
+                } else {
+                    // 다른 provider 또는 일반 이메일로 가입된 이메일 → SuccessHandler에서 충돌 처리
+                    log.warn("[소셜 로그인] 이미 다른 방식으로 등록된 이메일. email: {}", email);
+                    user = User.socialUser(email, "SOCIAL_CONFLICT_" + System.currentTimeMillis(), UserRole.TEMP);
+                }
+            } else {
+                // 완전 신규 유저 → TEMP로 signup.html 이동
+                user = User.socialUser(
+                        email,
+                        "SOCIAL_" + System.currentTimeMillis(),
+                        UserRole.TEMP
+                );
+                log.info("[소셜 로그인] 신규 유저 감지 (임시 정보), email: {}", email);
+            }
 
         } else {
 

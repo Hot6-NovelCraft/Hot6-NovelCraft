@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Slf4j
@@ -51,6 +52,17 @@ public class SubscriptionTransactionService {
 
     @Transactional
     public Subscription prepareSubscription(Long userId, PlanType planType, String subscriptionKey, Long amount) {
+        // 취소됐지만 기간이 남은 구독이 있으면 새 row 생성 대신 재활성화
+        Optional<Subscription> cancelled = subscriptionRepository
+                .findFirstByUserIdAndSubscriptionStatusAndNextBillingAtAfterOrderByNextBillingAtDesc(
+                        userId, SubscriptionStatus.CANCELLED, LocalDateTime.now());
+
+        if (cancelled.isPresent()) {
+            Subscription sub = cancelled.get();
+            sub.reactivate(subscriptionKey);
+            return subscriptionRepository.save(sub);
+        }
+
         Subscription subscription = Subscription.prepare(userId, planType, subscriptionKey, amount);
         return subscriptionRepository.save(subscription);
     }
@@ -169,7 +181,7 @@ public class SubscriptionTransactionService {
 
     @Transactional(readOnly = true)
     public Optional<Subscription> getActiveSubscription(Long userId) {
-        return subscriptionRepository.findByUserIdAndSubscriptionStatus(userId, SubscriptionStatus.ACTIVE);
+        return subscriptionRepository.findCurrentSubscription(userId, LocalDateTime.now());
     }
 
     /**

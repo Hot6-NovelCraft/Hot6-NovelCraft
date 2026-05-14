@@ -140,6 +140,19 @@ public class EpisodeController {
     }
 
     /**
+     * 작가용 회차 단건 조회 (에디터 본문 로드 - 포인트 차감 없음)
+     */
+    @GetMapping("/author/novels/{novelId}/episodes/{episodeId}")
+    public ResponseEntity<BaseResponse<AuthorEpisodeDetailResponse>> getAuthorEpisodeDetail(
+            @PathVariable Long novelId,
+            @PathVariable Long episodeId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        AuthorEpisodeDetailResponse response = episodeService.getAuthorEpisodeDetail(novelId, episodeId, userDetails);
+        return ResponseEntity.ok(BaseResponse.success("200", "작가 회차 본문 조회 성공", response));
+    }
+
+    /**
      * 작가용 회차 목록 조회 (에디터용)
      * 정은식
      */

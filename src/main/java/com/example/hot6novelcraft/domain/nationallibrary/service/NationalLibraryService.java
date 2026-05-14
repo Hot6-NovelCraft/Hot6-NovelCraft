@@ -142,4 +142,13 @@ public class NationalLibraryService {
                 .map(userBook -> MyShelfResponse.of(userBook, bookMap.get(userBook.getBookId())))
                 .toList();
     }
+
+    // 내 서재에서 도서 삭제
+    @Transactional
+    public void removeFromShelf(Long userId, Long userBookId) {
+        if (!userBookRepository.existsByIdAndUserId(userBookId, userId)) {
+            throw new ServiceErrorException(NationalLibraryExceptionEnum.BOOK_NOT_IN_SHELF);
+        }
+        userBookRepository.deleteByIdAndUserId(userBookId, userId);
+    }
 }

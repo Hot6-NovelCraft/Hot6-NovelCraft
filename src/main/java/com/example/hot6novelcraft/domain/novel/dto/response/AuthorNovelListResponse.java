@@ -12,6 +12,8 @@ public record AuthorNovelListResponse(
         NovelStatus status,
         String coverImageUrl,
         long episodeCount,
+        Long viewCount,
+        int bookmarkCount,
         LocalDateTime updatedAt
 
 ) {

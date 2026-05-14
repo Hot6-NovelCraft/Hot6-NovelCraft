@@ -60,8 +60,10 @@ public class Mentor extends BaseEntity {
     @Column(length = 500)
     private String rejectReason;
 
+    private java.time.LocalDateTime approvedAt;
+
     @Version
-    private Long version;
+    private long version;
 
     public void approve() {
 
@@ -70,6 +72,7 @@ public class Mentor extends BaseEntity {
         }
         this.status = MentorStatus.APPROVED;
         this.rejectReason = null;
+        this.approvedAt = java.time.LocalDateTime.now();
     }
 
     public void reject(String rejectReason) {

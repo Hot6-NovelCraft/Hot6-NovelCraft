@@ -13,10 +13,12 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -77,7 +79,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers(
-                        "/api/auth/login"
+                                "/api/auth/login"
                                 , "/api/auth/signup"
                                 , "/api/auth/signup/admin"
                                 , "/api/auth/signup/reader"
@@ -92,7 +94,6 @@ public class SecurityConfig {
                                 , "/api/webhooks/portone"
                                 , "/api/auth/social/signup/**"
                                 , "/api/auth/login/oauth2/**"
-                                , "/api/search/**"
                                 , "/api/novels/ranking/**"
                                 , "/oauth2/authorize/**"
                                 , "/error"
@@ -108,10 +109,23 @@ public class SecurityConfig {
                                 , "/actuator/**"
                                 , "/api/ai/recommendation"
                         ).permitAll()
-                                .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "SUPER_ADMIN")
-                                .requestMatchers("/api/calendars/**").hasAnyAuthority("READER", "AUTHOR")
-                                .requestMatchers("/api/ai-support/**").authenticated()
-                .anyRequest().authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET
+                                , "/api/v2/novels"
+                                , "/api/novels/*"
+                                , "/api/novels/*/episodes"
+                                , "/api/novels/*/episodes/*"
+                                , "/api/episodes/*/comments"
+                                , "/api/v2/episodes/*"
+                                , "/api/search/v2/novels"
+                                , "/api/search/v2/tags"
+                                , "/api/search/v2/authors"
+                                , "/api/search/keywords/popular"
+                                , "/api/search/tags/popular"
+                        ).permitAll()
+                        .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/api/calendars/**").hasAnyAuthority("READER", "AUTHOR")
+                        .requestMatchers("/api/ai-support/**").authenticated()
+                        .anyRequest().authenticated()
                 )
                 .build();
     }
@@ -119,5 +133,23 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager (AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    // SecurityConfig.java 에 이 Bean 추가
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return web -> web.ignoring()
+                .requestMatchers(
+                        "/*.html",
+                        "/**.html",
+                        "/*.js",
+                        "/**.js",
+                        "/*.css",
+                        "/**.css",
+                        "/static/**",
+                        "/images/**",
+                        "/favicon.ico",
+                        "/.well-known/**"
+                );
     }
 }

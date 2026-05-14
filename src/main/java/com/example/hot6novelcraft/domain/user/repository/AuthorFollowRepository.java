@@ -15,4 +15,6 @@ public interface AuthorFollowRepository extends JpaRepository<AuthorFollow, Long
 
     @Query("SELECT af.followerId FROM AuthorFollow af WHERE af.followingId = :authorId")
     List<Long> findFollowerIdsByFollowingId(@Param("authorId") Long authorId);
+
+    long countByFollowingId(Long followingId);
 }
