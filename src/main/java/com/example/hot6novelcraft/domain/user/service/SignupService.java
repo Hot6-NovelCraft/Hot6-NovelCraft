@@ -282,8 +282,11 @@ public class SignupService {
     // 소셜 작가
     private SignupResponse processSocialAuthorSignup(AuthorRequest request, String email, TempSocialSignupRequest tempRequest, String redisKey) {
 
-        User user = userRepository.findByEmail(email).orElseThrow(
-                ()-> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
+        if (userRepository.existsByEmail(email)) {
+            throw new ServiceErrorException(UserExceptionEnum.ERR_ALREADY_COMPLETED_SIGNUP);
+        }
+
+        User user = User.socialUser(email, "SOCIAL_LOGIN_USER", UserRole.AUTHOR);
 
         user.updateForSocialSignup(
                 tempRequest.nickname()
@@ -291,18 +294,18 @@ public class SignupService {
                 , tempRequest.birthday()
         );
 
-        user.changeRole(UserRole.AUTHOR);
+        User savedUser = userRepository.save(user);
 
         SocialAuth socialAuth = SocialAuth.register(
                 tempRequest.providerSns()
                 , tempRequest.providerId()
-                , user.getId()
+                , savedUser.getId()
         );
 
         socialAuthRepository.save(socialAuth);
 
         AuthorProfile authorProfile = AuthorProfile.register(
-                user.getId()
+                savedUser.getId()
                 , request.bio()
                 , request.careerLevel()
                 , request.mainGenreToString()
@@ -312,14 +315,14 @@ public class SignupService {
                 , request.allowMenteeRequest()
         );
 
-        if(user.isAdult()) {
-            user.verifyAdult(); // 19살 이상일 시 "인증 완료"
+        if(savedUser.isAdult()) {
+            savedUser.verifyAdult();
         }
 
         authorProfileRepository.save(authorProfile);
         adminCacheService.incrementNewUsersToday();
 
-        return SignupResponse.of(user);
+        return SignupResponse.of(savedUser);
     }
 
     // 일반 작가

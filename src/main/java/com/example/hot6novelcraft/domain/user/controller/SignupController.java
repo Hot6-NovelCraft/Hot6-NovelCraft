@@ -1,12 +1,14 @@
 package com.example.hot6novelcraft.domain.user.controller;
 
 import com.example.hot6novelcraft.common.dto.BaseResponse;
+import com.example.hot6novelcraft.common.security.JwtUtil;
 import com.example.hot6novelcraft.domain.user.dto.request.*;
 import com.example.hot6novelcraft.domain.user.dto.response.*;
 import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
 import com.example.hot6novelcraft.domain.user.entity.enums.ProviderSns;
 import com.example.hot6novelcraft.domain.user.service.SignupService;
 import com.example.hot6novelcraft.domain.user.service.SmsService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,7 @@ public class SignupController {
 
     private final SignupService signupService;
     private final SmsService smsService;
+    private final JwtUtil jwtUtil;
 
     /** ======== 중복 확인 ========
      1. 이메일
@@ -100,14 +103,18 @@ public class SignupController {
     public ResponseEntity<BaseResponse<SocialSignupResponse>> socialSignup(
             @Valid @RequestBody SocialSignupRequest request,
             @PathVariable String provider,
-            @AuthenticationPrincipal UserDetailsImpl userDetails
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            HttpServletRequest httpRequest
     ) {
         String email = userDetails.getUsername();
-        String providerId = (String) userDetails.getAttributes().get("sub");
+        // 소셜 토큰 JWT claims에서 providerId 추출 (OAuth2 attributes 아님)
+        String authHeader = httpRequest.getHeader("Authorization");
+        String rawToken = authHeader != null ? authHeader.replace("Bearer ", "") : null;
+        String providerId = rawToken != null ? jwtUtil.extractProviderId(rawToken) : null;
         ProviderSns providerSns = ProviderSns.from(provider);
 
         SocialSignupResponse response = signupService.socialCommonSignup(request, email, providerId, providerSns);
-        return ResponseEntity.ok(BaseResponse.success("200","소설 공통 가입이 완료되었습니다.", response));
+        return ResponseEntity.ok(BaseResponse.success("200","소셜 공통 가입이 완료되었습니다.", response));
     }
 
     // ======== 관리자 로그인 ========

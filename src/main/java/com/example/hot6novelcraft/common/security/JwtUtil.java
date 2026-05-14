@@ -90,12 +90,13 @@ public class JwtUtil {
                 .compact();
     }
 
-    public String createSocialToken(String email) {
+    public String createSocialToken(String email, String providerId) {
         Date now = new Date();
 
         return BEARER_PREFIX + Jwts.builder()
                 .subject(email)
                 .claim("type", "SOCIAL")
+                .claim("providerId", providerId)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + SOCIAL_TOKEN_TIME))
                 .signWith(secretKey, Jwts.SIG.HS256)
@@ -162,6 +163,10 @@ public class JwtUtil {
 
     public String extractEmail(String token) {
         return getClaims(token).getSubject();
+    }
+
+    public String extractProviderId(String token) {
+        return getClaims(token).get("providerId", String.class);
     }
 
     /**

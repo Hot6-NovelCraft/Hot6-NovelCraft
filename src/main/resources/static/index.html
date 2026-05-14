@@ -1225,6 +1225,25 @@
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    /* ── 소셜 로그인 OAuth2 콜백 처리 ──
+       OAuth2SuccessHandler → index.html?accessToken=xxx&refreshToken=yyy 로 리다이렉트됨 */
+    (async () => {
+        const _p = new URLSearchParams(location.search);
+        const _at = _p.get('accessToken');
+        const _rt = _p.get('refreshToken');
+        if (_at) {
+            Auth.setToken(decodeURIComponent(_at).replace('Bearer ', ''));
+            if (_rt) {
+                localStorage.setItem('refreshToken', decodeURIComponent(_rt).replace('Bearer ', ''));
+            }
+            try {
+                const me = await api.get('/auth/users/me', true);
+                Auth.setUser({ id: me.uerId || me.id, nickname: me.nickname, email: me.email, role: me.role });
+            } catch (_) {}
+            history.replaceState({}, '', location.pathname);
+        }
+    })();
+
     /* ──────────────────────────────────
        이벤트 바인딩 + 초기 로드
     ────────────────────────────────── */

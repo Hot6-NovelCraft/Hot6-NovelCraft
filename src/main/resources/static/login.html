@@ -159,28 +159,59 @@
         }
 
         .social-btn--google {
-            border-color: #4285F4;
+            border-color: #dadce0;
+            background: #fff;
+            color: #3c4043;
         }
 
         .social-btn--google:hover {
-            background: rgba(66, 133, 244, 0.1);
+            background: #f8f8f8;
         }
 
-        .login-footer {
-            text-align: center;
-            margin-top: 20px;
+        /* 회원가입 섹션 구분선 */
+        .signup-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 24px 0 16px;
             color: var(--text3);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+        }
+        .signup-divider::before, .signup-divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
         }
 
-        .login-footer a {
+        /* 소셜 버튼 3열 가로 배치 */
+        .social-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 0;
+        }
+        .social-row .social-btn {
+            padding: 11px 6px;
+            font-size: 0.82rem;
+            margin-bottom: 0;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        /* 이메일 회원가입 버튼 */
+        .email-signup-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--primary);
+            background: transparent;
             color: var(--primary-light);
-            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all .2s;
+            margin-bottom: 10px;
         }
-
-        .login-footer a:hover {
-            text-decoration: underline;
-        }
+        .email-signup-btn:hover { background: rgba(124,90,240,.1); }
 
         .restore-card {
             background: rgba(240, 200, 66, 0.08);
@@ -201,6 +232,36 @@
             display: flex;
             gap: 8px;
         }
+
+        /* 이메일 충돌 경고 카드 */
+        .conflict-card {
+            background: var(--surface);
+            border: 1px solid rgba(240, 200, 66, 0.4);
+            border-radius: 18px;
+            padding: 40px 36px;
+            box-shadow: 0 8px 48px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            display: none;
+        }
+        .conflict-icon { font-size: 3rem; margin-bottom: 16px; }
+        .conflict-title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--warning);
+            margin-bottom: 16px;
+        }
+        .conflict-desc {
+            color: var(--text2);
+            font-size: 0.88rem;
+            line-height: 1.7;
+            margin-bottom: 8px;
+        }
+        .conflict-hint {
+            color: var(--text3);
+            font-size: 0.8rem;
+            margin-bottom: 28px;
+        }
     </style>
 </head>
 <body>
@@ -209,6 +270,20 @@
     <div class="login-logo">
         <a href="/index.html"><span class="logo-icon">✦</span> NovelCraft</a>
         <p>소설의 모든 것을 담다</p>
+    </div>
+
+    <!-- 이메일 중복 소셜 경고 카드 -->
+    <div class="conflict-card" id="conflict-card">
+        <div class="conflict-icon">⚠️</div>
+        <div class="conflict-title">이미 등록된 이메일입니다</div>
+        <p class="conflict-desc">
+            동일한 이메일로 이미 가입된 계정이 있습니다.<br>
+            처음 가입하신 소셜 계정 또는 이메일로 로그인해주세요.
+        </p>
+        <p class="conflict-hint">소셜 이메일을 확인하신 후 올바른 방법으로 로그인하세요.</p>
+        <button class="nc-btn nc-btn--primary nc-btn--full nc-btn--lg" onclick="closeConflict()">
+            로그인 화면으로 돌아가기
+        </button>
     </div>
 
     <div class="login-card">
@@ -243,19 +318,29 @@
 
         <div class="login-divider">또는 소셜 로그인</div>
 
-        <button class="social-btn social-btn--kakao" onclick="socialLogin('kakao')">
-            <span>💬</span> 카카오로 로그인
-        </button>
-        <button class="social-btn social-btn--naver" onclick="socialLogin('naver')">
-            <span>N</span> 네이버로 로그인
-        </button>
-        <button class="social-btn social-btn--google" onclick="socialLogin('google')">
-            <span>🔵</span> Google로 로그인
+        <!-- 소셜 로그인 3열 가로 한 줄 -->
+        <div class="social-row">
+            <button class="social-btn social-btn--kakao" onclick="socialLogin('kakao')">
+                <span>💬</span> 카카오
+            </button>
+            <button class="social-btn social-btn--naver" onclick="socialLogin('naver')">
+                <span>N</span> 네이버
+            </button>
+            <button class="social-btn social-btn--google" onclick="socialLogin('google')">
+                <span>G</span> 구글
+            </button>
+        </div>
+
+        <!-- ── 회원가입 섹션 ── -->
+        <div class="signup-divider">처음이신가요? 회원가입</div>
+
+        <button class="email-signup-btn" onclick="window.location.href='/signup.html'">
+            ✉️ 이메일 회원가입
         </button>
 
-        <div class="login-footer">
-            계정이 없으신가요? <a href="/signup.html">회원가입</a>
-        </div>
+        <p style="text-align:center;font-size:0.78rem;color:var(--text3);margin-top:12px;line-height:1.6">
+            소셜 계정으로 처음 가입하시는 경우<br>위 소셜 로그인 버튼을 누르면 자동으로 회원가입 페이지로 이동합니다
+        </p>
     </div>
 </div>
 
@@ -281,6 +366,16 @@
     if (params.get('tab') === 'logout') {
         Auth.removeToken();
         Auth.removeUser();
+    }
+    if (params.get('error') === 'email_exists') {
+        document.getElementById('conflict-card').style.display = 'block';
+        document.querySelector('.login-card').style.display = 'none';
+        history.replaceState({}, '', location.pathname);
+    }
+
+    function closeConflict() {
+        document.getElementById('conflict-card').style.display = 'none';
+        document.querySelector('.login-card').style.display = 'block';
     }
 
     function togglePw(id, btn) {
@@ -356,8 +451,8 @@
     }
 
     function socialLogin(provider) {
-        // OAuth 리다이렉트 (백엔드 OAuth 엔드포인트로 이동)
-        window.location.href = `/oauth2/authorization/${provider}`;
+        sessionStorage.setItem('oauthProvider', provider);
+        window.location.href = `/oauth2/authorize/${provider}`;
     }
 </script>
 </body>
