@@ -110,6 +110,7 @@ public class NovelRankingService {
                     , novel.getTitle()
                     , authorNicknameMap.getOrDefault(novel.getAuthorId(), "알 수 없음")
                     , viewCount
+                    , novel.getCoverImageUrl()
             ));
         }
         return rankingList;
@@ -159,6 +160,7 @@ public class NovelRankingService {
                     , novel.getTitle()
                     , authorNicknameMap.getOrDefault(novel.getAuthorId(), "알 수 없음")
                     , novel.getViewCount()
+                    , novel.getCoverImageUrl()
             ));
         }
         return rankingList;

@@ -1,13 +1,11 @@
 package com.example.hot6novelcraft.domain.exchange.client;
 
-import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 1. public 키워드를 추가하여 Gradle 스캐너가 인식하게 합니다.
@@ -40,10 +38,10 @@ public class LocalBankVerificationClientTest { // public 추가
     }
 
     @Test
-    @DisplayName("실패 - 존재하지 않는 계좌 요청 시 예외가 발생한다")
+    @DisplayName("실패 - 존재하지 않는 계좌 요청 시 null을 반환한다")
     void verifyAccountOwner_Fail() {
-        assertThatThrownBy(() -> client.verifyAccountOwner("신한은행", "0000000000"))
-                .isInstanceOf(ServiceErrorException.class);
+        String result = client.verifyAccountOwner("신한은행", "0000000000");
+        assertThat(result).isNull();
     }
 
     @Test

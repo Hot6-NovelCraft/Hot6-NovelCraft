@@ -68,7 +68,7 @@ class RevenueControllerTest {
         void successWithAccount() throws Exception {
             BankAccountInfoResponse bankInfo = BankAccountInfoResponse.of(
                     1L, "국민은행", "******7890", "홍길동", true);
-            RevenueOverviewResponse response = RevenueOverviewResponse.of(500000, 100000, 400000, bankInfo);
+            RevenueOverviewResponse response = RevenueOverviewResponse.of(500000, 100000, 400000,0,0, bankInfo);
             given(revenueService.getRevenueOverview(1L)).willReturn(response);
 
             mockMvc.perform(get("/api/revenues/me"))
@@ -83,7 +83,7 @@ class RevenueControllerTest {
         @Test
         @DisplayName("성공 - 계좌 없이 수익만")
         void successNoAccount() throws Exception {
-            RevenueOverviewResponse response = RevenueOverviewResponse.of(0, 0, 0, null);
+            RevenueOverviewResponse response = RevenueOverviewResponse.of(0, 0, 0, 0,0,null);
             given(revenueService.getRevenueOverview(1L)).willReturn(response);
 
             mockMvc.perform(get("/api/revenues/me"))

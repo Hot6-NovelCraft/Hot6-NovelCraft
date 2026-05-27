@@ -309,9 +309,9 @@ class MentorshipServiceTest {
             );
 
             Page<MentorWithNickname> page = new PageImpl<>(List.of(mentor1, mentor2), pageable, 2);
-            given(mentorshipRepository.findMentorList(null, null, pageable)).willReturn(page);
+            given(mentorshipRepository.findMentorList(null, null,null, pageable)).willReturn(page);
 
-            Page<MentorshipListResponse> result = mentorshipService.getMentorList(null, null, pageable);
+            Page<MentorshipListResponse> result = mentorshipService.getMentorList(null, null, null,pageable);
 
             assertThat(result.getContent()).hasSize(2);
             assertThat(result.getContent().get(0).nickname()).isEqualTo("멘토1");
@@ -331,9 +331,9 @@ class MentorshipServiceTest {
             );
 
             Page<MentorWithNickname> page = new PageImpl<>(List.of(mentor), pageable, 1);
-            given(mentorshipRepository.findMentorList("판타지", null, pageable)).willReturn(page);
+            given(mentorshipRepository.findMentorList("판타지", null,null, pageable)).willReturn(page);
 
-            Page<MentorshipListResponse> result = mentorshipService.getMentorList("판타지", null, pageable);
+            Page<MentorshipListResponse> result = mentorshipService.getMentorList("판타지", null, null,pageable);
 
             assertThat(result.getContent()).hasSize(1);
             assertThat(result.getContent().get(0).mainGenres()).contains("판타지");
@@ -351,9 +351,9 @@ class MentorshipServiceTest {
             );
 
             Page<MentorWithNickname> page = new PageImpl<>(List.of(mentor), pageable, 1);
-            given(mentorshipRepository.findMentorList(null, CareerLevel.INTERMEDIATE, pageable)).willReturn(page);
+            given(mentorshipRepository.findMentorList(null, CareerLevel.INTERMEDIATE,null, pageable)).willReturn(page);
 
-            Page<MentorshipListResponse> result = mentorshipService.getMentorList(null, CareerLevel.INTERMEDIATE, pageable);
+            Page<MentorshipListResponse> result = mentorshipService.getMentorList(null, CareerLevel.INTERMEDIATE, null,pageable);
 
             assertThat(result.getContent()).hasSize(1);
             assertThat(result.getContent().get(0).careerLevel()).isEqualTo(CareerLevel.INTERMEDIATE);
@@ -365,9 +365,9 @@ class MentorshipServiceTest {
             Pageable pageable = PageRequest.of(0, 20);
 
             Page<MentorWithNickname> emptyPage = new PageImpl<>(List.of(), pageable, 0);
-            given(mentorshipRepository.findMentorList("없는장르", null, pageable)).willReturn(emptyPage);
+            given(mentorshipRepository.findMentorList("없는장르", null, null,pageable)).willReturn(emptyPage);
 
-            Page<MentorshipListResponse> result = mentorshipService.getMentorList("없는장르", null, pageable);
+            Page<MentorshipListResponse> result = mentorshipService.getMentorList("없는장르", null, null, pageable);
 
             assertThat(result.getContent()).isEmpty();
             assertThat(result.getTotalElements()).isZero();

@@ -105,8 +105,8 @@ class EntityLogicTest {
         @Test
         @DisplayName("actualAmount = requestAmount - fee")
         void actualAmount() {
-            Withdrawal withdrawal = Withdrawal.request(1L, 1L, 50000, 1650);
-            assertThat(withdrawal.getActualAmount()).isEqualTo(48350);
+            Withdrawal withdrawal = Withdrawal.request(1L, 1L, 50000, 5000);
+            assertThat(withdrawal.getActualAmount()).isEqualTo(45000);
         }
     }
 
@@ -115,17 +115,17 @@ class EntityLogicTest {
     class Fee {
 
         @Test
-        @DisplayName("3.3% 수수료 계산")
+        @DisplayName("10% 수수료 계산")
         void calculateFee() {
-            assertThat(FeePolicy.DEFAULT.calculateFee(50000)).isEqualTo(1650);
-            assertThat(FeePolicy.DEFAULT.calculateFee(100000)).isEqualTo(3300);
-            assertThat(FeePolicy.DEFAULT.calculateFee(10000)).isEqualTo(330);
+            assertThat(FeePolicy.DEFAULT.calculateFee(50000)).isEqualTo(5000);   // 50000 * 0.10
+            assertThat(FeePolicy.DEFAULT.calculateFee(100000)).isEqualTo(10000); // 100000 * 0.10
+            assertThat(FeePolicy.DEFAULT.calculateFee(10000)).isEqualTo(1000);   // 10000 * 0.10
         }
 
         @Test
         @DisplayName("실수령 금액 계산")
         void calculateActualAmount() {
-            assertThat(FeePolicy.DEFAULT.calculateActualAmount(50000)).isEqualTo(48350);
+            assertThat(FeePolicy.DEFAULT.calculateActualAmount(50000)).isEqualTo(45000);
         }
 
         @Test

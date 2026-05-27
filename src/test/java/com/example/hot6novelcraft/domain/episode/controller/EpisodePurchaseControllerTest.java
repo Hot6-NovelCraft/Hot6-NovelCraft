@@ -100,7 +100,7 @@ class EpisodePurchaseControllerTest {
         void purchaseEpisode_success() throws Exception {
             // given
             EpisodePurchaseResponse mockResponse = new EpisodePurchaseResponse(
-                    EPISODE_ID, "테스트 회차", EPISODE_PRICE, REMAINING_BALANCE
+                    EPISODE_ID, NOVEL_ID,"테스트 회차", EPISODE_PRICE, REMAINING_BALANCE
             );
             given(purchaseFacade.purchaseEpisode(USER_ID, EPISODE_ID))
                     .willReturn(mockResponse);

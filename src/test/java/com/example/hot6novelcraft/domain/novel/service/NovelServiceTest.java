@@ -297,7 +297,7 @@ class NovelServiceTest {
     void 소설상세조회_성공() {
         NovelDetailResponse detailResponse = new NovelDetailResponse(
                 1L, "제목", "설명", "FANTASY", "태그",
-                NovelStatus.ONGOING, null, 100L, 0, "작가닉네임", LocalDateTime.now()
+                NovelStatus.ONGOING, null, 100L, 0, "작가닉네임",1L, LocalDateTime.now()
         );
 
         given(novelRepository.findNovelDetailByNovelId(1L)).willReturn(detailResponse);
@@ -330,6 +330,8 @@ class NovelServiceTest {
                         NovelStatus.ONGOING,
                         null,
                         5L,
+                        null,
+                        0,
                         null
                 )
         ));

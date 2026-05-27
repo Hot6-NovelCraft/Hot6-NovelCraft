@@ -65,7 +65,7 @@ class EpisodePurchaseConcurrencyTest {
     }
 
     private EpisodePurchaseResponse createMockResponse(Long episodeId, Long remainingBalance) {
-        return new EpisodePurchaseResponse(episodeId, "테스트 회차 " + episodeId, EPISODE_PRICE, remainingBalance);
+        return new EpisodePurchaseResponse(episodeId, null,"테스트 회차 " + episodeId, EPISODE_PRICE, remainingBalance);
     }
 
     // =========================================================
