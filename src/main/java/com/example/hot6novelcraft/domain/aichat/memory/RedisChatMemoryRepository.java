@@ -35,12 +35,13 @@ public class RedisChatMemoryRepository implements ChatMemoryRepository {
      * Spring AI Message 인터페이스는 다형성이 있어 직접 직렬화가 복잡하므로
      * role/content 형태의 단순 record로 변환해서 저장한다.
      */
-    private record MessageRecord(String role, String content) {}
+    private record MessageRecord(String role, String content) {
+    }
 
     @Override
     public List<String> findConversationIds() {
         return StreamSupport.stream(
-                redissonClient.getKeys().getKeysByPattern(keyPrefix + "*").spliterator(), false)
+                        redissonClient.getKeys().getKeysByPattern(keyPrefix + "*").spliterator(), false)
                 .map(key -> key.substring(keyPrefix.length()))
                 .toList();
     }

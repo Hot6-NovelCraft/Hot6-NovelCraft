@@ -4,7 +4,6 @@ import com.example.hot6novelcraft.common.dto.PageResponse;
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.PaymentExceptionEnum;
 import com.example.hot6novelcraft.common.security.RedisUtil;
-import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
 import com.example.hot6novelcraft.domain.notification.entity.enums.NotificationType;
 import com.example.hot6novelcraft.domain.notification.producer.NotificationProducer;
 import com.example.hot6novelcraft.domain.payment.dto.request.PaymentConfirmRequest;

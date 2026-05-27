@@ -10,17 +10,23 @@ public record ChatEventResponse(
         Long roomId,
         ChatMessageResponse message
 ) {
-    /** 새 메시지 이벤트 */
+    /**
+     * 새 메시지 이벤트
+     */
     public static ChatEventResponse message(ChatMessageResponse msg) {
         return new ChatEventResponse("MESSAGE", msg.senderId(), msg.roomId(), msg);
     }
 
-    /** 읽음 처리 이벤트 — 누가(userId) 읽었는지 전파 */
+    /**
+     * 읽음 처리 이벤트 — 누가(userId) 읽었는지 전파
+     */
     public static ChatEventResponse read(Long roomId, Long readerId) {
         return new ChatEventResponse("READ", readerId, roomId, null);
     }
 
-    /** 나가기 이벤트 — 누가(userId) 나갔는지 전파 */
+    /**
+     * 나가기 이벤트 — 누가(userId) 나갔는지 전파
+     */
     public static ChatEventResponse leave(Long roomId, Long userId) {
         return new ChatEventResponse("LEAVE", userId, roomId, null);
     }

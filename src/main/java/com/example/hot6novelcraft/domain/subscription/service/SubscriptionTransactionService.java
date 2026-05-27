@@ -3,7 +3,6 @@ package com.example.hot6novelcraft.domain.subscription.service;
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.SubscriptionExceptionEnum;
 import com.example.hot6novelcraft.domain.payment.entity.Payment;
-import com.example.hot6novelcraft.domain.payment.entity.enums.PaymentStatus;
 import com.example.hot6novelcraft.domain.payment.repository.PaymentRepository;
 import com.example.hot6novelcraft.domain.point.service.PointService;
 import com.example.hot6novelcraft.domain.purchases.entity.Purchase;

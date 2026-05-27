@@ -21,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
@@ -502,7 +501,8 @@ class WebhookServiceTest {
             // when & then
             try {
                 webhookService.handleWebhook(request);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
 
             verify(redisUtil, times(1)).releaseLock("payment:cancel:lock:" + PAYMENT_KEY);
         }

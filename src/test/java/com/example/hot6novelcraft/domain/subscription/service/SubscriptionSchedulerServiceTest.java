@@ -19,7 +19,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -48,8 +49,8 @@ class SubscriptionSchedulerServiceTest {
     private static final String SUBSCRIPTION_KEY_2 = "subscription-key-2";
 
     private Subscription createMockSubscription(Long id, Long userId, SubscriptionStatus status,
-                                                 PlanType planType, String billingKey, Long amount,
-                                                 LocalDateTime nextBillingAt) {
+                                                PlanType planType, String billingKey, Long amount,
+                                                LocalDateTime nextBillingAt) {
         Subscription subscription = mock(Subscription.class);
         given(subscription.getId()).willReturn(id);
         given(subscription.getUserId()).willReturn(userId);

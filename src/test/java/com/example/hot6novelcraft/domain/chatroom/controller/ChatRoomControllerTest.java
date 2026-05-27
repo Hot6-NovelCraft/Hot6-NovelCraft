@@ -4,19 +4,15 @@ import com.example.hot6novelcraft.common.dto.PageResponse;
 import com.example.hot6novelcraft.common.exception.GlobalExceptionHandler;
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.ChatExceptionEnum;
-import com.example.hot6novelcraft.domain.chatroom.chatredispubsub.ChatRedisPublisher;
 import com.example.hot6novelcraft.domain.chatmessage.entity.enums.MessageType;
+import com.example.hot6novelcraft.domain.chatroom.chatredispubsub.ChatRedisPublisher;
 import com.example.hot6novelcraft.domain.chatroom.dto.response.ChatMessageResponse;
 import com.example.hot6novelcraft.domain.chatroom.dto.response.ChatRoomResponse;
 import com.example.hot6novelcraft.domain.chatroom.service.ChatService;
 import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -41,7 +37,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

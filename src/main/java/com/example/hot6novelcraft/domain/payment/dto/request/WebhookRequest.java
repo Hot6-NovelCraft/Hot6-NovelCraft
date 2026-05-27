@@ -5,11 +5,11 @@ package com.example.hot6novelcraft.domain.payment.dto.request;
  *
  * V2 웹훅 형식:
  * {
- *   "type": "Transaction.Paid",
- *   "data": {
- *     "paymentId": "payment-xxx",
- *     "transactionId": "xxx"
- *   }
+ * "type": "Transaction.Paid",
+ * "data": {
+ * "paymentId": "payment-xxx",
+ * "transactionId": "xxx"
+ * }
  * }
  *
  * type 종류: Transaction.Paid | Transaction.Failed | Transaction.Cancelled
@@ -22,5 +22,6 @@ public record WebhookRequest(
             String paymentId,
             String transactionId,
             String cancellationId
-    ) {}
+    ) {
+    }
 }

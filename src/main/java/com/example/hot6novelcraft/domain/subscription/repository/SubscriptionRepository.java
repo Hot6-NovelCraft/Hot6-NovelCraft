@@ -17,8 +17,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Optional<Subscription> findByUserIdAndSubscriptionStatus(Long userId, SubscriptionStatus status);
 
     @Query("SELECT s FROM Subscription s WHERE s.userId = :userId AND " +
-           "(s.subscriptionStatus = 'ACTIVE' OR " +
-           "(s.subscriptionStatus = 'CANCELLED' AND s.nextBillingAt > :now))")
+            "(s.subscriptionStatus = 'ACTIVE' OR " +
+            "(s.subscriptionStatus = 'CANCELLED' AND s.nextBillingAt > :now))")
     Optional<Subscription> findCurrentSubscription(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 
     Optional<Subscription> findFirstByUserIdAndSubscriptionStatusAndNextBillingAtAfterOrderByNextBillingAtDesc(

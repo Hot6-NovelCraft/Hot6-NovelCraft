@@ -35,9 +35,9 @@ class AiChatServiceTest {
     private ChatMemory chatMemory;
 
     private void mockRequestChain(ChatClientRequestSpec requestSpec,
-                                   StreamResponseSpec streamSpec,
-                                   String message,
-                                   Flux<String> responseFlux) {
+                                  StreamResponseSpec streamSpec,
+                                  String message,
+                                  Flux<String> responseFlux) {
         given(customerServiceChatClient.prompt()).willReturn(requestSpec);
         given(requestSpec.user(message)).willReturn(requestSpec);
         given(requestSpec.advisors(any(MessageChatMemoryAdvisor.class))).willReturn(requestSpec);

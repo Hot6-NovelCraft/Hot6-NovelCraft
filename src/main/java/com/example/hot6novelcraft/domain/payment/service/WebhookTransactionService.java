@@ -42,7 +42,7 @@ public class WebhookTransactionService {
      * 멱등성 체크 후 WebhookEvent를 준비한다.
      *
      * @return null이면 이미 처리 완료된 이벤트 (처리 skip),
-     *         non-null이면 신규 또는 재시도 이벤트 (처리 계속)
+     * non-null이면 신규 또는 재시도 이벤트 (처리 계속)
      */
     @Transactional
     public WebhookEvent prepareWebhookEvent(String transactionId, WebhookEventType eventType,
@@ -194,15 +194,15 @@ public class WebhookTransactionService {
 
     /**
      * [환불 타임아웃 보정] COMPLETED 결제를 REFUNDED로 전환한다.
-     *
+     * <p>
      * cancelPayment()에서 포트원 취소 API 타임아웃 발생 시:
-     *   - compensateDeduct()로 포인트 복구 후 Payment가 COMPLETED로 남는 케이스
-     *   - 이후 Transaction.Cancelled 웹훅 도착 시 이 메서드로 보정
-     *
+     * - compensateDeduct()로 포인트 복구 후 Payment가 COMPLETED로 남는 케이스
+     * - 이후 Transaction.Cancelled 웹훅 도착 시 이 메서드로 보정
+     * <p>
      * 포인트 처리 전략:
-     *   - compensateDeduct 실행됨 → 포인트 잔액 있음 → deduct 성공 → 정상 차감
-     *   - compensateDeduct 미실행 (서버 다운 등) → 이미 차감된 상태 → deduct 잔액 부족 예외 → 스킵
-     *   두 경우 모두 최종적으로 REFUNDED 상태가 되어 포트원 상태와 일치
+     * - compensateDeduct 실행됨 → 포인트 잔액 있음 → deduct 성공 → 정상 차감
+     * - compensateDeduct 미실행 (서버 다운 등) → 이미 차감된 상태 → deduct 잔액 부족 예외 → 스킵
+     * 두 경우 모두 최종적으로 REFUNDED 상태가 되어 포트원 상태와 일치
      */
     @Transactional
     public void finalizeRefundFromWebhook(Long webhookEventId, Long paymentDbId) {
