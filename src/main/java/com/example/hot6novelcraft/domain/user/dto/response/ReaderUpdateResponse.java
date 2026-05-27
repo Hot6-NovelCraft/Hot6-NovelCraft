@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 public record ReaderUpdateResponse(
         Long readerProfileId,
@@ -25,8 +24,8 @@ public record ReaderUpdateResponse(
         List<MainGenre> parsedGenres = (profile.getPreferredGenres() == null || profile.getPreferredGenres().isBlank())
                 ? Collections.emptyList()
                 : Arrays.stream(profile.getPreferredGenres().split(","))
-                .map(MainGenre::valueOf) // 👈 만들어둔 헬퍼 메서드 재사용!
-                .toList();
+                  .map(MainGenre::valueOf) // 👈 만들어둔 헬퍼 메서드 재사용!
+                  .toList();
 
         return new ReaderUpdateResponse(
                 profile.getId(),

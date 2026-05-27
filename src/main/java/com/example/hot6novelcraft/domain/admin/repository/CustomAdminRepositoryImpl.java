@@ -29,7 +29,9 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
     private final QNovel novel = QNovel.novel;
     private final QMentor mentor = QMentor.mentor;
 
-    /** ======= v1 기본 쿼리 8개 ======= **/
+    /**
+     * v1 기본 쿼리 8개
+     */
 
     // 회원
     public Long countTotalUsers() {
@@ -59,10 +61,10 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
                         user.isDeleted.eq(false)
                         , user.createdAt.goe(startOfDay)
                         , user.role.notIn(
-                                        UserRole.SUPER_ADMIN
-                                        , UserRole.ADMIN
-                                        , UserRole.PENDING_ADMIN
-                                        , UserRole.REJECTED_ADMIN
+                                UserRole.SUPER_ADMIN
+                                , UserRole.ADMIN
+                                , UserRole.PENDING_ADMIN
+                                , UserRole.REJECTED_ADMIN
                         )
                 )
                 .fetchOne();
@@ -77,7 +79,7 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
                 .where(
                         user.isDeleted.eq(false)
                         , role != null
-                            ? user.role.eq(role)
+                                ? user.role.eq(role)
                                 : user.role.in(UserRole.READER, UserRole.AUTHOR)
                 )
                 .fetchOne();
@@ -110,7 +112,7 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
         BooleanBuilder builder = new BooleanBuilder();
 
         // 삭제 소설 조회 요청인 경우
-        if(Boolean.TRUE.equals(isSoftDel)) {
+        if (Boolean.TRUE.equals(isSoftDel)) {
             builder.and(novel.isDeleted.eq(true));
 
         } else {
@@ -118,7 +120,7 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
             builder.and(novel.isDeleted.eq(false));
 
             // novelStatus 있으면 해당 상태만 필터
-            if(novelStatusEnum != null) {
+            if (novelStatusEnum != null) {
                 builder.and(novel.status.eq(novelStatusEnum));
             }
         }
@@ -151,20 +153,22 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
         return result != null ? result : 0L;
     }
 
-    /** ======= v2 쿼리 병합 ======= **/
+    /**
+     * v2 쿼리 병합
+     */
     @Override
     public AdminDashboardUserStatusResponse getIntegratedUserStatus(UserRole role) {
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
 
         return queryFactory
                 .select(Projections.constructor(AdminDashboardUserStatusResponse.class
-                , user.count() // 전체 회원
-                , new CaseBuilder()
+                        , user.count() // 전체 회원
+                        , new CaseBuilder()
                                 .when(user.createdAt.goe(startOfDay))
                                 .then(1L)
                                 .otherwise(0L)
                                 .sum().coalesce(0L)
-                , new CaseBuilder().when(role != null // 오늘 신규
+                        , new CaseBuilder().when(role != null // 오늘 신규
                                         ? user.role.eq(role)
                                         : user.role.in(UserRole.AUTHOR, UserRole.READER))
                                 .then(1L).otherwise(0L)
@@ -187,21 +191,21 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
 
         return queryFactory
                 .select(Projections.constructor(AdminDashboardNovelStatusResponse.class
-                // 전체 소설 : ALL 이면 통과, 아니면 삭제 안된 것만
-                , new CaseBuilder().when("ALL".equalsIgnoreCase(totalStatusFilter)
+                        // 전체 소설 : ALL 이면 통과, 아니면 삭제 안된 것만
+                        , new CaseBuilder().when("ALL".equalsIgnoreCase(totalStatusFilter)
                                         ? novel.id.isNotNull()
                                         : novel.isDeleted.eq(false))
-                                        .then(1L).otherwise(0L)
-                                        .sum().coalesce(0L)
-                // 오늘 신규 등록
-                , new CaseBuilder().when(novel.isDeleted.eq(false)
-                                    .and(novel.createdAt.goe(startOfDay)))
-                                    .then(1L).otherwise(0L)
-                                    .sum().coalesce(0L)
-                // 필터 적용 소설
-                , new CaseBuilder().when(filterNovelByCondition(filterStatus, isSoftDel))
-                                    .then(1L).otherwise(0L)
-                                    .sum().coalesce(0L)
+                                .then(1L).otherwise(0L)
+                                .sum().coalesce(0L)
+                        // 오늘 신규 등록
+                        , new CaseBuilder().when(novel.isDeleted.eq(false)
+                                        .and(novel.createdAt.goe(startOfDay)))
+                                .then(1L).otherwise(0L)
+                                .sum().coalesce(0L)
+                        // 필터 적용 소설
+                        , new CaseBuilder().when(filterNovelByCondition(filterStatus, isSoftDel))
+                                .then(1L).otherwise(0L)
+                                .sum().coalesce(0L)
                 ))
                 .from(novel)
                 .fetchOne();
@@ -214,9 +218,9 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
 
         return queryFactory
                 .select(Projections.constructor(AdminDashboardMentorsStatusResponse.class
-                , mentor.count() // 멘토, 멘티 전체 (status 안나눠져 있음)
-                // 오늘 신규 멘토/멘티
-                , new CaseBuilder()
+                        , mentor.count() // 멘토, 멘티 전체 (status 안나눠져 있음)
+                        // 오늘 신규 멘토/멘티
+                        , new CaseBuilder()
                                 .when(mentor.createdAt.goe(startOfDay))
                                 .then(1L).otherwise(0L)
                                 .sum().coalesce(0L)
@@ -225,11 +229,13 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
                 .fetchOne();
     }
 
-    /** ======= 공통 메소드 ======= **/
+    /**
+     * 공통 메소드
+     */
 
     // V1
     private BooleanExpression checkNovelStatus(String novelStatus) {
-        if("ALL".equalsIgnoreCase(novelStatus)) {
+        if ("ALL".equalsIgnoreCase(novelStatus)) {
             // 삭제, 보류 상관없이 전부 다 가져옴
             return null;
         }
@@ -240,11 +246,11 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
     // V2
     private BooleanExpression filterNovelByCondition(NovelStatus filterStatus, Boolean isSoftDel) {
         // 요청이 isDeleted=true 면 삭제된 소설만
-        if(Boolean.TRUE.equals(isSoftDel)) {
+        if (Boolean.TRUE.equals(isSoftDel)) {
             return novel.isDeleted.eq(true);
         }
         // 특정 상태 필터
-        if(filterStatus != null) {
+        if (filterStatus != null) {
             return novel.isDeleted.eq(false)
                     .and(novel.status.eq(filterStatus));
         }

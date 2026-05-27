@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
-@Slf4j( topic = "AdminStatsScheduler")
+@Slf4j(topic = "AdminStatsScheduler")
 @Component
 @RequiredArgsConstructor
 public class AdminStatsScheduler {

@@ -46,7 +46,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String providerId = extractProviderId(oAuth2User, registrationId);
 
         // 이메일이 없으면 구글 계정 문제 (이메일 공개 비허용 설정 등 예외 상황)
-        if(email == null || email.isBlank()) {
+        if (email == null || email.isBlank()) {
             log.error("[소셜 로그인] 구글에서 이메일 정보를 받지 못했습니다.");
             throw new OAuth2AuthenticationException(
                     new OAuth2Error("email_not_found"), "구글 계정에서 이메일을 가져올 수 없습니다.");
@@ -59,7 +59,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // DB에서 이메일로 기존 유저 조회
         User user;
 
-        if(!isExisting) {
+        if (!isExisting) {
 
             java.util.Optional<User> userByEmail = userRepository.findByEmail(email);
 
@@ -100,42 +100,42 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
             log.info("[소셜 로그인] 기존 소셜 유저 로그인, email: {}", email);
         }
-            // UserDetailsImpl 로 반환해서 SuccessHandler에서 사용
-            return new UserDetailsImpl(user, oAuth2User.getAttributes());
+        // UserDetailsImpl 로 반환해서 SuccessHandler에서 사용
+        return new UserDetailsImpl(user, oAuth2User.getAttributes());
     }
 
-        // 플랫폼별 이메일 추출
-        private String extractEmail(OAuth2User oAuth2User, String registrationId) {
-            return switch (registrationId.toLowerCase()) {
-                case "google" -> oAuth2User.getAttribute("email");
-                case "kakao" -> {
-                    Object idObj = oAuth2User.getAttributes().get("id");
-                    Long kakaoId = idObj instanceof Long? (Long) idObj : Long.valueOf(String.valueOf(idObj));
-                    Map<String, Object> kakaoAccount = oAuth2User.getAttribute("kakao_account");
-                    String kakaoEmail = kakaoAccount != null ? (String) kakaoAccount.get("email") : null;
-                    yield kakaoEmail != null ? kakaoEmail : kakaoId + "@kakao.com"; //  이메일이 없으면 임시 생성
-                }
-                case "naver" -> {
-                    Map<String, Object> naverResponse = oAuth2User.getAttribute("response");
-                    String naverEmail = naverResponse != null ? (String) naverResponse.get("email") : null;
-                    yield naverEmail != null ? naverEmail : naverResponse.get("id") + "@naver.com";
-                }
-                default -> throw new OAuth2AuthenticationException(
-                        new OAuth2Error("unsupported_provider"), "지원하지 않는 소셜 플랫폼입니다: " + registrationId);
-            };
-        }
+    // 플랫폼별 이메일 추출
+    private String extractEmail(OAuth2User oAuth2User, String registrationId) {
+        return switch (registrationId.toLowerCase()) {
+            case "google" -> oAuth2User.getAttribute("email");
+            case "kakao" -> {
+                Object idObj = oAuth2User.getAttributes().get("id");
+                Long kakaoId = idObj instanceof Long ? (Long) idObj : Long.valueOf(String.valueOf(idObj));
+                Map<String, Object> kakaoAccount = oAuth2User.getAttribute("kakao_account");
+                String kakaoEmail = kakaoAccount != null ? (String) kakaoAccount.get("email") : null;
+                yield kakaoEmail != null ? kakaoEmail : kakaoId + "@kakao.com"; //  이메일이 없으면 임시 생성
+            }
+            case "naver" -> {
+                Map<String, Object> naverResponse = oAuth2User.getAttribute("response");
+                String naverEmail = naverResponse != null ? (String) naverResponse.get("email") : null;
+                yield naverEmail != null ? naverEmail : naverResponse.get("id") + "@naver.com";
+            }
+            default -> throw new OAuth2AuthenticationException(
+                    new OAuth2Error("unsupported_provider"), "지원하지 않는 소셜 플랫폼입니다: " + registrationId);
+        };
+    }
 
-        // 플랫폼별 고유 ID 추출
-        private String extractProviderId(OAuth2User oAuth2User, String registrationId) {
-            return switch (registrationId.toLowerCase()) {
-                case "google" -> oAuth2User.getAttribute("sub");
-                case "kakao" -> String.valueOf(oAuth2User.getAttributes().get("id"));
-                case "naver" -> {
-                    Map<String, Object> naverResponse = oAuth2User.getAttribute("response");
-                    yield naverResponse != null ? (String) naverResponse.get("id") : null;
-                }
-                default -> throw new OAuth2AuthenticationException(
-                        new OAuth2Error("unsupported_provider"), "지원하지 않는 소셜 플랫폼입니다: " + registrationId);
-            };
-        }
+    // 플랫폼별 고유 ID 추출
+    private String extractProviderId(OAuth2User oAuth2User, String registrationId) {
+        return switch (registrationId.toLowerCase()) {
+            case "google" -> oAuth2User.getAttribute("sub");
+            case "kakao" -> String.valueOf(oAuth2User.getAttributes().get("id"));
+            case "naver" -> {
+                Map<String, Object> naverResponse = oAuth2User.getAttribute("response");
+                yield naverResponse != null ? (String) naverResponse.get("id") : null;
+            }
+            default -> throw new OAuth2AuthenticationException(
+                    new OAuth2Error("unsupported_provider"), "지원하지 않는 소셜 플랫폼입니다: " + registrationId);
+        };
+    }
 }

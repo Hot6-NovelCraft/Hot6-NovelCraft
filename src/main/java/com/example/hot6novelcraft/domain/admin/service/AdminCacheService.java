@@ -7,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @Slf4j(topic = "AdminCacheService")
 @Service
@@ -29,7 +27,7 @@ public class AdminCacheService {
         String key = getTodayUsersKey();
         String cached = redisUtil.getAsString(key);
 
-        if(cached != null) {
+        if (cached != null) {
             log.info("[Cache HIT] 신규 가입 회원: {}", cached);
             return Long.parseLong(cached);
         }
@@ -50,7 +48,7 @@ public class AdminCacheService {
         String key = getTodayNovelsKey();
         String cached = redisUtil.getAsString(key);
 
-        if(cached != null) {
+        if (cached != null) {
             log.info("[Cache HIT] 신작 소설: {}", cached);
             return Long.parseLong(cached);
         }
@@ -71,7 +69,7 @@ public class AdminCacheService {
         String key = getTodayMentorsKey();
         String cached = redisUtil.getAsString(key);
 
-        if(cached != null) {
+        if (cached != null) {
             log.info("[Cache HIT] 신규 멘토 등록: {}", cached);
             return Long.parseLong(cached);
         }
@@ -87,7 +85,9 @@ public class AdminCacheService {
         return count;
     }
 
-    /** ====== [스케쥴용] 특정 날짜 캐시 직접 조회====== **/
+    /**
+     * ====== [스케쥴용] 특정 날짜 캐시 직접 조회======
+     **/
     public Long getNewUsersByDate(LocalDate targetDate) {
         String key = NEW_USERS_TODAY_KEY + targetDate;
         String cached = redisUtil.getAsString(key);
@@ -106,7 +106,9 @@ public class AdminCacheService {
         return cached != null ? Long.parseLong(cached) : 0L;
     }
 
-    /** ====== 실시간 데이터 생성 시 카운트 +1 증가 ====== **/
+    /**
+     * ====== 실시간 데이터 생성 시 카운트 +1 증가 ======
+     **/
 
     // 회원 가입 완료 시 -> Redis 원자적 +1 (동시성)
     public void incrementNewUsersToday() {
@@ -132,7 +134,9 @@ public class AdminCacheService {
         log.info("[Cache UPDATE] 신규 멘토 등록 +1");
     }
 
-    /** ====== key 생성 공통 메소드 ======= */
+    /**
+     * ====== key 생성 공통 메소드 =======
+     */
     // 오늘 날짜가 붙은 key 생성
     private String getTodayUsersKey() {
         return NEW_USERS_TODAY_KEY + LocalDate.now();

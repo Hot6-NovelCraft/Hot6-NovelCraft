@@ -49,7 +49,6 @@ public class AuthController {
      * 3. 독자 프로필 - 전호 장르, 독서 목표
      * 4. 비번 변경
      * 5. 1년 후 성인 인증 갱신
-     * =============================
      */
 
     @PatchMapping("/users/me")
@@ -111,7 +110,6 @@ public class AuthController {
      * 2. 회원탈퇴
      * 3. 계정복구 (30일 이내)
      * 4. 즉시파기 (새로운 이력생성 위해)
-     * =============================
      */
     @PostMapping("/logout")
     public ResponseEntity<BaseResponse<Void>> logout(
@@ -157,7 +155,7 @@ public class AuthController {
             throw new ServiceErrorException(UserExceptionEnum.ERR_INVALID_TOKEN);
         }
         try {
-            if(!jwtUtil.isRecoveryToken(recoveryToken)) {
+            if (!jwtUtil.isRecoveryToken(recoveryToken)) {
                 throw new ServiceErrorException(UserExceptionEnum.ERR_INVALID_TOKEN);
             }
             return jwtUtil.extractEmail(recoveryToken);

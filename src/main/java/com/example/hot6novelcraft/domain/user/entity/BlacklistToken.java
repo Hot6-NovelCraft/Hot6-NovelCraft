@@ -15,11 +15,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @Table(name = "blacklist_tokens"
-                , indexes = @Index(name = "idx_blacklist_token", columnList = "token")
+        , indexes = @Index(name = "idx_blacklist_token", columnList = "token")
 )
 public class BlacklistToken extends BaseEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     // JWT access token

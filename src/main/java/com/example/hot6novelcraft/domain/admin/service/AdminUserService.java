@@ -3,7 +3,6 @@ package com.example.hot6novelcraft.domain.admin.service;
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.UserExceptionEnum;
 import com.example.hot6novelcraft.domain.admin.dto.response.AdminResponse;
-import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +23,7 @@ public class AdminUserService {
     /**
      * 일반 관리자 승인 대기 목록 조회
      * 관리자 승인/거절 처리
-     * */
+     */
 
     // 관리자 승인 대기 목록 조회 (SUPER_ADMIN 전용)
     @Transactional(readOnly = true)
@@ -41,7 +40,7 @@ public class AdminUserService {
         int updateRole = userRepository.updateRoleIfCurrent(userId, UserRole.PENDING_ADMIN, UserRole.ADMIN);
 
         // 유저가 없거나 이미 다른 관리자가 승인/거절 누른 상태
-        if(updateRole == 0) {
+        if (updateRole == 0) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_NOT_PENDING_ADMIN);
         }
     }
@@ -53,7 +52,7 @@ public class AdminUserService {
         int updateRole = userRepository.updateRoleIfCurrent(userId, UserRole.PENDING_ADMIN, UserRole.REJECTED_ADMIN);
 
         // 유저가 없거나 이미 다른 관리자가 승인/거절 누른 상태
-        if(updateRole == 0) {
+        if (updateRole == 0) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_NOT_POSSIBLE_TO_REFUSE);
         }
     }

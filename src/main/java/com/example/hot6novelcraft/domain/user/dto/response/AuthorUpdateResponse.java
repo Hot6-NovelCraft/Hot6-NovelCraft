@@ -36,17 +36,17 @@ public record AuthorUpdateResponse(
         List<MainGenre> parsedGenres = (profile.getMainGenre() == null || profile.getMainGenre().isBlank())
                 ? Collections.emptyList()
                 : Arrays.stream(profile.getMainGenre().split(","))
-                .map(String::trim) // 공백 제거 (예: " ROMANCE" -> "ROMANCE")
-                .map(String::toUpperCase) // 대소문자 방어
-                .map(genreStr -> {
-                    try {
-                        return MainGenre.valueOf(genreStr);
-                    } catch (IllegalArgumentException e) {
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull) // null로 반환된 잘못된 값 필터링
-                .toList();
+                  .map(String::trim) // 공백 제거 (예: " ROMANCE" -> "ROMANCE")
+                  .map(String::toUpperCase) // 대소문자 방어
+                  .map(genreStr -> {
+                      try {
+                          return MainGenre.valueOf(genreStr);
+                      } catch (IllegalArgumentException e) {
+                          return null;
+                      }
+                  })
+                  .filter(Objects::nonNull) // null로 반환된 잘못된 값 필터링
+                  .toList();
 
         return new AuthorUpdateResponse(
                 profile.getId(),

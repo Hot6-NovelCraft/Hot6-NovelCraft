@@ -47,14 +47,15 @@ public class AuthService {
     private final AuthorProfileRepository authorProfileRepository;
     private final ReaderProfileRepository readerProfileRepository;
 
-    /** ======== 로그인 및 로그아웃 ========
-    1. 로그인 - 일반, 소셜, 관리자 공통
-    2. 내 정보 조회
-    3. 회원정보 수정 - 공통, 작가, 독자별
-    4. 비밀번호 변경
-    5. 회원 탈퇴
-    6. 로그아웃
-    =================================== */
+    /**
+     * ======== 로그인 및 로그아웃 ========
+     * 1. 로그인 - 일반, 소셜, 관리자 공통
+     * 2. 내 정보 조회
+     * 3. 회원정보 수정 - 공통, 작가, 독자별
+     * 4. 비밀번호 변경
+     * 5. 회원 탈퇴
+     * 6. 로그아웃
+     */
 
     public LoginUserResponse login(LoginUserRequest request) {
 
@@ -62,7 +63,7 @@ public class AuthService {
 
         try {
             authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password()));
         } catch (AuthenticationException e) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_INVALID_EMAIL_OR_PASSWORD);
         }
@@ -70,7 +71,7 @@ public class AuthService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         User user = userDetails.getUser();
 
-        if(user.isDeleted()) {
+        if (user.isDeleted()) {
 
             // 계정 복구 및 초기 파기 요청 임시 토큰
             String recoveryToken = jwtUtil.createRecoveryToken(user.getEmail());
@@ -95,9 +96,9 @@ public class AuthService {
     public MyPageResponse getMyPage(UserDetailsImpl userDetails) {
 
         User user = userRepository.findById(userDetails.getUser().getId())
-                .orElseThrow(()-> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
+                .orElseThrow(() -> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
 
-        return switch(user.getRole()) {
+        return switch (user.getRole()) {
             case AUTHOR -> {
                 AuthorProfile authorProfile = authorProfileRepository.findByUserId(user.getId())
                         .orElseThrow(() -> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_AUTHOR_PROFILE));
@@ -126,14 +127,14 @@ public class AuthService {
         String verifiedKeyToDelete = null;
 
         // 휴대폰 번호 수정
-        if(request.phoneNo() != null && !user.getPhoneNo().equals(request.phoneNo())) {
+        if (request.phoneNo() != null && !user.getPhoneNo().equals(request.phoneNo())) {
 
             String cleanPhoneNo = request.phoneNo().replaceAll("-", "");
             String verifiedKey = "SMS:VERIFIED:" + cleanPhoneNo;
 
             Object isVerified = redisUtil.get(verifiedKey);
 
-            if(isVerified == null || !"TRUE".equals(isVerified.toString())) {
+            if (isVerified == null || !"TRUE".equals(isVerified.toString())) {
 
                 log.info("[SMS] 인증되지 않은 번호로 접근 시도됨, {} ", cleanPhoneNo);
                 throw new ServiceErrorException(UserExceptionEnum.ERR_PHONE_NOT_VERIFIED);
@@ -148,7 +149,7 @@ public class AuthService {
         userRepository.flush();
 
         // DB 반영 완료 후, Redis 키 삭제
-        if(verifiedKeyToDelete != null) {
+        if (verifiedKeyToDelete != null) {
             redisUtil.delete(verifiedKeyToDelete);
             log.info("[SMS] Redis 인증 확인 및 삭제 완료, phoneNo: {} ", verifiedKeyToDelete);
         }
@@ -159,9 +160,9 @@ public class AuthService {
     public AuthorUpdateResponse authorUpdateProfile(AuthorRequest request, UserDetailsImpl userDetails) {
 
         User user = userRepository.findByIdAndIsDeletedFalse(userDetails.getUser().getId())
-                .orElseThrow(()-> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
+                .orElseThrow(() -> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
 
-        if(user.getRole() != UserRole.AUTHOR) {
+        if (user.getRole() != UserRole.AUTHOR) {
             throw new ServiceErrorException(NovelExceptionEnum.NOVEL_AUTHOR_FORBIDDEN);
         }
 
@@ -186,7 +187,7 @@ public class AuthService {
     public ReaderUpdateResponse readerUpdateProfile(ReaderUpdatedRequest request, UserDetailsImpl userDetails) {
 
         User user = userRepository.findByIdAndIsDeletedFalse(userDetails.getUser().getId())
-                .orElseThrow(()-> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
+                .orElseThrow(() -> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
 
         ReaderProfile readerProfile = readerProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
@@ -204,18 +205,18 @@ public class AuthService {
     public void updatePassword(String oldPassword, String newPassword, UserDetailsImpl userDetails) {
 
         User user = userRepository.findByIdAndIsDeletedFalse(userDetails.getUser().getId())
-                .orElseThrow(()-> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
+                .orElseThrow(() -> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
 
-        if("SOCIAL_LOGIN".equals(user.getPassword())) {
+        if ("SOCIAL_LOGIN".equals(user.getPassword())) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_SOCIAL_USER_CANNOT_CHANGE_PASSWORD);
         }
 
         // 현재, 변경 비밀번호 검증
-        if(!passwordEncoder.matches(oldPassword, user.getPassword())) {
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_PASSWORD_NOT_MATCH);
         }
 
-        if(passwordEncoder.matches(newPassword, user.getPassword())) {
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_SAME_AS_OLD_PASSWORD);
         }
 
@@ -232,26 +233,27 @@ public class AuthService {
             long expiration = jwtUtil.getExpiration(token);
 
             log.warn("===== [디버깅] 추출된 만료 시간 숫자: {} =====", expiration);
-            if(expiration > 0) {
+            if (expiration > 0) {
                 redisUtil.setBlackList(token, "Logout", Duration.ofMillis(expiration));
                 log.info("===== [블랙리스트 등록] 사용자가 로그아웃하였습니다. 남은 시간: {}ms =====", expiration);
             }
-        } catch(ExpiredJwtException e) {
+        } catch (ExpiredJwtException e) {
             log.warn("이미 만료된 토큰입니다. reason: {}", e.getMessage());
         }
     }
 
-    /** ======== 회원 탈퇴 ========
-     1. 탈퇴 유예 - 탈퇴 직후부터 30일 유예 상태로 변경
-     2. 회원 복구 - 탈퇴 직후부터 30일 이내 재로그인 (사용자 마음 변함)
-     3. 즉시 파기 - 30일 이전 유저 요청에 의한 즉시 데이터 파기 (새로운 이력 생성)
-     =================================== */
+    /**
+     * ======== 회원 탈퇴 ========
+     * 1. 탈퇴 유예 - 탈퇴 직후부터 30일 유예 상태로 변경
+     * 2. 회원 복구 - 탈퇴 직후부터 30일 이내 재로그인 (사용자 마음 변함)
+     * 3. 즉시 파기 - 30일 이전 유저 요청에 의한 즉시 데이터 파기 (새로운 이력 생성)
+     */
     public void withdrawUser(String accessToken, String email) {
-        User user =  userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
 
         // 탈퇴한 유저인지 검증
-        if(user.isDeleted()) {
+        if (user.isDeleted()) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_USER_WITHDRAWAL_PENDING_FORBIDDEN);
         }
 
@@ -263,10 +265,10 @@ public class AuthService {
     }
 
     public void restoreUser(String email) {
-        User user =  userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ServiceErrorException(UserExceptionEnum.ERR_NOT_FOUND_USER));
 
-        if(!user.isDeleted()) {
+        if (!user.isDeleted()) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_USER_WITHDRAWAL_PENDING_CONFLICT);
         }
         user.restore();

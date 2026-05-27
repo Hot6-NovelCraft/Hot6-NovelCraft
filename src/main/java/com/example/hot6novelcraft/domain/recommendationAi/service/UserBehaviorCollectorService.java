@@ -28,10 +28,11 @@ public class UserBehaviorCollectorService {
     private static final String HISTORY_KEY_PREFIX = "search:history:";
     private static final String TAG_SEARCH_RANK_KEY = "ranking:search:tag";
 
-    /** 사용자 행동 데이터 수집 후 AI 입력용 요약으로 변환
+    /**
+     * 사용자 행동 데이터 수집 후 AI 입력용 요약으로 변환
      * @param userId 로그인한 사용자 ID
      * @return AI에게 넘길 행동
-     * */
+     */
     public UserBehaviorSummary collect(Long userId) {
         return new UserBehaviorSummary(
                 collectRecentReadNovels(userId)
@@ -49,7 +50,7 @@ public class UserBehaviorCollectorService {
                     .findRecentPurchasedNovelIds(userId, PointHistoryType.NOVEL, PageRequest.of(0, 10))
                     .getContent();
 
-            if(novelIds.isEmpty()) {
+            if (novelIds.isEmpty()) {
                 return Collections.emptyList();
             }
 

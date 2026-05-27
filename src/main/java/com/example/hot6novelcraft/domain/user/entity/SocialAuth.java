@@ -27,11 +27,11 @@ public class SocialAuth extends BaseEntity {
     private String providerId;
 
     public static SocialAuth register(ProviderSns provider, String providerId, Long userId) {
-      return SocialAuth.builder()
-              .provider(provider)
-              .providerId(providerId)
-              .userId(userId)
-              .build();
+        return SocialAuth.builder()
+                .provider(provider)
+                .providerId(providerId)
+                .userId(userId)
+                .build();
     }
 
     public void updateProviderId(String providerId) {

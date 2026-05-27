@@ -10,20 +10,20 @@ import java.util.stream.Collectors;
 
 public record ReaderSignupRequest(
 
-    @NotEmpty (message = "선호 장르 선택은 필수입니다")
-    @Size(min = 1, message = "중복 선택이 가능합니다.")
-    List<MainGenre> preferredGenres,
+        @NotEmpty(message = "선호 장르 선택은 필수입니다")
+        @Size(min = 1, message = "중복 선택이 가능합니다.")
+        List<MainGenre> preferredGenres,
 
-    ReadingGoal readingGoal,
+        ReadingGoal readingGoal,
 
-    Boolean notifyNewNovel,
+        Boolean notifyNewNovel,
 
-    Boolean notifyEvent
-){
+        Boolean notifyEvent
+) {
 
     // 선호 장르 반환
     public String mainGenreToString() {
-        if(preferredGenres == null || preferredGenres.isEmpty())
+        if (preferredGenres == null || preferredGenres.isEmpty())
             return null;
         return preferredGenres.stream()
                 .map(MainGenre::toString)

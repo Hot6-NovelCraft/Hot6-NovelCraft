@@ -5,13 +5,13 @@ import com.example.hot6novelcraft.common.exception.domain.UserExceptionEnum;
 import com.example.hot6novelcraft.common.security.RedisUtil;
 import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
-import net.nurigo.sdk.message.model.Message;
+import lombok.extern.slf4j.Slf4j;
 import net.nurigo.sdk.NurigoApp;
+import net.nurigo.sdk.message.model.Message;
 import net.nurigo.sdk.message.request.SingleMessageSendingRequest;
 import net.nurigo.sdk.message.response.SingleMessageSentResponse;
 import net.nurigo.sdk.message.service.DefaultMessageService;
 import org.springframework.beans.factory.annotation.Value;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +37,7 @@ public class SmsService {
             , RedisUtil redisUtil,
             UserRepository userRepository) {
         // 4.x 버전 - 여기서 CoolSMS 객체 초기화
-        this.messageService = NurigoApp.INSTANCE.initialize(apiKey,apiSecret,"https://api.coolsms.co.kr");
+        this.messageService = NurigoApp.INSTANCE.initialize(apiKey, apiSecret, "https://api.coolsms.co.kr");
         this.fromNumber = fromNumber;
         this.redisUtil = redisUtil;
         this.isTestMode = isTestMode;
@@ -61,7 +61,7 @@ public class SmsService {
         // 24시간(1140) 기준으로 카운트 증가
         Long requestCount = redisUtil.incrementAndExpire(limitKey, 1440);
 
-        if(requestCount != null && requestCount > 5) {
+        if (requestCount != null && requestCount > 5) {
             log.warn("[SMS] 일일 전송 횟수 5회 초과, 수신번호: {}", phoneNumber);
             throw new ServiceErrorException(UserExceptionEnum.ERR_EXCEED_SMS_LIMIT);
         }
@@ -74,7 +74,7 @@ public class SmsService {
         redisUtil.set(redisKey, randomCode, 5);
 
         // testMode 켜져있을 때 로그만 찍힘
-        if(isTestMode) {
+        if (isTestMode) {
             log.info("[SMS TEST] 진짜 문자를 발송하지 않습니다.");
             log.info("[SMS TEST] 수신번호: {}, 인증번호: [{}]", phoneNumber, randomCode);
             return;
@@ -104,7 +104,7 @@ public class SmsService {
         String redisKey = "SMS:VERIFIED:" + phoneNumber;
 
         boolean isVerified = redisUtil.verifyAndDeleteWithLua(redisKey, inputCode);
-        if(!isVerified) {
+        if (!isVerified) {
             log.error("[SMS] 인증번호 불일치, key: {}", redisKey);
             throw new ServiceErrorException(UserExceptionEnum.ERR_INVALID_PHONE_VERIFICATION);
         }
@@ -114,7 +114,7 @@ public class SmsService {
 
         String tokenKey = "SMS:TOKEN:" + tempToken;
         redisUtil.set(tokenKey, phoneNumber, 10);
-        
+
         log.info("[SMS] 인증번호 검증 성공, key: {}", redisKey);
         return tempToken;
     }

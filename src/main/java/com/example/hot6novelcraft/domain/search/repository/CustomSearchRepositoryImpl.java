@@ -27,11 +27,13 @@ public class CustomSearchRepositoryImpl implements CustomSearchRepository {
 
     private final JPAQueryFactory queryFactory;
 
-    /** ===============================
-     소설 검색
-        - 제목에 키워드 포함된 소설 목록
-        - response : 표지, 제목, 작가 닉네임, 장르
-     =================================== */
+    /**
+     * ===============================
+     * 소설 검색
+     * - 제목에 키워드 포함된 소설 목록
+     * - response : 표지, 제목, 작가 닉네임, 장르
+     * ===================================
+     */
     @Override
     public Page<NovelSearchResponse> searchNovelsByTitle(String keyword, Pageable pageable, boolean isAdult) {
         QNovel novel = QNovel.novel;
@@ -70,15 +72,17 @@ public class CustomSearchRepositoryImpl implements CustomSearchRepository {
         return new PageImpl<>(content, pageable, total != null ? total : 0);
     }
 
-    /** ===============================
-     태그 검색
-        - 선택한 태그별로 그룹핑해 반환
-        - 프론트에서 enum 영문값(FANTASY, MUNCHKIN)을 그대로 전달해야 함
-        - response : 태그 선택 조합별 필터링
-        - 예시 결과
-            - { tag: "FANTASY", novels: [{소설1}, {소설2}] }
-            - { tag: "MUNCHKIN", novels: [{소설1}, {소설3}] }
-     =================================== */
+    /**
+     * ===============================
+     * 태그 검색
+     * - 선택한 태그별로 그룹핑해 반환
+     * - 프론트에서 enum 영문값(FANTASY, MUNCHKIN)을 그대로 전달해야 함
+     * - response : 태그 선택 조합별 필터링
+     * - 예시 결과
+     * - { tag: "FANTASY", novels: [{소설1}, {소설2}] }
+     * - { tag: "MUNCHKIN", novels: [{소설1}, {소설3}] }
+     * ===================================
+     */
     @Override
     public List<TagGroupSearchResponse> searchNovelsByTags(List<String> tags, boolean isAdult) {
         QNovel novel = QNovel.novel;
@@ -86,34 +90,36 @@ public class CustomSearchRepositoryImpl implements CustomSearchRepository {
 
         return tags.stream().map(tag -> {
 
-            List<NovelSimpleResponse> novels = queryFactory
-                    .select(Projections.constructor(
-                            NovelSimpleResponse.class
-                            , novel.id
-                            , novel.title
-                            , user.nickname
-                            , novel.tags
-                    ))
-                    .from(novel)
-                    .join(user).on(novel.authorId.eq(user.id))
-                    .where(
-                            novel.tags.containsIgnoreCase(tag)
-                            , novel.isDeleted.eq(false)
-                            , isAdultFilter(isAdult)
-                    )
-                    .fetch();
+                    List<NovelSimpleResponse> novels = queryFactory
+                            .select(Projections.constructor(
+                                    NovelSimpleResponse.class
+                                    , novel.id
+                                    , novel.title
+                                    , user.nickname
+                                    , novel.tags
+                            ))
+                            .from(novel)
+                            .join(user).on(novel.authorId.eq(user.id))
+                            .where(
+                                    novel.tags.containsIgnoreCase(tag)
+                                    , novel.isDeleted.eq(false)
+                                    , isAdultFilter(isAdult)
+                            )
+                            .fetch();
 
-            return new TagGroupSearchResponse(tag, novels);
-        })
+                    return new TagGroupSearchResponse(tag, novels);
+                })
                 .filter(response -> !response.novels().isEmpty())
                 .toList();
     }
 
-    /** ===============================
-     작가 검색 (통합)
-     - 닉네임에 키워드가 포함된 작가들 + 대표작 3개 표시
-     - 제목에 키워드가 포함된 소설 (제목+작가만 간단하게) 표시
-     =================================== */
+    /**
+     * ===============================
+     * 작가 검색 (통합)
+     * - 닉네임에 키워드가 포함된 작가들 + 대표작 3개 표시
+     * - 제목에 키워드가 포함된 소설 (제목+작가만 간단하게) 표시
+     * ===================================
+     */
     @Override
     public IntegratedAuthorSearchResponse searchByAuthorKeyword(String keyword, boolean isAdult) {
         QUser user = QUser.user;
@@ -129,7 +135,7 @@ public class CustomSearchRepositoryImpl implements CustomSearchRepository {
                 .from(user)
                 .join(authorProfile).on(user.id.eq(authorProfile.userId))
                 .where(user.nickname.containsIgnoreCase(keyword)
-                , user.isDeleted.eq(false)
+                        , user.isDeleted.eq(false)
                 )
                 .fetch();
 
@@ -140,7 +146,7 @@ public class CustomSearchRepositoryImpl implements CustomSearchRepository {
 
         List<AuthorSearchResponse> matchingAuthors;
 
-        if(authorIds.isEmpty()) {
+        if (authorIds.isEmpty()) {
             matchingAuthors = List.of();
 
         } else {
@@ -182,35 +188,35 @@ public class CustomSearchRepositoryImpl implements CustomSearchRepository {
                             , t.get(user.nickname)
                             , t.get(authorProfile.bio)
                             , novelsByAuthor
-                                .getOrDefault(t.get(user.id), List.of())
-                                .stream()
-                                .limit(3)
-                                .toList()
+                            .getOrDefault(t.get(user.id), List.of())
+                            .stream()
+                            .limit(3)
+                            .toList()
                     ))
                     .toList();
         }
 
-            // 제목 키워드 소설 목록
-            List<NovelSimpleResponse> matchingNovels = queryFactory
-                    .select(Projections.constructor(
-                            NovelSimpleResponse.class
-                            , novel.title
-                            , user.nickname
-                    ))
-                    .from(novel)
-                    .join(user).on(novel.authorId.eq(user.id))
-                    .where(
-                            novel.title.containsIgnoreCase(keyword)
-                            , novel.isDeleted.eq(false)
-                            , isAdultFilter(isAdult)
-                    )
-                    .fetch();
+        // 제목 키워드 소설 목록
+        List<NovelSimpleResponse> matchingNovels = queryFactory
+                .select(Projections.constructor(
+                        NovelSimpleResponse.class
+                        , novel.title
+                        , user.nickname
+                ))
+                .from(novel)
+                .join(user).on(novel.authorId.eq(user.id))
+                .where(
+                        novel.title.containsIgnoreCase(keyword)
+                        , novel.isDeleted.eq(false)
+                        , isAdultFilter(isAdult)
+                )
+                .fetch();
 
-            return new IntegratedAuthorSearchResponse(matchingAuthors, matchingNovels);
+        return new IntegratedAuthorSearchResponse(matchingAuthors, matchingNovels);
     }
 
     private BooleanExpression isAdultFilter(boolean isAdult) {
-        if(isAdult) {
+        if (isAdult) {
             return null;
         }
         return novel.tags.notLike("%" + MainTag.ADULT.name() + "%");

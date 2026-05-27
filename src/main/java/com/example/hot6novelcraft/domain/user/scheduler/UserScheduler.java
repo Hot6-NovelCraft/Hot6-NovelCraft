@@ -41,15 +41,15 @@ public class UserScheduler {
 
         // 30일 지난 "탈퇴 대기" 유저들 조회 (물리적 x)
         List<User> expiredUsers =
-                userRepository.findByIsDeletedTrueAndDeletedAtBeforeAndAnonymizedAtIsNull (thirtyDaysAgo);
+                userRepository.findByIsDeletedTrueAndDeletedAtBeforeAndAnonymizedAtIsNull(thirtyDaysAgo);
 
-        if(expiredUsers.isEmpty()) {
+        if (expiredUsers.isEmpty()) {
             log.info("[회원탈퇴] 오늘 00시 완전 탈퇴 처리할 회원이 없습니다.");
             return;
         }
 
         // 조회해온 유저들을 하나씩 돌면서 마스킹 처리
-        for(User user : expiredUsers) {
+        for (User user : expiredUsers) {
             user.anonymize();
             log.info("[회원탈퇴] 회원ID : {}, 비식별화 완료", user.getId());
         }

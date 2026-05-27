@@ -32,7 +32,7 @@ public class AdminMentorController {
             @PathVariable Long mentorId
     ) {
         adminMentorService.approveMentor(mentorId);
-        return ResponseEntity.ok(BaseResponse.success("200","멘토 등급 심사 승급 완료",null));
+        return ResponseEntity.ok(BaseResponse.success("200", "멘토 등급 심사 승급 완료", null));
     }
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'SUPER_ADMIN')")

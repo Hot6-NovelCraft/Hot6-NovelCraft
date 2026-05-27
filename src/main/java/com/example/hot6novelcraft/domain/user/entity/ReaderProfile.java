@@ -54,10 +54,10 @@ public class ReaderProfile extends BaseEntity {
 
     // 독자 프로필 수정
     public void readerUpdateProfile(String preferredGenres, ReadingGoal readingGoal) {
-        if(preferredGenres != null) {
+        if (preferredGenres != null) {
             this.preferredGenres = preferredGenres;
         }
-        if(readingGoal != null) {
+        if (readingGoal != null) {
             this.readingGoal = readingGoal;
         }
         this.updatedAt = LocalDateTime.now();

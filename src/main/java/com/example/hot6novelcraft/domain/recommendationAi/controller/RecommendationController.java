@@ -18,10 +18,11 @@ public class RecommendationController {
 
     private final RecommendationFacade recommendationFacade;
 
-    /** ===== 메인 페이지 소설 추천 ====
+    /**
+     * ===== 메인 페이지 소설 추천 ====
      * 로그인 : 행동 기반 개인 추천
      * 비로그인 + 신규 회원 : 트렌드 기반 추천
-     =============================== */
+     */
     @GetMapping
     public ResponseEntity<BaseResponse<RecommendationResponse>> getRecommendations(
             @AuthenticationPrincipal UserDetailsImpl userDetails

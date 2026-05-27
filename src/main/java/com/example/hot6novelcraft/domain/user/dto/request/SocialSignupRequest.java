@@ -25,9 +25,9 @@ public record SocialSignupRequest(
         @NotBlank
         String tempToken
 ) {
-        public SocialSignupRequest {
-                if(phoneNo != null) {
-                        phoneNo = phoneNo.replaceAll("-", "");
-                }
+    public SocialSignupRequest {
+        if (phoneNo != null) {
+            phoneNo = phoneNo.replaceAll("-", "");
         }
+    }
 }

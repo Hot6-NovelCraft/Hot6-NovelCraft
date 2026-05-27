@@ -11,11 +11,11 @@ public record CommonUpdateRequest(
         @Pattern(regexp = "^010\\d{8}$", message = "유효하지 않은 휴대폰 번호 형식입니다.")
         String phoneNo
 
-        ) {
+) {
 
-        public CommonUpdateRequest {
-                if(phoneNo != null) {
-                        phoneNo = phoneNo.replaceAll("-", "");
-                }
+    public CommonUpdateRequest {
+        if (phoneNo != null) {
+            phoneNo = phoneNo.replaceAll("-", "");
         }
+    }
 }

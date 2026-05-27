@@ -7,16 +7,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
-@Slf4j( topic = "AiRecommendationService")
+@Slf4j(topic = "AiRecommendationService")
 @Service
 @RequiredArgsConstructor
 public class RecommendationService {
 
     private final RecommendationAiClient recommendationAiClient;
 
-   // 로그인 사용자 개인 맞춤 추천
+    // 로그인 사용자 개인 맞춤 추천
     public List<Long> getPersonalizedRecommendations(
             UserBehaviorSummary behavior
             , Map<String, Integer> genrePreference

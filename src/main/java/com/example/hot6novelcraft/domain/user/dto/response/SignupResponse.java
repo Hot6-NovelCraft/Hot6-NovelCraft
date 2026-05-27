@@ -13,7 +13,7 @@ public record SignupResponse(
         String phoneNo,
         UserRole role,
         LocalDateTime createdAt
-){
+) {
     public static SignupResponse of(User user) {
         return new SignupResponse(
                 user.getId(),

@@ -2,7 +2,6 @@ package com.example.hot6novelcraft.domain.user.dto.request;
 
 import com.example.hot6novelcraft.domain.novel.entity.enums.MainGenre;
 import com.example.hot6novelcraft.domain.user.entity.enums.ReadingGoal;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
@@ -20,11 +19,11 @@ public record ReaderUpdatedRequest(
         Boolean notifyNewNovel,
 
         Boolean notifyEvent
-){
+) {
 
     // 선호 장르 반환
     public String mainGenreToString() {
-        if(preferredGenres == null || preferredGenres.isEmpty())
+        if (preferredGenres == null || preferredGenres.isEmpty())
             return null;
         return preferredGenres.stream()
                 .map(MainGenre::toString)
