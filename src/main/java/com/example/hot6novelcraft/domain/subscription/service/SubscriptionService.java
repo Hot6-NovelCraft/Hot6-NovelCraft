@@ -13,7 +13,6 @@ import com.example.hot6novelcraft.domain.subscription.dto.response.SubscriptionR
 import com.example.hot6novelcraft.domain.subscription.entity.Subscription;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.portone.sdk.server.errors.*;
 import io.portone.sdk.server.payment.PaymentClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -152,15 +151,15 @@ public class SubscriptionService {
 
             // 요청 바디 생성
             String requestBody = String.format("""
-                {
-                    "billingKey": "%s",
-                    "orderName": "정기 구독 결제",
-                    "amount": {
-                        "total": %d
-                    },
-                    "currency": "KRW"
-                }
-                """, billingKey, amount);
+                    {
+                        "billingKey": "%s",
+                        "orderName": "정기 구독 결제",
+                        "amount": {
+                            "total": %d
+                        },
+                        "currency": "KRW"
+                    }
+                    """, billingKey, amount);
 
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
 
@@ -292,7 +291,7 @@ public class SubscriptionService {
     /**
      * 빌링키 삭제 (PortOne REST API 직접 호출)
      * DELETE https://api.portone.io/billing-keys/{billingKey}
-     *
+     * <p>
      * PortOne SDK 0.23.0에 deleteBillingKey 메서드가 없어 REST API를 직접 호출합니다.
      */
     private void deleteBillingKey(String billingKey) {

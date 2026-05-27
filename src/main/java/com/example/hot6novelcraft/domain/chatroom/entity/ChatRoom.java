@@ -44,20 +44,26 @@ public class ChatRoom extends BaseEntity {
         return mentorId.equals(userId) || menteeId.equals(userId);
     }
 
-    /** 해당 유저가 이미 나갔는지 여부 */
+    /**
+     * 해당 유저가 이미 나갔는지 여부
+     */
     public boolean hasLeft(Long userId) {
         if (mentorId.equals(userId)) return mentorLeftAt != null;
         if (menteeId.equals(userId)) return menteeLeftAt != null;
         return false;
     }
 
-    /** 나가기 처리 — 해당 참여자의 leftAt 기록 */
+    /**
+     * 나가기 처리 — 해당 참여자의 leftAt 기록
+     */
     public void leave(Long userId) {
         if (mentorId.equals(userId)) this.mentorLeftAt = LocalDateTime.now();
         else if (menteeId.equals(userId)) this.menteeLeftAt = LocalDateTime.now();
     }
 
-    /** 재입장 처리 — leftAt 초기화 */
+    /**
+     * 재입장 처리 — leftAt 초기화
+     */
     public void rejoin(Long userId) {
         if (mentorId.equals(userId)) this.mentorLeftAt = null;
         else if (menteeId.equals(userId)) this.menteeLeftAt = null;

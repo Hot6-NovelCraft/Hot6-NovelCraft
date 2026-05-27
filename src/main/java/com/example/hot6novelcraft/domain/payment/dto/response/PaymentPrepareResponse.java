@@ -9,4 +9,5 @@ package com.example.hot6novelcraft.domain.payment.dto.response;
 public record PaymentPrepareResponse(
         String paymentKey,
         Long amount
-) {}
+) {
+}

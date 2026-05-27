@@ -9,6 +9,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * 트랜잭션 커밋 이후에 Kafka 알림을 발행한다.
+ *
  * @Transactional 메서드 안에서 ApplicationEventPublisher.publishEvent()로 이벤트를 등록하면
  * 커밋이 완료된 시점에 이 리스너가 Kafka에 메시지를 전달한다.
  */

@@ -10,35 +10,32 @@ import com.example.hot6novelcraft.domain.webhookevent.entity.WebhookEvent;
 import com.example.hot6novelcraft.domain.webhookevent.entity.WebhookEventType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.portone.sdk.server.payment.CancelledPayment;
-import java.util.concurrent.TimeUnit;
-import io.portone.sdk.server.payment.FailedPayment;
-import io.portone.sdk.server.payment.PaidPayment;
-import io.portone.sdk.server.payment.PartialCancelledPayment;
-import io.portone.sdk.server.payment.PaymentClient;
+import io.portone.sdk.server.payment.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * 웹훅 처리 오케스트레이터.
  * DB 트랜잭션({@link WebhookTransactionService})과 외부 API 호출을 분리하여
  * 트랜잭션 점유 중 외부 API 대기가 발생하지 않도록 한다.
- *
+ * <p>
  * 멱등성 키 전략:
  * - Transaction.Paid / Transaction.Failed → transactionId (결제 트랜잭션 ID)
  * - Transaction.Cancelled → cancellationId (취소 트랜잭션 ID)
- *   포트원 V2는 취소 웹훅에 결제와 동일한 transactionId를 전송하므로
- *   cancellationId를 별도 키로 사용해야 중복 처리를 막을 수 있다.
- *
+ * 포트원 V2는 취소 웹훅에 결제와 동일한 transactionId를 전송하므로
+ * cancellationId를 별도 키로 사용해야 중복 처리를 막을 수 있다.
+ * <p>
  * 처리 흐름:
  * 1. [TX] 멱등성 체크 + WebhookEvent 준비
  * 2. [외부 API] 포트원 SDK 결제 상태 조회 (위조 방지 검증)
  * 3. [TX-readOnly] Payment 조회
  * 4. 상태에 따라 분기
- *    - Payment 없음:    /prepare 전에 웹훅이 도착한 예외 케이스 → WebhookEvent COMPLETE (로그만 남김)
- *    - Payment PENDING: /confirm 누락 보정 → completePendingPayment / failPendingPayment
- *    - Payment 최종상태: /confirm 또는 /cancel이 이미 처리 완료 → WebhookEvent COMPLETE
+ * - Payment 없음:    /prepare 전에 웹훅이 도착한 예외 케이스 → WebhookEvent COMPLETE (로그만 남김)
+ * - Payment PENDING: /confirm 누락 보정 → completePendingPayment / failPendingPayment
+ * - Payment 최종상태: /confirm 또는 /cancel이 이미 처리 완료 → WebhookEvent COMPLETE
  */
 @Slf4j
 @Service

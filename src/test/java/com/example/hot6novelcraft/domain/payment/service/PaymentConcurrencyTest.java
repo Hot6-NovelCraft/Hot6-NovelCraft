@@ -3,12 +3,11 @@ package com.example.hot6novelcraft.domain.payment.service;
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.PaymentExceptionEnum;
 import com.example.hot6novelcraft.common.security.RedisUtil;
+import com.example.hot6novelcraft.domain.notification.producer.NotificationProducer;
 import com.example.hot6novelcraft.domain.payment.dto.request.PaymentConfirmRequest;
 import com.example.hot6novelcraft.domain.payment.entity.Payment;
-import com.example.hot6novelcraft.domain.payment.entity.enums.PaymentMethod;
 import com.example.hot6novelcraft.domain.payment.entity.enums.PaymentStatus;
 import com.example.hot6novelcraft.domain.payment.repository.PaymentRepository;
-import com.example.hot6novelcraft.domain.notification.producer.NotificationProducer;
 import com.example.hot6novelcraft.domain.point.service.PointService;
 import io.portone.sdk.server.payment.PaidPayment;
 import io.portone.sdk.server.payment.PaymentAmount;
@@ -25,25 +24,15 @@ import org.mockito.quality.Strictness;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
