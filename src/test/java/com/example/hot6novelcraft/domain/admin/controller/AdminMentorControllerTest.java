@@ -224,7 +224,7 @@ class AdminMentorControllerTest {
                     .when(adminMentorService).approveMentor(1L);
 
             // when & then
-            mockMvc.perform(get("/api/admin/mentors/{mentorId}/approve", 1L))
+            mockMvc.perform(patch("/api/admin/mentors/{mentorId}/approve", 1L))
                     .andDo(print())
                     .andExpect(status().isNotFound());
         }

@@ -181,7 +181,7 @@ class RecommendationFacadeTest {
         when(recommendationService.getTrendRecommendations(anyList(), anyList())).thenReturn(Collections.emptyList());
 
         // Redis 랭킹 모킹
-        NovelRankingResponse rankingResponse = new NovelRankingResponse(30, 1L, "커버", "장르", 100L); // 생성자 파라미터 타입에 맞게 수정 (필요시 확인)
+        NovelRankingResponse rankingResponse = new NovelRankingResponse(30, 1L, "커버", "장르", 100L,null); // 생성자 파라미터 타입에 맞게 수정 (필요시 확인)
         when(novelRankingService.getNovelRanking("realtime")).thenReturn(List.of(rankingResponse));
 
         Novel mockNovel = mock(Novel.class);

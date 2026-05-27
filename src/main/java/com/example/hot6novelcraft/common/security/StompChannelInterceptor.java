@@ -2,6 +2,7 @@ package com.example.hot6novelcraft.common.security;
 
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.ChatExceptionEnum;
+import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -14,8 +15,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
-
-import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
 
 @Slf4j
 @Component

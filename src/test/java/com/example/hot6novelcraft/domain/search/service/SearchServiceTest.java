@@ -86,8 +86,8 @@ public class SearchServiceTest {
         @DisplayName("V1 소설 제목 검색 - Redis 저장 없이 결과만 반환")
         void searchNovelsV1_success() {
             List<NovelSearchResponse> novels = List.of(
-                    new NovelSearchResponse("cover.jpg", "바다가 보이는 카페", "바다작가", "HEALING"),
-                    new NovelSearchResponse(null, "바다 위의 던전", "바다작가", "FANTASY")
+                    new NovelSearchResponse(1L,"cover.jpg", "바다가 보이는 카페", "바다작가", "HEALING"),
+                    new NovelSearchResponse(null, null,"바다 위의 던전", "바다작가", "FANTASY")
             );
             Page<NovelSearchResponse> mockPage = new PageImpl<>(novels, pageable, 2);
             given(customSearchRepository.searchNovelsByTitle("바다", pageable, false)).willReturn(mockPage);

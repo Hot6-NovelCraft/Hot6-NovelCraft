@@ -18,7 +18,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -54,7 +53,7 @@ public class SecurityConfig {
                         })
                 )
                 // 소셜 로그인 설정
-                .oauth2Login(oauth2 ->oauth2
+                .oauth2Login(oauth2 -> oauth2
                         // 구글 로그인 시작
                         .authorizationEndpoint(endpoint
                                 -> endpoint.baseUri("/oauth2/authorize"))
@@ -84,7 +83,7 @@ public class SecurityConfig {
                                 , "/api/auth/signup/admin"
                                 , "/api/auth/signup/reader"
                                 , "/api/auth/signup/author"
-                                ,"/api/auth/social/signup/**"
+                                , "/api/auth/social/signup/**"
                                 , "/api/auth/email/check"
                                 , "/api/auth/nickname/check"
                                 , "/api/auth/phone/send"
@@ -131,7 +130,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager (AuthenticationConfiguration authenticationConfiguration) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
 

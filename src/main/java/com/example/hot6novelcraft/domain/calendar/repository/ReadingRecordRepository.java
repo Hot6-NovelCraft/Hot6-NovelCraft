@@ -1,11 +1,11 @@
 package com.example.hot6novelcraft.domain.calendar.repository;
 
 import com.example.hot6novelcraft.domain.calendar.entity.ReadingRecord;
-import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -41,11 +41,11 @@ public interface ReadingRecordRepository extends JpaRepository<ReadingRecord, Lo
 
     // 월별 전체 기록 조회 (통계용)
     @Query("""
-        SELECT r FROM ReadingRecord r
-        WHERE r.userId = :userId
-        AND YEAR(r.readDate) = :year
-        AND MONTH(r.readDate) = :month
-        """)
+            SELECT r FROM ReadingRecord r
+            WHERE r.userId = :userId
+            AND YEAR(r.readDate) = :year
+            AND MONTH(r.readDate) = :month
+            """)
     List<ReadingRecord> findByUserIdAndYearAndMonth(
             @Param("userId") Long userId,
             @Param("year") int year,

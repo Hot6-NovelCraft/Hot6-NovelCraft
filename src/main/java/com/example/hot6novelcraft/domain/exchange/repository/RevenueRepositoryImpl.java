@@ -6,7 +6,6 @@ import com.example.hot6novelcraft.domain.exchange.entity.enums.RevenueType;
 import com.example.hot6novelcraft.domain.exchange.entity.enums.StatisticsPeriod;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.core.types.dsl.StringTemplate;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +13,8 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.querydsl.core.types.dsl.Expressions.stringTemplate;
 import static com.querydsl.core.types.dsl.Expressions.numberTemplate;
+import static com.querydsl.core.types.dsl.Expressions.stringTemplate;
 
 @RequiredArgsConstructor
 public class RevenueRepositoryImpl implements RevenueRepositoryCustom {

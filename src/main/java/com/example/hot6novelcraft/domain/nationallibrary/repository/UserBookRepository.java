@@ -7,7 +7,10 @@ import java.util.List;
 
 public interface UserBookRepository extends JpaRepository<UserBook, Long> {
     boolean existsByUserIdAndBookId(Long userId, Long bookId);
+
     List<UserBook> findAllByUserId(Long userId);
+
     boolean existsByIdAndUserId(Long id, Long userId);
+
     void deleteByIdAndUserId(Long id, Long userId);
 }

@@ -130,7 +130,7 @@ class AdminUserControllerTest {
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("200"))  // ← code → status
-                    .andExpect(jsonPath("$.message").value("일반 관리자 승인 거절 완료"));
+                    .andExpect(jsonPath("$.message").value("관리자 가입 거절 완료"));
         }
     }
 

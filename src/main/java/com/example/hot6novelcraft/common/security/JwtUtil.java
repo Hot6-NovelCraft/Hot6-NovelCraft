@@ -108,7 +108,7 @@ public class JwtUtil {
 
         return BEARER_PREFIX + Jwts.builder()
                 .subject(email)
-                .claim("type","RECOVERY")
+                .claim("type", "RECOVERY")
                 .issuedAt(now)
                 .expiration(new Date(System.currentTimeMillis() + RECOVERY_TIME))
                 .signWith(secretKey, Jwts.SIG.HS256)
@@ -117,7 +117,7 @@ public class JwtUtil {
 
     // Bearer 삭제
     public String substringToken(String tokenValue) {
-        if(tokenValue != null && tokenValue.startsWith(BEARER_PREFIX)) {
+        if (tokenValue != null && tokenValue.startsWith(BEARER_PREFIX)) {
             return tokenValue.substring(7);
         }
         throw new NullPointerException("토큰이 없거나 유효하지 않습니다.");

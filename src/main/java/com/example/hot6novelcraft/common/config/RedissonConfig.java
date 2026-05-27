@@ -12,7 +12,9 @@ import java.util.List;
 @Configuration
 public class RedissonConfig {
 
-    /** "standalone" 이면 로컬 단독 Redis, 그 외(기본값)는 Sentinel 모드 */
+    /**
+     * "standalone" 이면 로컬 단독 Redis, 그 외(기본값)는 Sentinel 모드
+     */
     @Value("${redisson.mode:sentinel}")
     private String redissonMode;
 
@@ -40,10 +42,10 @@ public class RedissonConfig {
         if ("standalone".equalsIgnoreCase(redissonMode)) {
             // 로컬 개발 환경: 단독 Redis
             config.useSingleServer()
-                  .setAddress("redis://" + standaloneHost + ":" + standalonePort)
-                  .setConnectTimeout(1000)
-                  .setRetryAttempts(3)
-                  .setRetryInterval(1500);
+                    .setAddress("redis://" + standaloneHost + ":" + standalonePort)
+                    .setConnectTimeout(1000)
+                    .setRetryAttempts(3)
+                    .setRetryInterval(1500);
         } else {
             // 배포 환경: Redis Sentinel
             String[] nodesArray = sentinelNodes.stream()

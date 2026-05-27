@@ -6,7 +6,10 @@ import com.example.hot6novelcraft.common.exception.domain.NationalLibraryExcepti
 import com.example.hot6novelcraft.domain.nationallibrary.dto.request.BookSaveRequest;
 import com.example.hot6novelcraft.domain.nationallibrary.dto.request.BookSearchRequest;
 import com.example.hot6novelcraft.domain.nationallibrary.dto.request.UserBookSaveRequest;
-import com.example.hot6novelcraft.domain.nationallibrary.dto.response.*;
+import com.example.hot6novelcraft.domain.nationallibrary.dto.response.BookResponse;
+import com.example.hot6novelcraft.domain.nationallibrary.dto.response.MyShelfResponse;
+import com.example.hot6novelcraft.domain.nationallibrary.dto.response.NationalLibraryBookResponse;
+import com.example.hot6novelcraft.domain.nationallibrary.dto.response.UserBookResponse;
 import com.example.hot6novelcraft.domain.nationallibrary.entity.Book;
 import com.example.hot6novelcraft.domain.nationallibrary.entity.UserBook;
 import com.example.hot6novelcraft.domain.nationallibrary.infrastructure.NationalLibraryApiClient;
@@ -36,7 +39,7 @@ public class NationalLibraryService {
     private final UserBookRepository userBookRepository;
 
     private static final String SEARCH_CACHE_PREFIX = "book:search:";
-    private static final Duration SEARCH_CACHE_TTL  = Duration.ofMinutes(10);
+    private static final Duration SEARCH_CACHE_TTL = Duration.ofMinutes(10);
 
     // 도서 검색 (Redis 캐싱 적용)
     public PageResponse<NationalLibraryBookResponse> searchBooks(BookSearchRequest request) {

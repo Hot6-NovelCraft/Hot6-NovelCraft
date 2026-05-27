@@ -1,7 +1,7 @@
 package com.example.hot6novelcraft.domain.exchange.entity.enums;
 
-import java.util.Set;
 import java.util.Map;
+import java.util.Set;
 
 public enum WithdrawalStatus {
     PENDING,        // 승인 대기

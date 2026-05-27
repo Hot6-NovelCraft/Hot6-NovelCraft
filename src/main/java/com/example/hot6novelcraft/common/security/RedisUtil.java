@@ -28,7 +28,9 @@ public class RedisUtil {
     private final RedissonClient redissonClient;
     private final BlacklistTokenRepository blacklistTokenRepository;
 
-    /** === 블랙리스트 등록 - Failover 중 쓰기 실패 시 로그만 남김 === **/
+    /**
+     * === 블랙리스트 등록 - Failover 중 쓰기 실패 시 로그만 남김 ===
+     **/
     public void setBlackList(String accessToken, Object object, Duration duration) {
         try {
             redisTemplate.opsForValue().set(accessToken, object, duration);
@@ -36,7 +38,7 @@ public class RedisUtil {
             log.error("[Redis Blacklist] 등록 실패, accessToken: {}, reason: {}", accessToken, e.getMessage(), e);
 
             try {    // DB fallback : Redis 장애 중에도 로그아웃 토큰 차단 유지
-                if(!blacklistTokenRepository.existsByToken(accessToken)) {
+                if (!blacklistTokenRepository.existsByToken(accessToken)) {
                     LocalDateTime expirationTime = LocalDateTime.now().plus(duration);
                     String reason = (object != null) ? object.toString() : "Unknown";
                     blacklistTokenRepository.save(BlacklistToken.of(accessToken, reason, expirationTime));
@@ -60,7 +62,9 @@ public class RedisUtil {
         }
     }
 
-    /** === SMS 서비스 - 원자적 getAndDelete === **/
+    /**
+     * === SMS 서비스 - 원자적 getAndDelete ===
+     **/
     public Object getAndDelete(String signupKey) {
         try {
             return redisTemplate.opsForValue().getAndDelete(signupKey);
@@ -70,7 +74,9 @@ public class RedisUtil {
         }
     }
 
-    /** === SMS 서비스 - 원자적 검증 (인증번호 저장, 재사용 방지) 및 삭제 === **/
+    /**
+     * === SMS 서비스 - 원자적 검증 (인증번호 저장, 재사용 방지) 및 삭제 ===
+     **/
     public boolean verifyAndDeleteWithLua(String key, String expectedValue) {
         String script =
                 "if redis.call('get', KEYS[1]) == ARGV[1] then \n" +
@@ -182,7 +188,9 @@ public class RedisUtil {
         }
     }
 
-    /** == 대시보드 통계용 - setWithSeconds 으로 초단위 업데이트 설정 (초 단위 TTL) == */
+    /**
+     * == 대시보드 통계용 - setWithSeconds 으로 초단위 업데이트 설정 (초 단위 TTL) ==
+     */
     public void setWithSeconds(String key, Object value, long seconds) {
 
         try {
@@ -233,7 +241,7 @@ public class RedisUtil {
                 return connection.eval(
                         script.getBytes()
                         , ReturnType.INTEGER
-                        ,1
+                        , 1
                         , rawKey
                         , rawArg
                 );

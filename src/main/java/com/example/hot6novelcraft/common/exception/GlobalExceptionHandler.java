@@ -7,8 +7,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<BaseResponse<Void>> HttpRequestMethodNotSupportedExceptionHandler(HttpRequestMethodNotSupportedException e) {
         log.error("지원하지 않는 HTTP 메서드 : ", e);
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body(BaseResponse.fail(HttpStatus.METHOD_NOT_ALLOWED.name(),"지원하지 않는 HTTP 메서드입니다."));
+                .body(BaseResponse.fail(HttpStatus.METHOD_NOT_ALLOWED.name(), "지원하지 않는 HTTP 메서드입니다."));
     }
 
     @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
@@ -87,6 +87,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.FORBIDDEN)
                 .body(BaseResponse.fail(HttpStatus.FORBIDDEN.name(), "접근 권한이 없습니다."));
     }
+
     @ExceptionHandler(jakarta.persistence.EntityNotFoundException.class)
     public ResponseEntity<BaseResponse<Void>> handleEntityNotFoundException(jakarta.persistence.EntityNotFoundException e) {
         log.error("EntityNotFoundException 발생: {}", e.getMessage());
@@ -94,6 +95,7 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(BaseResponse.fail(HttpStatus.NOT_FOUND.name(), e.getMessage()));
     }
+
     @ExceptionHandler(value = MissingServletRequestParameterException.class)
     public ResponseEntity<BaseResponse<Void>> MissingServletRequestParameterExceptionHandler(MissingServletRequestParameterException e) {
         log.error("필수 파라미터 누락 : ", e);

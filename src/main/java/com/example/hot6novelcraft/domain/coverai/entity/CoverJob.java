@@ -3,7 +3,9 @@ package com.example.hot6novelcraft.domain.coverai.entity;
 import com.example.hot6novelcraft.common.entity.BaseEntity;
 import com.example.hot6novelcraft.domain.coverai.entity.enums.CoverJobStatus;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Entity

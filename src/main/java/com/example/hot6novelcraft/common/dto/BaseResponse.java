@@ -1,6 +1,6 @@
 package com.example.hot6novelcraft.common.dto;
 
-public record BaseResponse<T> (
+public record BaseResponse<T>(
         boolean success
         , String status
         , String message

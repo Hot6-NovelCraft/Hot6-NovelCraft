@@ -36,6 +36,7 @@ class BankAccountServiceTest {
     @Mock AccountVerificationRepository accountVerificationRepository;
     @Mock BankVerificationClient bankVerificationClient;
     @Mock AesEncryptionUtil aesEncryptionUtil;
+    @Mock RevenueService revenueService;
 
     private final Long USER_ID = 1L;
 
@@ -57,9 +58,8 @@ class BankAccountServiceTest {
         @DisplayName("성공 - 계좌 등록 후 인증 코드 발송")
         void success() {
             given(bankVerificationClient.isBankMaintenanceTime()).willReturn(false);
-            given(bankAccountRepository.existsByUserIdAndIsVerifiedTrue(USER_ID)).willReturn(false);
             given(aesEncryptionUtil.encrypt("1234567890")).willReturn("encrypted");
-            given(bankAccountRepository.existsByAccountNumber("encrypted")).willReturn(false);
+            given(bankAccountRepository.existsByAccountNumberAndIsVerifiedTrue("encrypted")).willReturn(false);
             given(bankVerificationClient.verifyAccountOwner("국민은행", "1234567890")).willReturn("홍길동");
             given(bankVerificationClient.requestOneWonTransfer("국민은행", "1234567890")).willReturn("5873");
 
@@ -73,7 +73,7 @@ class BankAccountServiceTest {
 
             assertThat(res.maskedAccountNumber()).isEqualTo("******7890");
             assertThat(res.bankName()).isEqualTo("국민은행");
-            assertThat(res.expiredAt()).isNotNull();  // isAfter 제거
+            assertThat(res.expiredAt()).isNotNull();
             verify(bankAccountRepository).save(any());
             verify(accountVerificationRepository).save(any());
         }
@@ -87,21 +87,21 @@ class BankAccountServiceTest {
         }
 
         @Test
-        @DisplayName("실패 - 이미 인증된 계좌 존재")
+        @DisplayName("실패 - 이미 인증된 계좌 존재 (타인이 인증한 계좌번호)")
         void failAlreadyVerified() {
             given(bankVerificationClient.isBankMaintenanceTime()).willReturn(false);
-            given(bankAccountRepository.existsByUserIdAndIsVerifiedTrue(USER_ID)).willReturn(true);
+            given(aesEncryptionUtil.encrypt("1234567890")).willReturn("encrypted");
+            given(bankAccountRepository.existsByAccountNumberAndIsVerifiedTrue("encrypted")).willReturn(true);
             assertThatThrownBy(() -> bankAccountService.registerAndRequestVerification(USER_ID, req))
                     .isInstanceOf(ServiceErrorException.class);
         }
 
         @Test
-        @DisplayName("실패 - 중복 계좌번호")
+        @DisplayName("실패 - 중복 계좌번호 (타인이 인증한 계좌번호)")
         void failDuplicate() {
             given(bankVerificationClient.isBankMaintenanceTime()).willReturn(false);
-            given(bankAccountRepository.existsByUserIdAndIsVerifiedTrue(USER_ID)).willReturn(false);
             given(aesEncryptionUtil.encrypt("1234567890")).willReturn("encrypted");
-            given(bankAccountRepository.existsByAccountNumber("encrypted")).willReturn(true);
+            given(bankAccountRepository.existsByAccountNumberAndIsVerifiedTrue("encrypted")).willReturn(true);
             assertThatThrownBy(() -> bankAccountService.registerAndRequestVerification(USER_ID, req))
                     .isInstanceOf(ServiceErrorException.class);
         }
@@ -110,9 +110,8 @@ class BankAccountServiceTest {
         @DisplayName("실패 - 예금주 불일치")
         void failHolderMismatch() {
             given(bankVerificationClient.isBankMaintenanceTime()).willReturn(false);
-            given(bankAccountRepository.existsByUserIdAndIsVerifiedTrue(USER_ID)).willReturn(false);
             given(aesEncryptionUtil.encrypt("1234567890")).willReturn("encrypted");
-            given(bankAccountRepository.existsByAccountNumber("encrypted")).willReturn(false);
+            given(bankAccountRepository.existsByAccountNumberAndIsVerifiedTrue("encrypted")).willReturn(false);
             given(bankVerificationClient.verifyAccountOwner("국민은행", "1234567890")).willReturn("김철수");
             assertThatThrownBy(() -> bankAccountService.registerAndRequestVerification(USER_ID, req))
                     .isInstanceOf(ServiceErrorException.class);

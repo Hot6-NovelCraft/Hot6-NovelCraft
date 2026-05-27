@@ -24,7 +24,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -56,7 +55,7 @@ class WithdrawalServiceTest {
     }
 
     private Withdrawal createWithdrawal(Long id, WithdrawalStatus status) {
-        Withdrawal withdrawal = Withdrawal.request(AUTHOR_ID, 1L, 50000, 1650);
+        Withdrawal withdrawal = Withdrawal.request(AUTHOR_ID, 1L, 50000, 5000);
         ReflectionTestUtils.setField(withdrawal, "id", id);
         if (status == WithdrawalStatus.COMPLETED) {
             withdrawal.processing();
@@ -75,14 +74,13 @@ class WithdrawalServiceTest {
         void success() {
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
             given(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).willReturn(true);
-            given(valueOperations.get(anyString())).willReturn(null);
             given(bankAccountRepository.findByUserIdAndIsVerifiedTrue(AUTHOR_ID))
                     .willReturn(Optional.of(createVerifiedAccount()));
             given(withdrawalRepository.existsByAuthorIdAndStatus(AUTHOR_ID, WithdrawalStatus.PENDING)).willReturn(false);
             given(revenueRepository.sumAmountByAuthorIdAndTypeIn(eq(AUTHOR_ID), any())).willReturn(100000);
             given(revenueRepository.sumAmountByAuthorIdAndType(AUTHOR_ID, RevenueType.WITHDRAWAL)).willReturn(0);
 
-            Withdrawal saved = Withdrawal.request(AUTHOR_ID, 1L, 50000, 1650);
+            Withdrawal saved = Withdrawal.request(AUTHOR_ID, 1L, 50000, 5000);
             ReflectionTestUtils.setField(saved, "id", 1L);
             given(withdrawalRepository.save(any())).willReturn(saved);
             given(revenueRepository.save(any())).willReturn(Revenue.ofWithdrawal(AUTHOR_ID, 50000, 50000));
@@ -90,8 +88,8 @@ class WithdrawalServiceTest {
             WithdrawalResponse res = withdrawalService.createWithdrawal(AUTHOR_ID, new WithdrawalCreateRequest(50000));
 
             assertThat(res.requestAmount()).isEqualTo(50000);
-            assertThat(res.fee()).isEqualTo(1650);
-            assertThat(res.actualAmount()).isEqualTo(48350);
+            assertThat(res.fee()).isEqualTo(5000);
+            assertThat(res.actualAmount()).isEqualTo(45000);
             assertThat(res.status()).isEqualTo(WithdrawalStatus.PENDING);
         }
 
@@ -109,7 +107,6 @@ class WithdrawalServiceTest {
         void failNoAccount() {
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
             given(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).willReturn(true);
-            given(valueOperations.get(anyString())).willReturn(null);
             given(bankAccountRepository.findByUserIdAndIsVerifiedTrue(AUTHOR_ID)).willReturn(Optional.empty());
             assertThatThrownBy(() -> withdrawalService.createWithdrawal(AUTHOR_ID, new WithdrawalCreateRequest(50000)))
                     .isInstanceOf(ServiceErrorException.class);
@@ -120,7 +117,6 @@ class WithdrawalServiceTest {
         void failPendingExists() {
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
             given(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).willReturn(true);
-            given(valueOperations.get(anyString())).willReturn(null);
             given(bankAccountRepository.findByUserIdAndIsVerifiedTrue(AUTHOR_ID))
                     .willReturn(Optional.of(createVerifiedAccount()));
             given(withdrawalRepository.existsByAuthorIdAndStatus(AUTHOR_ID, WithdrawalStatus.PENDING)).willReturn(true);
@@ -133,7 +129,6 @@ class WithdrawalServiceTest {
         void failBelowMinimum() {
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
             given(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).willReturn(true);
-            given(valueOperations.get(anyString())).willReturn(null);
             given(bankAccountRepository.findByUserIdAndIsVerifiedTrue(AUTHOR_ID))
                     .willReturn(Optional.of(createVerifiedAccount()));
             given(withdrawalRepository.existsByAuthorIdAndStatus(AUTHOR_ID, WithdrawalStatus.PENDING)).willReturn(false);
@@ -144,17 +139,14 @@ class WithdrawalServiceTest {
         @Test
         @DisplayName("실패 - 잔액 부족 시 정확한 에러 코드 반환")
         void failInsufficientBalance() {
-            // given
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
             given(valueOperations.setIfAbsent(anyString(), anyString(), anyLong(), any(TimeUnit.class))).willReturn(true);
             given(bankAccountRepository.findByUserIdAndIsVerifiedTrue(AUTHOR_ID)).willReturn(Optional.of(createVerifiedAccount()));
-            given(revenueRepository.sumAmountByAuthorIdAndTypeIn(eq(AUTHOR_ID), any())).willReturn(10000); // 1만 원 있음
+            given(revenueRepository.sumAmountByAuthorIdAndTypeIn(eq(AUTHOR_ID), any())).willReturn(10000);
             given(revenueRepository.sumAmountByAuthorIdAndType(AUTHOR_ID, RevenueType.WITHDRAWAL)).willReturn(0);
 
-            // when & then
-            assertThatThrownBy(() -> withdrawalService.createWithdrawal(AUTHOR_ID, new WithdrawalCreateRequest(50000))) // 5만 원 신청
+            assertThatThrownBy(() -> withdrawalService.createWithdrawal(AUTHOR_ID, new WithdrawalCreateRequest(50000)))
                     .isInstanceOf(ServiceErrorException.class)
-                    // [개선] 에러 코드 필드까지 검증
                     .hasFieldOrPropertyWithValue("errorCode", com.example.hot6novelcraft.domain.exchange.exception.ExchangeExceptionEnum.WITHDRAWAL_INSUFFICIENT_BALANCE);
         }
     }

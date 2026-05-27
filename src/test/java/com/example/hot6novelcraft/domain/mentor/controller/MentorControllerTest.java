@@ -246,7 +246,7 @@ class MentorControllerTest {
         @DisplayName("PENDING 상태 조회 시 200 반환")
         void getMyStatus_pending_returns_200() {
             MentorStatusResponse mockResponse = new MentorStatusResponse(
-                    1L, MentorStatus.PENDING, null
+                    1L, MentorStatus.PENDING, null,null,null
             );
             given(mentorService.getMyStatus(USER_ID)).willReturn(mockResponse);
 
@@ -266,7 +266,7 @@ class MentorControllerTest {
         @DisplayName("APPROVED 상태 조회 시 rejectReason null 반환")
         void getMyStatus_approved_returns_200() {
             MentorStatusResponse mockResponse = new MentorStatusResponse(
-                    1L, MentorStatus.APPROVED, null
+                    1L, MentorStatus.APPROVED, null,null,null
             );
             given(mentorService.getMyStatus(USER_ID)).willReturn(mockResponse);
 
@@ -282,7 +282,7 @@ class MentorControllerTest {
         @DisplayName("REJECTED 상태 조회 시 rejectReason 반환")
         void getMyStatus_rejected_returns_rejectReason() {
             MentorStatusResponse mockResponse = new MentorStatusResponse(
-                    1L, MentorStatus.REJECTED, "전문성 기준 미달입니다"
+                    1L, MentorStatus.REJECTED, "전문성 기준 미달입니다",null,null
             );
             given(mentorService.getMyStatus(USER_ID)).willReturn(mockResponse);
 
@@ -298,7 +298,7 @@ class MentorControllerTest {
         @DisplayName("응답 메시지 확인")
         void getMyStatus_message_check() {
             MentorStatusResponse mockResponse = new MentorStatusResponse(
-                    1L, MentorStatus.PENDING, null
+                    1L, MentorStatus.PENDING, null,null,null
             );
             given(mentorService.getMyStatus(USER_ID)).willReturn(mockResponse);
 

@@ -1,7 +1,5 @@
 package com.example.hot6novelcraft.domain.exchange.client;
 
-import com.example.hot6novelcraft.common.exception.ServiceErrorException;
-import com.example.hot6novelcraft.domain.exchange.exception.ExchangeExceptionEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;

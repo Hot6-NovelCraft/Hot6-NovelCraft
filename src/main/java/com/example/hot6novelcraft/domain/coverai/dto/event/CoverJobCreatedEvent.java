@@ -4,4 +4,5 @@ public record CoverJobCreatedEvent(
         String jobId,
         Long novelId,
         Long userId
-) {}
+) {
+}

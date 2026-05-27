@@ -1,6 +1,5 @@
 package com.example.hot6novelcraft.common.config;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -10,8 +9,6 @@ import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
 import io.lettuce.core.resource.DnsResolvers;
 import io.lettuce.core.resource.MappingSocketAddressResolver;
-import org.redisson.api.RedissonClient;
-import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +20,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.util.List;
 import java.util.Set;
 
 @Configuration
@@ -44,7 +40,7 @@ public class RedisConfig {
     public ClientResources clientResources() {
 
         // natMappingIp가 비어있으면 기본 설정 사용 (배포 환경)
-        if(natMappingIp == null || natMappingIp.isBlank()) {
+        if (natMappingIp == null || natMappingIp.isBlank()) {
             return DefaultClientResources.create();
         }
 
@@ -62,7 +58,8 @@ public class RedisConfig {
                 .build();
     }
 
-    /** Redis 다운 시 마스터-슬레이브 및 센티넬 발동
+    /**
+     * Redis 다운 시 마스터-슬레이브 및 센티넬 발동
      * 읽기는 슬레이브에서 -> 마스터 부하 분산
      * 슬레이브 장애 시엔 마스터에서 읽음 -> 자동 fallback
      * Failover 새 마스터 선출 시 센티넬이 알려준 새 마스터로 자동 재연결

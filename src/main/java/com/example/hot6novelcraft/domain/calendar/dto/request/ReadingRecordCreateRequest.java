@@ -3,8 +3,9 @@ package com.example.hot6novelcraft.domain.calendar.dto.request;
 import com.example.hot6novelcraft.domain.calendar.entity.enums.ReadingStatus;
 import com.example.hot6novelcraft.domain.calendar.entity.enums.RecordSource;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+
 import java.time.LocalDate;
 
 public record ReadingRecordCreateRequest(
@@ -23,11 +24,12 @@ public record ReadingRecordCreateRequest(
         String note,// 선택
 
         @Min(value = 0, message = "읽은 페이지 수는 음수일 수 없습니다")
-                Integer readPage,
+        Integer readPage,
 
         @Min(value = 1, message = "전체 페이지 수는 1 이상이어야 합니다")
         Integer totalPage,
 
         @NotNull(message = "독서 상태를 선택해주세요")
         ReadingStatus readingStatus
-) {}
+) {
+}

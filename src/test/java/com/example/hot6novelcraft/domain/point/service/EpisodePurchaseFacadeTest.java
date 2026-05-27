@@ -59,7 +59,7 @@ class EpisodePurchaseFacadeTest {
             given(redisUtil.acquireLock(anyString())).willReturn(true);
 
             EpisodePurchaseResponse mockResponse = new EpisodePurchaseResponse(
-                    EPISODE_ID, "테스트 회차", EPISODE_PRICE, REMAINING_BALANCE
+                    EPISODE_ID, NOVEL_ID,"테스트 회차", EPISODE_PRICE, REMAINING_BALANCE
             );
             given(transactionService.executePurchase(USER_ID, EPISODE_ID))
                     .willReturn(mockResponse);
@@ -130,7 +130,7 @@ class EpisodePurchaseFacadeTest {
             // given
             given(redisUtil.acquireLock(anyString())).willReturn(true);
             EpisodePurchaseResponse mockResponse = new EpisodePurchaseResponse(
-                    EPISODE_ID, "테스트 회차", EPISODE_PRICE, REMAINING_BALANCE
+                    EPISODE_ID, NOVEL_ID,"테스트 회차", EPISODE_PRICE, REMAINING_BALANCE
             );
             given(transactionService.executePurchase(USER_ID, EPISODE_ID))
                     .willReturn(mockResponse);
@@ -264,7 +264,7 @@ class EpisodePurchaseFacadeTest {
             given(redisUtil.acquireLock(anyString())).willReturn(true);
 
             EpisodePurchaseResponse singleResponse = new EpisodePurchaseResponse(
-                    EPISODE_ID, "테스트 회차", EPISODE_PRICE, REMAINING_BALANCE
+                    EPISODE_ID, NOVEL_ID,"테스트 회차", EPISODE_PRICE, REMAINING_BALANCE
             );
             given(transactionService.executePurchase(USER_ID, EPISODE_ID))
                     .willReturn(singleResponse);
