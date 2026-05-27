@@ -14,9 +14,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RecommendationPromptBuilder {
 
-    /** ============ 프롬프트 규칙 ============
+    /**
+     * ============ 프롬프트 규칙 ============
      * AI에게 역할 + 데이터 + 출력 형식 명확히 지정
-     ======================================== **/
+     */
 
     private final UserPreferenceAnalyzer preferenceAnalyzer;
 
@@ -64,7 +65,7 @@ public class RecommendationPromptBuilder {
                         , formatList(behavior.likedTags())
                         , preferenceText
                         , formatNovelList(candidates)
-        );
+                );
     }
 
     // 비로그인 사용자 트랜드 추천 프롬프트 (+ 신규 로그인 콜드스타트)
@@ -105,7 +106,7 @@ public class RecommendationPromptBuilder {
     }
 
     private String formatList(List<String> list) {
-        if(list == null || list.isEmpty()) {
+        if (list == null || list.isEmpty()) {
             return "없음";
         }
         return String.join(", ", list);

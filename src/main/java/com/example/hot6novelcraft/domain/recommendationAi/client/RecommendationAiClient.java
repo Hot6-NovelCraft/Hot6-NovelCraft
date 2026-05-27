@@ -53,7 +53,9 @@ public class RecommendationAiClient {
         return callAndParseIds(prompt);
     }
 
-    /** ======== AI 호출 ======== */
+    /**
+     * ======== AI 호출 ========
+     */
 
     // AI 호출 + ID 파싱 (도메인 전용 옵션 적용해서 호출)
     private List<Long> callAndParseIds(String prompt) {

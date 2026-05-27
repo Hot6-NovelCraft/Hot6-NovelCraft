@@ -1,7 +1,5 @@
 package com.example.hot6novelcraft.domain.user.dto.request;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 // 탈퇴 후 계정 복구 DTO

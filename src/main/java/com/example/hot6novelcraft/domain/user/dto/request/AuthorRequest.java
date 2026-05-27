@@ -12,26 +12,26 @@ import java.util.stream.Collectors;
 
 public record AuthorRequest(
 
-    @NotEmpty(message = "주력 장르 선택은 필수입니다.")
-    List<MainGenre> genres,
+        @NotEmpty(message = "주력 장르 선택은 필수입니다.")
+        List<MainGenre> genres,
 
-    @NotBlank
-    @Size(min = 10, max = 500, message = "작가소개는 500자 이내로 작성 가능합니다.")
-    String bio,
+        @NotBlank
+        @Size(min = 10, max = 500, message = "작가소개는 500자 이내로 작성 가능합니다.")
+        String bio,
 
-    @NotNull
-    CareerLevel careerLevel,
+        @NotNull
+        CareerLevel careerLevel,
 
-    String instagramLinks,
+        String instagramLinks,
 
-    String xLinks,
+        String xLinks,
 
-    String blogLinks,
+        String blogLinks,
 
-    @NotNull(message = "멘티 요청 허용 여부는 필수입니다.")
-    Boolean allowMenteeRequest
+        @NotNull(message = "멘티 요청 허용 여부는 필수입니다.")
+        Boolean allowMenteeRequest
 
-){
+) {
     // 주력 장르 변환
     public String mainGenreToString() {
         if (genres == null || genres.isEmpty())

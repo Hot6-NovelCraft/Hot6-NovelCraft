@@ -17,7 +17,9 @@ public class AdminUserController {
 
     private final AdminUserService adminUserService;
 
-    // 관리자 승인 대기 목록 조회
+    /**
+     * 관리자 승인 대기 목록 조회
+     */
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     @GetMapping("/pending")
     public ResponseEntity<BaseResponse<List<AdminResponse>>> getPendingAdmins() {
@@ -25,7 +27,9 @@ public class AdminUserController {
         return ResponseEntity.ok(BaseResponse.success("200", "관리자 승인 대기 목록 조회 완료", responses));
     }
 
-    // 관리자 승인 완료
+    /**
+     * 관리자 승인 완료
+     */
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     @PatchMapping("/{userId}/approve")
     public ResponseEntity<BaseResponse<Void>> approveUser(
@@ -35,7 +39,10 @@ public class AdminUserController {
         return ResponseEntity.ok(BaseResponse.success("200", "일반 관리자 승인 완료", null));
     }
 
-    // 관리자 승인 거절 (계정 삭제)
+    /**
+     * 관리자 승인 거절 (계정 삭제)
+     */
+
     @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     @PatchMapping("/{userId}/reject")
     public ResponseEntity<BaseResponse<Void>> rejectUser(

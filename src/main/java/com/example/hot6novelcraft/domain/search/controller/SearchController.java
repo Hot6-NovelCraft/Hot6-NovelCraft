@@ -38,7 +38,7 @@ public class SearchController {
      3. 작가 검색
      - GET /api/search/v1/authors?keyword=백산
      - 유사 닉네임 작가 목록 + 유사 키워드 제목 포함 소설 목록
-     =================================== */
+     */
     @GetMapping("/v1/novels")
     public ResponseEntity<BaseResponse<PageResponse<NovelSearchResponse>>> searchNovelsV1(
             @RequestParam String keyword,
@@ -67,8 +67,9 @@ public class SearchController {
         return ResponseEntity.ok(BaseResponse.success("200", "작가 검색 성공", result));
     }
 
-
-    /** ============ V2 =============== */
+    /**
+     * V2
+     */
     @GetMapping("/v2/novels")
     public ResponseEntity<BaseResponse<PageResponse<NovelSearchResponse>>> searchNovels(
             @RequestParam String keyword,
@@ -103,19 +104,25 @@ public class SearchController {
         return ResponseEntity.ok(BaseResponse.success("200", "작가 검색 성공", result));
     }
 
-    /** ============ 인기 검색어 랭킹 =============== */
+    /**
+     * 인기 검색어 랭킹
+     */
     @GetMapping("/keywords/popular")
     public ResponseEntity<BaseResponse<List<String>>> getPopularKeywords() {
         return ResponseEntity.ok(BaseResponse.success("200", "인기 검색어 조회 성공", searchService.getTopSearchKeywords()));
     }
 
-    /** ============ 인기 테그 랭킹 =============== */
+    /**
+     * 인기 테그 랭킹
+     */
     @GetMapping("/tags/popular")
     public ResponseEntity<BaseResponse<List<String>>> getPopularTags() {
         return ResponseEntity.ok(BaseResponse.success("200", "인기 태그 조회 성공", searchService.getTopTagsKeywords()));
     }
 
-    /** ===== 내 최근 검색어 조회 (로그인 필수) ====== */
+    /**
+     * 내 최근 검색어 조회 (로그인 필수)
+     */
     @GetMapping("/keywords/recent")
     public ResponseEntity<BaseResponse<List<String>>> getRecentSearchKeywords(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {

@@ -30,6 +30,7 @@ public record MyPageResponse(
                 null
         );
     }
+
     public static MyPageResponse ofReader(User user, ReaderProfile readerProfile) {
         return new MyPageResponse(
                 user.getId(),
@@ -42,6 +43,7 @@ public record MyPageResponse(
                 ReaderUpdateResponse.of(readerProfile)
         );
     }
+
     public static MyPageResponse ofDefault(User user) {
         return new MyPageResponse(
                 user.getId(),

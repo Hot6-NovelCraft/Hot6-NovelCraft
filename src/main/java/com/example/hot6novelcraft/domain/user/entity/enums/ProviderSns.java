@@ -6,12 +6,10 @@ import lombok.Getter;
 
 @Getter
 public enum ProviderSns {
-    GOOGLE
-    , KAKAO
-    , NAVER;
+    GOOGLE, KAKAO, NAVER;
 
     public static ProviderSns from(String registrationId) {
-        return switch(registrationId.toLowerCase()) {
+        return switch (registrationId.toLowerCase()) {
             case "google" -> GOOGLE;
             case "kakao" -> KAKAO;
             case "naver" -> NAVER;

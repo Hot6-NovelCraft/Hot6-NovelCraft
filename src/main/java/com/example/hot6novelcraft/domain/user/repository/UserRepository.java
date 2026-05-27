@@ -43,5 +43,4 @@ public interface UserRepository extends JpaRepository <User, Long> {
             @Param("currentRole") UserRole currentRole,
             @Param("nextRole") UserRole nextRole
     );
-
 }

@@ -11,7 +11,6 @@ import com.example.hot6novelcraft.domain.recommendationAi.dto.UserBehaviorSummar
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -43,7 +42,6 @@ public class RecommendationFacade {
      * ==== 로그인 사용자 맞춤 추천 ====
      * 캐시 HIT -> 즉시 반환
      * 캐시 MISS -> AI 호출 후 캐시 저장
-     * ===================================
      */
     @SuppressWarnings("unchecked")
     public RecommendationResponse getPersonalizedRecommendations(Long userId) {
@@ -110,250 +108,253 @@ public class RecommendationFacade {
         return response;
     }
 
-        // 비로그인 트렌드 추천 - TTL 1시간 (모든 비로그인 사용자 공용 캐시)
-        public RecommendationResponse getTrendRecommendation () {
-            String cacheKey = CACHE_KEY_PREFIX + "trend";
-            Object cached = redisTemplate.opsForValue().get(cacheKey);
+    // 비로그인 트렌드 추천 - TTL 1시간 (모든 비로그인 사용자 공용 캐시)
+    public RecommendationResponse getTrendRecommendation() {
+        String cacheKey = CACHE_KEY_PREFIX + "trend";
+        Object cached = redisTemplate.opsForValue().get(cacheKey);
 
-            if (cached instanceof RecommendationResponse response
+        if (cached instanceof RecommendationResponse response
 
-            ) {
-                log.debug("[AI 추천] 트랜드 캐시 HIT");
-                return response;
-            }
-
-            // Redis 인기 태그 수집
-            List<String> popularTags = getPopularTags();
-            List<NovelSummaryForAi> candidates = getCandidateNovels();
-
-            List<Long> recommendedIsd = recommendationService.getTrendRecommendations(popularTags, candidates);
-
-            if (recommendedIsd.isEmpty()) {
-                return getFallbackRecommendation();
-            }
-
-            List<NovelListResponse> novels = getNovelsByIds(recommendedIsd);
-            RecommendationResponse response = new RecommendationResponse(novels, "TREND");
-
-            // 비로그인 공용 캐시
-            redisTemplate.opsForValue().set(cacheKey, response, Duration.ofHours(1));
-
+        ) {
+            log.debug("[AI 추천] 트랜드 캐시 HIT");
             return response;
         }
 
-            /** ======= 공용 메소드 =======  */
+        // Redis 인기 태그 수집
+        List<String> popularTags = getPopularTags();
+        List<NovelSummaryForAi> candidates = getCandidateNovels();
 
-            // 선호 장르 비율로 후보 소설 구성 -> 선호 장르 60% + 나머지 장르 40% 섞어서
-            private List<NovelSummaryForAi> getFilteredCandidates (
-                    Map < String, Integer > genrePreference){
+        List<Long> recommendedIsd = recommendationService.getTrendRecommendations(popularTags, candidates);
 
-                // 선호 장르 없으면 전체 후보 반환
-                if (genrePreference.isEmpty()) {
-                    return getCandidateNovels();
-                }
-
-                Optional<String> topGenre = preferenceAnalyzer.getTopGenre(genrePreference);
-
-                if (topGenre.isEmpty()) {
-                    return getCandidateNovels();
-                }
-
-                String preferredGenre = topGenre.get();
-
-                // 선호 장르 소설 30개
-                List<NovelSummaryForAi> preferred = novelRepository.findByGenreForRecommendation(preferredGenre, PageRequest.of(0, 30))
-                        .getContent()
-                        .stream()
-                        .map(n -> new NovelSummaryForAi(
-                                n.getId(), n.getCoverImageUrl(), n.getTitle(), n.getGenre(), n.getTags(), n.getAuthorId()))
-                        .collect(Collectors.toList());
-
-                // 나머지 장르 소설 20개 (다양성 확보)
-                List<NovelSummaryForAi> others = novelRepository.findExcludeGenreForRecommendation(preferredGenre, PageRequest.of(0, 20))
-                        .getContent()
-                        .stream()
-                        .map(n -> new NovelSummaryForAi(
-                                n.getId(), n.getCoverImageUrl(), n.getTitle(), n.getGenre(), n.getTags(), n.getAuthorId()))
-                        .collect(Collectors.toList());
-
-                // 합쳐서 반환
-                List<NovelSummaryForAi> candidates = new ArrayList<>(preferred);
-                candidates.addAll(others);
-
-                log.info("[AI 추천] 후보 구성 - 선호장르 ({}) {}개 + 기타 {}개", preferredGenre, preferred.size(), others.size());
-
-                return candidates;
-            }
-
-            // AI에게 넘길 후보 소설 목록 조회 - 연재(ongoing), 완결(completed) 상태만 최신순 50개로 제한
-            private List<NovelSummaryForAi> getCandidateNovels () {
-                return novelRepository.findTop50ForRecommendation(PageRequest.of(0, 50))
-                        .stream()
-                        .map(n -> new NovelSummaryForAi(
-                                n.getId()
-                                , n.getCoverImageUrl()
-                                , n.getTitle()
-                                , n.getGenre()
-                                , n.getTags()
-                                , n.getAuthorId()
-                        ))
-                        .collect(Collectors.toList());
-            }
-
-            // 추천 ID 순서 유지하면서 소설 목록 조회
-            private List<NovelListResponse> getNovelsByIds (List < Long > novelIds) {
-
-                // AI가 빈 결과를 줬을 때 바로 DB 결과가 아닌 빈 리스트 반환
-                if (novelIds == null || novelIds.isEmpty()) {
-                    return Collections.emptyList();
-                }
-
-                Map<Long, Novel> novelMap = novelRepository.findActiveNovelsByIds(novelIds)
-                        .stream()
-                        .collect(Collectors.toMap(Novel::getId, novel -> novel));
-
-                return novelIds.stream()
-                        .filter(novelMap::containsKey)
-                        .map(id -> {
-                            Novel n = novelMap.get(id);
-                            return NovelListResponse.of(
-                                    n.getId()
-                                    , n.getTitle()
-                                    , n.getGenre()
-                                    , n.getTags()
-                                    , n.getStatus()
-                                    , n.getCoverImageUrl()
-                                    , n.getViewCount()
-                                    , n.getBookmarkCount()
-                                    , getAuthorNickname(n.getAuthorId())
-                            );
-                        })
-                        .collect(Collectors.toList());
-            }
-
-            // AI 응답 실패 시, 최종 안전망 - Redis 인기 랭킹 소설로 대체
-            private RecommendationResponse getFallbackRecommendation () {
-
-                // Redis 랭킹에서 상위 소설 ID 가져오기
-                List<NovelRankingResponse> ranking =
-                        novelRankingService.getNovelRanking("realtime");
-
-                // Redis가 비어있으면 주간으로 재시도
-                if (ranking.isEmpty()) {
-                    ranking = novelRankingService.getNovelRanking("weekly");
-                }
-
-                // Redis도 비어있으면 DB에서 직접 조회
-                if (ranking.isEmpty()) {
-                    log.warn("[AI 추천] Redis 랭킹 없음 - DB 직접 조회");
-
-                    return getFallbackFromDb();
-                }
-
-                // 랭킹 ID 순서유지하면서 Novel 상세 조회
-                List<Long> novelIds = ranking.stream()
-                        .map(NovelRankingResponse::novelId)
-                        .collect(Collectors.toList());
-
-                Map<Long, Novel> novelMap = novelRepository.findAllById(novelIds)
-                        .stream()
-                        .collect(Collectors.toMap(Novel::getId, novel -> novel));
-
-                // 랭킹 순서 유지하면서 NovelListResponse 변환
-                List<NovelListResponse> novels = novelIds.stream()
-                        .filter(novelMap::containsKey)
-                        .map(id -> {
-                            Novel n = novelMap.get(id);
-
-                            return NovelListResponse.of(
-                                    n.getId()
-                                    , n.getTitle()
-                                    , n.getGenre()
-                                    , n.getTags()
-                                    , n.getStatus()
-                                    , n.getCoverImageUrl()
-                                    , n.getViewCount()
-                                    , n.getBookmarkCount()
-                                    , getAuthorNickname(n.getAuthorId())
-                            );
-                        })
-                        .collect(Collectors.toList());
-
-                return new RecommendationResponse(novels, "FALLBACK");
-            }
-
-            // Redis에도 없을 때 DB 조회
-            private RecommendationResponse getFallbackFromDb () {
-                List<Novel> popular = novelRepository.findFallbackNovels(PageRequest.of(0, 10)).getContent();
-
-                List<NovelListResponse> novels = popular.stream()
-                        .map(n -> NovelListResponse.of(
-                                n.getId()
-                                , n.getTitle()
-                                , n.getGenre()
-                                , n.getTags()
-                                , n.getStatus()
-                                , n.getCoverImageUrl()
-                                , n.getViewCount()
-                                , n.getBookmarkCount()
-                                , getAuthorNickname(n.getAuthorId())
-                        ))
-                        .collect(Collectors.toList());
-
-                return new RecommendationResponse(novels, "FALLBACK");
-            }
-
-            private List<String> getPopularTags () {
-                var tags = stringRedisTemplate.opsForZSet().reverseRange("ranking:search:tag", 0, 4);
-
-                return tags == null ?
-                        Collections.emptyList()
-                        : tags.stream()
-                        .collect(Collectors.toList());
-            }
-
-            private String getAuthorNickname (Long authorId) {
-
-                if (authorId == null) {
-                    return "알 수 없는 작가";
-                }
-
-                return userRepository.findById(authorId)
-                        .map(user -> user.getNickname())
-                        .orElse("알 수 없는 작가");
-            }
-
-            /** ===== 성능 + 정합성 통합 로그 확인 =====
-             * 소요시간 : AI가 다른 API에 방해되는지 확인
-             * 선호장르 vs 추천 졀과 : 의도한 대로 나왔는지 확인 (정합성)
-             ===================================== */
-            private void logRecommendation (
-                    Long userId
-                    , String type
-            ,long elapsedMs
-            ,Map<String, Integer> genrePreference
-            ,List<Long> recommendedIds
-        ){
-                // 추천 소설 실제 장르 조회
-                List<Novel> recommendedNovels = novelRepository.findAllById(recommendedIds);
-
-                // 추천 결과 장르 빈도 계산
-                Map<String, Long> resultGenreCount = recommendedNovels.stream()
-                        .collect(Collectors.groupingBy(Novel::getGenre, Collectors.counting()));
-
-                // 선호 장르 1위 추출
-                String topPreferredGenre = genrePreference.entrySet().stream()
-                        .max(Map.Entry.comparingByValue())
-                        .map(Map.Entry::getKey)
-                        .orElse("없음");
-
-                // 추천 결과 중 선호 장르 비율 계산
-                long preferredCount = resultGenreCount.getOrDefault(topPreferredGenre, 0L);
-                int total = recommendedIds.size();
-                double preferredRatio = total == 0 ? 0 : (double) preferredCount / total * 100;
-
-                // 한 줄로 모든 정보 기록 -> grep으로 쉽게 필터링
-                log.info("[AI추천결과] userId: {}, type: {} 소요: {}ms, 추천수: {}, 선호장르: {}, 선호장르비율: {}%, 장르분포: {}",
-                        userId, type, elapsedMs, total, topPreferredGenre, preferredRatio, resultGenreCount);
-            }
+        if (recommendedIsd.isEmpty()) {
+            return getFallbackRecommendation();
         }
+
+        List<NovelListResponse> novels = getNovelsByIds(recommendedIsd);
+        RecommendationResponse response = new RecommendationResponse(novels, "TREND");
+
+        // 비로그인 공용 캐시
+        redisTemplate.opsForValue().set(cacheKey, response, Duration.ofHours(1));
+
+        return response;
+    }
+
+    /**
+     * 공용 메소드
+     */
+
+    // 선호 장르 비율로 후보 소설 구성 -> 선호 장르 60% + 나머지 장르 40% 섞어서
+    private List<NovelSummaryForAi> getFilteredCandidates(
+            Map<String, Integer> genrePreference) {
+
+        // 선호 장르 없으면 전체 후보 반환
+        if (genrePreference.isEmpty()) {
+            return getCandidateNovels();
+        }
+
+        Optional<String> topGenre = preferenceAnalyzer.getTopGenre(genrePreference);
+
+        if (topGenre.isEmpty()) {
+            return getCandidateNovels();
+        }
+
+        String preferredGenre = topGenre.get();
+
+        // 선호 장르 소설 30개
+        List<NovelSummaryForAi> preferred = novelRepository.findByGenreForRecommendation(preferredGenre, PageRequest.of(0, 30))
+                .getContent()
+                .stream()
+                .map(n -> new NovelSummaryForAi(
+                        n.getId(), n.getCoverImageUrl(), n.getTitle(), n.getGenre(), n.getTags(), n.getAuthorId()))
+                .collect(Collectors.toList());
+
+        // 나머지 장르 소설 20개 (다양성 확보)
+        List<NovelSummaryForAi> others = novelRepository.findExcludeGenreForRecommendation(preferredGenre, PageRequest.of(0, 20))
+                .getContent()
+                .stream()
+                .map(n -> new NovelSummaryForAi(
+                        n.getId(), n.getCoverImageUrl(), n.getTitle(), n.getGenre(), n.getTags(), n.getAuthorId()))
+                .collect(Collectors.toList());
+
+        // 합쳐서 반환
+        List<NovelSummaryForAi> candidates = new ArrayList<>(preferred);
+        candidates.addAll(others);
+
+        log.info("[AI 추천] 후보 구성 - 선호장르 ({}) {}개 + 기타 {}개", preferredGenre, preferred.size(), others.size());
+
+        return candidates;
+    }
+
+    // AI에게 넘길 후보 소설 목록 조회 - 연재(ongoing), 완결(completed) 상태만 최신순 50개로 제한
+    private List<NovelSummaryForAi> getCandidateNovels() {
+        return novelRepository.findTop50ForRecommendation(PageRequest.of(0, 50))
+                .stream()
+                .map(n -> new NovelSummaryForAi(
+                        n.getId()
+                        , n.getCoverImageUrl()
+                        , n.getTitle()
+                        , n.getGenre()
+                        , n.getTags()
+                        , n.getAuthorId()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    // 추천 ID 순서 유지하면서 소설 목록 조회
+    private List<NovelListResponse> getNovelsByIds(List<Long> novelIds) {
+
+        // AI가 빈 결과를 줬을 때 바로 DB 결과가 아닌 빈 리스트 반환
+        if (novelIds == null || novelIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, Novel> novelMap = novelRepository.findActiveNovelsByIds(novelIds)
+                .stream()
+                .collect(Collectors.toMap(Novel::getId, novel -> novel));
+
+        return novelIds.stream()
+                .filter(novelMap::containsKey)
+                .map(id -> {
+                    Novel n = novelMap.get(id);
+                    return NovelListResponse.of(
+                            n.getId()
+                            , n.getTitle()
+                            , n.getGenre()
+                            , n.getTags()
+                            , n.getStatus()
+                            , n.getCoverImageUrl()
+                            , n.getViewCount()
+                            , n.getBookmarkCount()
+                            , getAuthorNickname(n.getAuthorId())
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+    // AI 응답 실패 시, 최종 안전망 - Redis 인기 랭킹 소설로 대체
+    private RecommendationResponse getFallbackRecommendation() {
+
+        // Redis 랭킹에서 상위 소설 ID 가져오기
+        List<NovelRankingResponse> ranking =
+                novelRankingService.getNovelRanking("realtime");
+
+        // Redis가 비어있으면 주간으로 재시도
+        if (ranking.isEmpty()) {
+            ranking = novelRankingService.getNovelRanking("weekly");
+        }
+
+        // Redis도 비어있으면 DB에서 직접 조회
+        if (ranking.isEmpty()) {
+            log.warn("[AI 추천] Redis 랭킹 없음 - DB 직접 조회");
+
+            return getFallbackFromDb();
+        }
+
+        // 랭킹 ID 순서유지하면서 Novel 상세 조회
+        List<Long> novelIds = ranking.stream()
+                .map(NovelRankingResponse::novelId)
+                .collect(Collectors.toList());
+
+        Map<Long, Novel> novelMap = novelRepository.findAllById(novelIds)
+                .stream()
+                .collect(Collectors.toMap(Novel::getId, novel -> novel));
+
+        // 랭킹 순서 유지하면서 NovelListResponse 변환
+        List<NovelListResponse> novels = novelIds.stream()
+                .filter(novelMap::containsKey)
+                .map(id -> {
+                    Novel n = novelMap.get(id);
+
+                    return NovelListResponse.of(
+                            n.getId()
+                            , n.getTitle()
+                            , n.getGenre()
+                            , n.getTags()
+                            , n.getStatus()
+                            , n.getCoverImageUrl()
+                            , n.getViewCount()
+                            , n.getBookmarkCount()
+                            , getAuthorNickname(n.getAuthorId())
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return new RecommendationResponse(novels, "FALLBACK");
+    }
+
+    // Redis에도 없을 때 DB 조회
+    private RecommendationResponse getFallbackFromDb() {
+        List<Novel> popular = novelRepository.findFallbackNovels(PageRequest.of(0, 10)).getContent();
+
+        List<NovelListResponse> novels = popular.stream()
+                .map(n -> NovelListResponse.of(
+                        n.getId()
+                        , n.getTitle()
+                        , n.getGenre()
+                        , n.getTags()
+                        , n.getStatus()
+                        , n.getCoverImageUrl()
+                        , n.getViewCount()
+                        , n.getBookmarkCount()
+                        , getAuthorNickname(n.getAuthorId())
+                ))
+                .collect(Collectors.toList());
+
+        return new RecommendationResponse(novels, "FALLBACK");
+    }
+
+    private List<String> getPopularTags() {
+        var tags = stringRedisTemplate.opsForZSet().reverseRange("ranking:search:tag", 0, 4);
+
+        return tags == null ?
+                Collections.emptyList()
+                : tags.stream()
+                  .collect(Collectors.toList());
+    }
+
+    private String getAuthorNickname(Long authorId) {
+
+        if (authorId == null) {
+            return "알 수 없는 작가";
+        }
+
+        return userRepository.findById(authorId)
+                .map(user -> user.getNickname())
+                .orElse("알 수 없는 작가");
+    }
+
+    /**
+     * ===== 성능 + 정합성 통합 로그 확인 =====
+     * 소요시간 : AI가 다른 API에 방해되는지 확인
+     * 선호장르 vs 추천 졀과 : 의도한 대로 나왔는지 확인 (정합성)
+     */
+    private void logRecommendation(
+            Long userId
+            , String type
+            , long elapsedMs
+            , Map<String, Integer> genrePreference
+            , List<Long> recommendedIds
+    ) {
+        // 추천 소설 실제 장르 조회
+        List<Novel> recommendedNovels = novelRepository.findAllById(recommendedIds);
+
+        // 추천 결과 장르 빈도 계산
+        Map<String, Long> resultGenreCount = recommendedNovels.stream()
+                .collect(Collectors.groupingBy(Novel::getGenre, Collectors.counting()));
+
+        // 선호 장르 1위 추출
+        String topPreferredGenre = genrePreference.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("없음");
+
+        // 추천 결과 중 선호 장르 비율 계산
+        long preferredCount = resultGenreCount.getOrDefault(topPreferredGenre, 0L);
+        int total = recommendedIds.size();
+        double preferredRatio = total == 0 ? 0 : (double) preferredCount / total * 100;
+
+        // 한 줄로 모든 정보 기록 -> grep으로 쉽게 필터링
+        log.info("[AI추천결과] userId: {}, type: {} 소요: {}ms, 추천수: {}, 선호장르: {}, 선호장르비율: {}%, 장르분포: {}",
+                userId, type, elapsedMs, total, topPreferredGenre, preferredRatio, resultGenreCount);
+    }
+}

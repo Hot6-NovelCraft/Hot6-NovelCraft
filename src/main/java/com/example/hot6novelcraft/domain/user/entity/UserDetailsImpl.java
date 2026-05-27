@@ -45,7 +45,8 @@ public class UserDetailsImpl implements UserDetails, OAuth2User {
     // 구글에서 받은 속성 맵핑
     @Override
     public Map<String, Object> getAttributes() {
-        return attributes == null ? Collections.emptyMap() : attributes;    }
+        return attributes == null ? Collections.emptyMap() : attributes;
+    }
 
     // OAuth2User의 식별자 = 이메일로 통일
     @Override

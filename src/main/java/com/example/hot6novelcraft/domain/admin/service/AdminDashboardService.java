@@ -28,7 +28,9 @@ public class AdminDashboardService {
     private final AdminCacheService adminCacheService;
     private final AdminStatisticsRepository adminStatisticsRepository;
 
-    /** ======= v1 쿼리 분할 (DB I/O 8회) + indexing ======= **/
+    /**
+     *  v1 쿼리 분할 (DB I/O 8회) + indexing
+     */
     public AdminDashboardResponse getDashboardStatusSeparated(
             UserRole role
             , String novelStatus
@@ -59,7 +61,9 @@ public class AdminDashboardService {
         return AdminDashboardResponse.of(userStatus, novelStatusResponse, mentorStatus);
     }
 
-    /** ======= v2 쿼리 병합 (DB I/O 3회) + indexing ======= **/
+    /**
+     * v2 쿼리 병합 (DB I/O 3회) + indexing
+     */
     public AdminDashboardResponse getDashboardStatusIntegrated(
             UserRole role
             , String novelStatus
@@ -73,10 +77,11 @@ public class AdminDashboardService {
         return AdminDashboardResponse.of(userStatusResponse, novelStatusResponse, mentorStatusResponse);
     }
 
-    /** ======= v3 신규 회원 및 신작 소설  =======
-     과거 데이터 스냅샷 + Redis 캐싱 + 쿼리 병합 + indexing 통합
-     "오늘" 실시간 기준 데이터 변환
-     **/
+    /**
+     * v3 신규 회원 및 신작 소설
+     * 과거 데이터 스냅샷 + Redis 캐싱 + 쿼리 병합 + indexing 통합
+     * "오늘" 실시간 기준 데이터 변환
+     */
     public AdminDashboardResponse getLiveDashboard(
             UserRole role
             , String novelStatus
@@ -100,9 +105,10 @@ public class AdminDashboardService {
         );
     }
 
-    /** ======= 과거 통계 분석용  =======
-     스케쥴러가 저장해둔 AdminStatistics 통계 DB 테이블만 조회
-     **/
+    /**
+     * 과거 통계 분석용
+     * 스케쥴러가 저장해둔 AdminStatistics 통계 DB 테이블만 조회
+     */
     public AdminDashboardResponse getHistoryDashBoard(LocalDate targetDate) {
 
         // 통계 테이블에서 1줄만

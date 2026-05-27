@@ -11,7 +11,7 @@ public record AdminSignupResponse(
         String email,
         UserRole role,
         LocalDateTime createdAt
-){
+) {
     public static AdminSignupResponse of(User user) {
         return new AdminSignupResponse(
                 user.getId(),

@@ -1,6 +1,6 @@
 package com.example.hot6novelcraft.domain.user.dto.response;
 
-public record CommonSignupResponse (
+public record CommonSignupResponse(
 
         String tempToken
 ) {

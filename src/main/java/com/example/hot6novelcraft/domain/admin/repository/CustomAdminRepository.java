@@ -8,23 +8,34 @@ import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
 
 public interface CustomAdminRepository {
 
-    /** ======= v1 쿼리 분할 ======= **/
+    /**
+     * ======= v1 쿼리 분할 =======
+     **/
     // 회원 통계
     Long countTotalUsers();
+
     Long countNewUsersToday();
+
     Long countUsersByRole(UserRole role);
 
     // 소설 통계
     Long countTotalNovels(String novelStatus);
+
     Long countNewNovelsToday();
+
     Long countNovelsByFilter(NovelStatus novelStatusEnum, Boolean isDeleted);
 
     // 멘토링 통계
     Long countTotalMentors();
+
     Long countNewMentorsToday();
 
-    /** ======= v2 쿼리 병합 ======= **/
+    /**
+     * ======= v2 쿼리 병합 =======
+     **/
     AdminDashboardUserStatusResponse getIntegratedUserStatus(UserRole role);
+
     AdminDashboardNovelStatusResponse getIntegratedNovelStatus(String totalStatusFilter, NovelStatus filterStatus, Boolean isDeleted);
+
     AdminDashboardMentorsStatusResponse getIntegratedMentorsStatus();
 }

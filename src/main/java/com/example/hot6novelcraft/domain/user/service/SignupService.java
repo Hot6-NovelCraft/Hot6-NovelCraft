@@ -43,11 +43,12 @@ public class SignupService {
     private final AdminCacheService adminCacheService;
     private final ObjectMapper objectMapper;
 
-    /** ======== 중복 확인 ========
-    1. 이메일 중복 확인
-    2. 닉네임 중복 확인
-    탈퇴 후 재가입시도 시 확인 및 30일 이내 탈퇴자가 있을 때 사용
-    ============================= */
+    /**
+     * ======== 중복 확인 ========
+     * 1. 이메일 중복 확인
+     * 2. 닉네임 중복 확인
+     * 탈퇴 후 재가입시도 시 확인 및 30일 이내 탈퇴자가 있을 때 사용
+     */
     public void checkEmail(String email) {
 
         Optional<User> optionalUser = userRepository.findByEmail(email);
@@ -82,13 +83,14 @@ public class SignupService {
         }
     }
 
-    /** ======== 회원 가입 ========
-    1. 공통 회원가입
-        - 독자/작가 추가 정보 기입까지 완료 후, DB 저장 및 임시 JWT 발급으로 보안 설정
-        - SMS 전송 및 인증
-    2. 독자 회원가입 - 임시 JWT로만 접근 가능, 하단 공통 메소드로 소셜/일반 분리
-    3. 작가 회원가입 - 임시 JWT로만 접근 가능, 하단 공통 메소드로 소셜/일반 분리
-    ============================= */
+    /**
+     * ======== 회원 가입 ========
+     * 1. 공통 회원가입
+     * - 독자/작가 추가 정보 기입까지 완료 후, DB 저장 및 임시 JWT 발급으로 보안 설정
+     * - SMS 전송 및 인증
+     * 2. 독자 회원가입 - 임시 JWT로만 접근 가능, 하단 공통 메소드로 소셜/일반 분리
+     * 3. 작가 회원가입 - 임시 JWT로만 접근 가능, 하단 공통 메소드로 소셜/일반 분리
+     */
     @Transactional
     public String commonSignup(CommonSignupRequest request) {
 
@@ -151,7 +153,7 @@ public class SignupService {
         Object socialData = redisUtil.getAndDelete(socialKey);
         TempSocialSignupRequest tempSocialSignupRequest = objectMapper.convertValue(socialData, TempSocialSignupRequest.class);
 
-        if(tempSocialSignupRequest != null) {
+        if (tempSocialSignupRequest != null) {
             return processSocialAuthorSignup(request, email, tempSocialSignupRequest, socialKey);
         }
 
@@ -159,18 +161,19 @@ public class SignupService {
         Object normalData = redisUtil.getAndDelete(normalKey);
         TempSignupRequest tempRequest = objectMapper.convertValue(normalData, TempSignupRequest.class);
 
-        if(tempRequest != null) {
+        if (tempRequest != null) {
             return processNormalAuthorSignup(request, email, tempRequest, normalKey);
         }
 
         throw new ServiceErrorException(UserExceptionEnum.ERR_INVALID_TOKEN);
     }
 
-    /** ======== 소셜 회원 가입 ========
-     1. 소셜 공통 회원 가입 - 번호 인증 필요, 닉네임, 생일 입력
-     2. 소셜 독자 회원 가입 - private
-     3. 소셜 작가 회원 가입 - private
-     ============================= */
+    /**
+     * ======== 소셜 회원 가입 ========
+     * 1. 소셜 공통 회원 가입 - 번호 인증 필요, 닉네임, 생일 입력
+     * 2. 소셜 독자 회원 가입 - private
+     * 3. 소셜 작가 회원 가입 - private
+     */
     @Transactional
     public SocialSignupResponse socialCommonSignup(SocialSignupRequest request, String email, String providerId, ProviderSns providerSns) {
 
@@ -179,7 +182,7 @@ public class SignupService {
 
         // 소셜 유저 검증 - 탈퇴 유예 기간 유저인지 체크 및 비밀번호는 SOCIAL LOGIN으로 고정
         Optional<User> optionalUser = userRepository.findByEmail(email);
-        if(optionalUser.isPresent()) {
+        if (optionalUser.isPresent()) {
             User user = optionalUser.get();
             if (user.isDeleted()) {
                 throw new ServiceErrorException(UserExceptionEnum.ERR_USER_WITHDRAWAL_PENDING_CONFLICT);
@@ -206,7 +209,9 @@ public class SignupService {
         return SocialSignupResponse.of(tempToken, email, request.nickname());
     }
 
-    /** ================= 공통 메소드 ================= */
+    /**
+     * 공통 메소드
+     */
 
     // 소셜 독자
     private SignupResponse processSocialReaderSignup(ReaderSignupRequest request, String email, TempSocialSignupRequest tempRequest, String redisKey) {
@@ -227,7 +232,7 @@ public class SignupService {
                 , savedUser.getId()
         );
 
-        if(user.isAdult()) {
+        if (user.isAdult()) {
             user.verifyAdult(); // 19살 이상일 시 "인증 완료"
         }
 
@@ -249,7 +254,7 @@ public class SignupService {
     private SignupResponse processNormalReaderSignup(ReaderSignupRequest request, String email, TempSignupRequest tempRequest, String redisKey) {
 
         // 중복 가입 체크
-        if(userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(email)) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_ALREADY_COMPLETED_SIGNUP);
         }
 
@@ -269,7 +274,7 @@ public class SignupService {
                 , request.readingGoal()
         );
 
-        if(user.isAdult()) {
+        if (user.isAdult()) {
             user.verifyAdult(); // 19살 이상일 시 "인증 완료"
         }
 
@@ -315,7 +320,7 @@ public class SignupService {
                 , request.allowMenteeRequest()
         );
 
-        if(savedUser.isAdult()) {
+        if (savedUser.isAdult()) {
             savedUser.verifyAdult();
         }
 
@@ -328,7 +333,7 @@ public class SignupService {
     // 일반 작가
     private SignupResponse processNormalAuthorSignup(AuthorRequest request, String email, TempSignupRequest tempRequest, String redisKey) {
 
-        if(userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(email)) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_ALREADY_COMPLETED_SIGNUP);
         }
 
@@ -354,7 +359,7 @@ public class SignupService {
                 , request.allowMenteeRequest()
         );
 
-        if(user.isAdult()) {
+        if (user.isAdult()) {
             user.verifyAdult(); // 19살 이상일 시 "인증 완료"
         }
         authorProfileRepository.save(authorProfile);
@@ -363,9 +368,10 @@ public class SignupService {
         return SignupResponse.of(savedUser);
     }
 
-    /** ====== 관리자 회원 가입 ======
-     이메일, 비밀번호, 핸드폰 인증만 진행
-     ============================= */
+    /**
+     * ====== 관리자 회원 가입 ======
+     * 이메일, 비밀번호, 핸드폰 인증만 진행
+     */
     @Transactional
     public AdminSignupResponse adminSignup(AdminSignupRequest request, String email) {
 
@@ -397,10 +403,10 @@ public class SignupService {
     }
 
     // SMS 공통 메소드
-    private void consumePhoneVerification(String tempToken,String phoneNo) {
+    private void consumePhoneVerification(String tempToken, String phoneNo) {
         String smsToken = "SMS:TOKEN:" + tempToken;
         String verifiedPhone = (String) redisUtil.getAndDelete(smsToken);
-        if(verifiedPhone == null || !verifiedPhone.equals(phoneNo)) {
+        if (verifiedPhone == null || !verifiedPhone.equals(phoneNo)) {
             throw new ServiceErrorException(UserExceptionEnum.ERR_PHONE_NOT_VERIFIED);
         }
     }

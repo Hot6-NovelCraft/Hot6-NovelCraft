@@ -18,7 +18,7 @@ import java.util.UUID;
 @Table(name = "users"
         , indexes = {
         @Index(name = "idx_user_role_deleted", columnList = "is_deleted, role") // 역할별 회원 조회
-        ,  @Index(name = "idx_user_created_at", columnList = "created_at") // 신규 회원 조회
+        , @Index(name = "idx_user_created_at", columnList = "created_at") // 신규 회원 조회
 })
 public class User extends BaseEntity {
 
@@ -115,10 +115,10 @@ public class User extends BaseEntity {
 
     // 회원정보 수정
     public void update(String nickname, String phoneNo) {
-        if(nickname != null) {
+        if (nickname != null) {
             this.nickname = nickname;
         }
-        if(phoneNo != null) {
+        if (phoneNo != null) {
             this.phoneNo = phoneNo;
         }
     }
@@ -140,7 +140,7 @@ public class User extends BaseEntity {
         String uuid = UUID.randomUUID().toString().substring(0, 8);
 
         this.email = "deleted_" + uuid + "@anonymous.com";
-        this.nickname = "알수없음_" +uuid;
+        this.nickname = "알수없음_" + uuid;
 
         this.password = "DELETED";
         this.phoneNo = null;
@@ -168,7 +168,7 @@ public class User extends BaseEntity {
 
     // 단순 나이 계산
     public boolean isAdult() {
-        if(this.birthday == null) {
+        if (this.birthday == null) {
             return false;
         }
         int age = Period.between(this.birthday, LocalDate.now()).getYears();
@@ -183,7 +183,7 @@ public class User extends BaseEntity {
 
     // 성인 인증 완료 (1년 유효기간)
     public boolean isAdultVerificationValid() {
-        if(!isAdultVerified || adultVerifiedAt == null) {
+        if (!isAdultVerified || adultVerifiedAt == null) {
             return false;
         }
         return adultVerifiedAt.plusYears(1).isAfter(LocalDateTime.now());
