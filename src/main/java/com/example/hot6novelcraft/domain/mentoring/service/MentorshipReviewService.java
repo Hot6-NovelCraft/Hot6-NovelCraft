@@ -2,7 +2,6 @@ package com.example.hot6novelcraft.domain.mentoring.service;
 
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.MentoringExceptionEnum;
-import com.example.hot6novelcraft.common.exception.domain.UserExceptionEnum;
 import com.example.hot6novelcraft.domain.mentoring.dto.request.MentorshipReviewRequest;
 import com.example.hot6novelcraft.domain.mentoring.entity.Mentorship;
 import com.example.hot6novelcraft.domain.mentoring.entity.MentorshipReview;

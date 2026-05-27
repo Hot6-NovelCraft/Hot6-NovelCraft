@@ -3,7 +3,6 @@ package com.example.hot6novelcraft.domain.episode.repository;
 import com.example.hot6novelcraft.domain.episode.dto.cache.EpisodeContentCache;
 import com.example.hot6novelcraft.domain.episode.dto.response.AuthorEpisodeListResponse;
 import com.example.hot6novelcraft.domain.episode.dto.response.EpisodeListResponse;
-import com.example.hot6novelcraft.domain.episode.entity.Episode;
 import com.example.hot6novelcraft.domain.episode.entity.QEpisode;
 import com.example.hot6novelcraft.domain.episode.entity.enums.EpisodeStatus;
 import com.querydsl.core.types.Projections;

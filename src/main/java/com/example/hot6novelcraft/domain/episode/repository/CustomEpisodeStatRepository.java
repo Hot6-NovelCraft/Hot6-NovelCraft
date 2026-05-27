@@ -1,6 +1,7 @@
 package com.example.hot6novelcraft.domain.episode.repository;
 
 import com.example.hot6novelcraft.domain.episode.dto.response.EpisodeStatResponse;
+
 import java.util.List;
 
 public interface CustomEpisodeStatRepository {

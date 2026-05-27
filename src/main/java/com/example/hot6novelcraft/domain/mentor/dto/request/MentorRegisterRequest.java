@@ -1,11 +1,7 @@
 package com.example.hot6novelcraft.domain.mentor.dto.request;
 
 import com.example.hot6novelcraft.domain.user.entity.enums.CareerLevel;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.util.List;
 

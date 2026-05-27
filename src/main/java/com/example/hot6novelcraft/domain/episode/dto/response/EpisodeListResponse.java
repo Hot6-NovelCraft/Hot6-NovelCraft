@@ -1,7 +1,5 @@
 package com.example.hot6novelcraft.domain.episode.dto.response;
 
-import com.example.hot6novelcraft.domain.episode.entity.enums.EpisodeStatus;
-
 import java.time.LocalDateTime;
 
 public record EpisodeListResponse(

@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface NovelRepository extends JpaRepository<Novel, Long>, CustomNovelRepository  {
+public interface NovelRepository extends JpaRepository<Novel, Long>, CustomNovelRepository {
 
     // V1 - 소설 목록 조회 (IsDeleted확인)
     Page<Novel> findAllByIsDeletedFalse(Pageable pageable);

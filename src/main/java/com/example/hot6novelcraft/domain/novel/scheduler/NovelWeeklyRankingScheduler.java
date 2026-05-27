@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -69,11 +70,13 @@ public class NovelWeeklyRankingScheduler {
         }
     }
 
-    /** ======= [주간 랭킹] ============
+    /**
+     * ======= [주간 랭킹] ============
      * - Redis 주간 키 초기화 및 새 주차 시작
      * - 일요일 00시 01분 업데이트 초기화
      * 서하나
-     * =============================== */
+     * ===============================
+     */
     @Transactional(readOnly = true)
     @Scheduled(cron = "0 1 0 * * SUN")
     public void updateWeeklyRanking() {

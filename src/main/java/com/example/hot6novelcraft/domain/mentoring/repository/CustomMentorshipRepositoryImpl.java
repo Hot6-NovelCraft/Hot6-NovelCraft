@@ -2,8 +2,8 @@ package com.example.hot6novelcraft.domain.mentoring.repository;
 
 import com.example.hot6novelcraft.domain.mentor.entity.QMentor;
 import com.example.hot6novelcraft.domain.mentor.entity.enums.MentorStatus;
-import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringReceivedResponse;
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentorWithNickname;
+import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringReceivedResponse;
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentorshipHistoryResponse;
 import com.example.hot6novelcraft.domain.mentoring.entity.QMentorship;
 import com.example.hot6novelcraft.domain.mentoring.entity.enums.MentorshipStatus;

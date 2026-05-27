@@ -75,16 +75,16 @@ public class OpenAiReviewClient implements AiReviewClient {
                 당신은 웹소설 플랫폼의 다양한 독자들입니다.
                 작가님이 발행하기 전에 받아보는 미리 보기 리뷰입니다.
                 실제 독자들이 다는 댓글처럼 자연스러운 반응을 남겨주세요.
-
+                
                 [회차 제목]
                 %s
-
+                
                 [본문]
                 %s
-
+                
                 ⚠️⚠️⚠️ 가장 중요한 규칙 ⚠️⚠️⚠️
                 본문을 평가하기 전, 먼저 본문이 "실제 소설"인지 판단하세요.
-
+                
                 [본문이 의미 없는 입력인지 체크]
                 다음 중 하나라도 해당되면 **무조건 평점 1.0~1.5, 비판적 댓글만 작성**:
                 - 같은 글자/단어/문자가 반복됨 (예: "gggg", "asdf", "ㅁㄴㅇㄹ", "ㅋㅋㅋㅋㅋ", "ㅏㅏㅏㅏ")
@@ -92,24 +92,24 @@ public class OpenAiReviewClient implements AiReviewClient {
                 - 본문이 너무 짧음 (50자 미만)
                 - 문장이 아닌 단어 나열
                 - 키보드 마구 누른 듯한 입력
-
+                
                 ⛔ 이런 본문에는 절대로:
                 - 4점, 5점 평점 주지 말 것
                 - "기대되네요", "다음화 기다려져요" 같은 긍정적 댓글 절대 금지
                 - 등장인물이나 스토리에 대해 추측하지 말 것 (없는 내용을 만들어내지 말기)
                 - 제목만 보고 평가하지 말 것 (본문이 핵심)
-
+                
                 ✅ 의미없는 본문에는 이런 댓글:
                 - "이게 뭐임 ㅋㅋㅋ 본문 비어있는데요?"
                 - "테스트하시는거 같은데... 진짜 본문 채워서 다시 받아보세요"
                 - "글자만 막 적어놓으셨네요 ㅠㅠ"
                 - "내용이 전혀 없어서 평가할 게 없어요"
                 - "이거 실수로 발행 누르신거 아니에요?ㅋㅋ"
-
+                
                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+                
                 [본문이 실제 소설인 경우만 아래 규칙 적용]
-
+                
                 [규칙]
                 - 댓글은 6~10개 사이로 생성
                 - 각 댓글마다 댓글 작성자가 매긴 개별 평점(rating) 포함 (1.0 ~ 5.0, 0.5 단위)
@@ -124,7 +124,7 @@ public class OpenAiReviewClient implements AiReviewClient {
                 - 평론가처럼 분석하지 말 것 (예: "이 작품은 ~한 의미가 있다" X)
                 - 닉네임은 실제 웹소설 독자 느낌으로 (예: 달빛독자, 소설덕후777, 띵작헌터, 결말이뭐야, 정주행중, 새벽감성러 등)
                 - 닉네임은 3~10자, 매번 다르게
-
+                
                 [평가 기준 - 반드시 본문 퀄리티에 맞춰 솔직하고 냉정하게]
                 - 절대 무조건 호의적으로 평가하지 말 것. 작가에게 도움되는 솔직한 피드백이 목적
                 - 본문 퀄리티에 따라 댓글마다 평점 차등 적용:
@@ -135,7 +135,7 @@ public class OpenAiReviewClient implements AiReviewClient {
                   * 5.0: 정말 뛰어난 글
                 - 댓글마다 평점이 약간씩 다른게 자연스러움
                 - 부정적 댓글이면 낮은 평점, 긍정적 댓글이면 높은 평점
-
+                
                 [응답 형식 - 반드시 아래 JSON만 출력. 코드블럭이나 다른 말 절대 금지]
                 {
                   "comments": [
@@ -173,8 +173,11 @@ public class OpenAiReviewClient implements AiReviewClient {
             throw new IllegalStateException("AI 리뷰 파싱 실패", e);
         }
     }
-    // OpenAI JSON 응답 -> 이 record로 변환
-    private record ParsedAiResponse(List<ParsedComment> comments) {}
 
-    private record ParsedComment(String nickname, String content, double rating) {}
+    // OpenAI JSON 응답 -> 이 record로 변환
+    private record ParsedAiResponse(List<ParsedComment> comments) {
+    }
+
+    private record ParsedComment(String nickname, String content, double rating) {
+    }
 }

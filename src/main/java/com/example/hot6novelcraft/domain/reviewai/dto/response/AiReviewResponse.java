@@ -15,5 +15,6 @@ public record AiReviewResponse(
             String nickname,
             String content,
             double rating
-    ) {}
+    ) {
+    }
 }

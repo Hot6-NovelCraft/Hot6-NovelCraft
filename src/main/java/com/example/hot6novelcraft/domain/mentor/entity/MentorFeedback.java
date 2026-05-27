@@ -37,11 +37,11 @@ public class MentorFeedback extends BaseEntity {
 
     private MentorFeedback(Long mentorshipId, Long authorId, String title,
                            int sessionNumber, String content) {
-        this.mentorshipId  = mentorshipId;
-        this.authorId      = authorId;
-        this.title         = title;
+        this.mentorshipId = mentorshipId;
+        this.authorId = authorId;
+        this.title = title;
         this.sessionNumber = sessionNumber;
-        this.content       = content;
+        this.content = content;
     }
 
     public static MentorFeedback create(Long mentorshipId, Long authorId, String title,

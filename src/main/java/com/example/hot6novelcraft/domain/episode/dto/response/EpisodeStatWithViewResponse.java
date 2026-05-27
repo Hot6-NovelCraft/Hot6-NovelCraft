@@ -8,4 +8,5 @@ public record EpisodeStatWithViewResponse(
         long likeCount,
         long commentCount,
         long purchaseCount
-) {}
+) {
+}

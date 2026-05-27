@@ -3,11 +3,8 @@ package com.example.hot6novelcraft.domain.episode.repository;
 import com.example.hot6novelcraft.domain.episode.dto.cache.EpisodeContentCache;
 import com.example.hot6novelcraft.domain.episode.dto.response.AuthorEpisodeListResponse;
 import com.example.hot6novelcraft.domain.episode.dto.response.EpisodeListResponse;
-import com.example.hot6novelcraft.domain.episode.entity.Episode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
-import java.util.List;
 
 public interface CustomEpisodeRepository {
 

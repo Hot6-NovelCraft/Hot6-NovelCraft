@@ -182,10 +182,10 @@ public class NovelController {
             @RequestParam(defaultValue = "50") int limit // 기본 50개 리스트
     ) {
         // limit 값 최대 100개
-        if(limit > 100) {
+        if (limit > 100) {
             limit = 100;
         }
-        if(limit < 1) {
+        if (limit < 1) {
             limit = 1;
         }
         List<NovelListResponse> response = novelService.getNewNovelList(genre, status, limit);

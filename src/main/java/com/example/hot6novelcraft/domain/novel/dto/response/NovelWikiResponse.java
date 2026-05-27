@@ -3,8 +3,6 @@ package com.example.hot6novelcraft.domain.novel.dto.response;
 import com.example.hot6novelcraft.domain.novel.entity.NovelWiki;
 import com.example.hot6novelcraft.domain.novel.entity.enums.WikiCategory;
 
-import java.time.LocalDateTime;
-
 public record NovelWikiResponse(
 
         Long wikiId,

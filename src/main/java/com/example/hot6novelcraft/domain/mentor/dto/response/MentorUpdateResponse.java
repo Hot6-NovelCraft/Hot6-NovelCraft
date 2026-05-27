@@ -1,6 +1,5 @@
 package com.example.hot6novelcraft.domain.mentor.dto.response;
 
-import com.example.hot6novelcraft.domain.mentor.entity.Mentor;
 import java.time.LocalDateTime;
 
 public record MentorUpdateResponse(

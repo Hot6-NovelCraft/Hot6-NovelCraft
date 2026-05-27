@@ -1,12 +1,10 @@
 package com.example.hot6novelcraft.domain.mentoring.service;
 
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
-import com.example.hot6novelcraft.common.exception.domain.MentoringExceptionEnum;
 import com.example.hot6novelcraft.common.exception.domain.MentorExceptionEnum;
+import com.example.hot6novelcraft.common.exception.domain.MentoringExceptionEnum;
 import com.example.hot6novelcraft.domain.file.service.FileUploadService;
 import com.example.hot6novelcraft.domain.mentor.entity.Mentor;
-import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
-import org.springframework.context.ApplicationEventPublisher;
 import com.example.hot6novelcraft.domain.mentor.entity.MentorFeedback;
 import com.example.hot6novelcraft.domain.mentor.repository.MentorFeedbackRepository;
 import com.example.hot6novelcraft.domain.mentor.repository.MentorRepository;
@@ -17,11 +15,13 @@ import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringReceive
 import com.example.hot6novelcraft.domain.mentoring.entity.Mentorship;
 import com.example.hot6novelcraft.domain.mentoring.entity.enums.MentorshipStatus;
 import com.example.hot6novelcraft.domain.mentoring.repository.MentorshipRepository;
+import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
 import com.example.hot6novelcraft.domain.novel.entity.Novel;
 import com.example.hot6novelcraft.domain.novel.repository.NovelRepository;
 import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -180,7 +180,7 @@ public class MentoringService {
                 .map(User::getNickname).orElse("알 수 없는 사용자");
         String novelTitle = mentorship.getCurrentNovelId() != null
                 ? novelRepository.findByIdAndIsDeletedFalse(mentorship.getCurrentNovelId())
-                        .map(Novel::getTitle).orElse("알 수 없는 소설")
+                .map(Novel::getTitle).orElse("알 수 없는 소설")
                 : "선택 없음";
 
         List<MentoringDetailResponse.FeedbackInfo> feedbacks = mentorFeedbackRepository

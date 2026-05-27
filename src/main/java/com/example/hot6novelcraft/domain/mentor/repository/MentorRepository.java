@@ -3,8 +3,9 @@ package com.example.hot6novelcraft.domain.mentor.repository;
 import com.example.hot6novelcraft.domain.mentor.entity.Mentor;
 import com.example.hot6novelcraft.domain.mentor.entity.enums.MentorStatus;
 import org.springframework.data.domain.Page;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import java.util.List;
 import java.util.Optional;
 
