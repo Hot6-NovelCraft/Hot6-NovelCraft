@@ -222,7 +222,7 @@ public class CustomNovelRepositoryImpl implements CustomNovelRepository {
                         novel.viewCount,
                         novel.bookmarkCount,
                         user.nickname
-                        ))
+                ))
                 .from(novel)
                 .join(user).on(novel.authorId.eq(user.id))
                 .where(

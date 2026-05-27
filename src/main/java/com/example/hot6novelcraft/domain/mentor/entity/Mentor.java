@@ -67,7 +67,7 @@ public class Mentor extends BaseEntity {
 
     public void approve() {
 
-        if(this.status != MentorStatus.PENDING) {
+        if (this.status != MentorStatus.PENDING) {
             throw new ServiceErrorException(MentorExceptionEnum.MENTOR_ALREADY_PROCESSED);
         }
         this.status = MentorStatus.APPROVED;
@@ -77,7 +77,7 @@ public class Mentor extends BaseEntity {
 
     public void reject(String rejectReason) {
 
-        if(this.status != MentorStatus.PENDING) {
+        if (this.status != MentorStatus.PENDING) {
             throw new ServiceErrorException(MentorExceptionEnum.MENTOR_ALREADY_PROCESSED);
         }
         this.status = MentorStatus.REJECTED;

@@ -6,9 +6,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
-import org.springframework.data.redis.core.Cursor;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -34,7 +34,8 @@ public class EpisodeCommentCacheService {
         try {
             return objectMapper.readValue(
                     cached.toString(),
-                    new TypeReference<PageResponse<EpisodeCommentListResponse>>() {}
+                    new TypeReference<PageResponse<EpisodeCommentListResponse>>() {
+                    }
             );
         } catch (Exception e) {
             redisTemplate.delete(key);

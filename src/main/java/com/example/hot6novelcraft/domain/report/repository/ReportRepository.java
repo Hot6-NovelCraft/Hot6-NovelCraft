@@ -12,5 +12,5 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     boolean existsByReporterIdAndCommentIdAndCreatedAtAfter(Long reporterId, Long commentId, LocalDateTime since);
 
     // 24시간 내 동일 유저 신고 여부
-    boolean existsByReporterIdAndTargetIdAndTargetTypeAndCreatedAtAfter(Long reporterId,Long targetId,ReportTargetType targetType, LocalDateTime since);
+    boolean existsByReporterIdAndTargetIdAndTargetTypeAndCreatedAtAfter(Long reporterId, Long targetId, ReportTargetType targetType, LocalDateTime since);
 }

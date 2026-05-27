@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -31,7 +29,7 @@ public class EpisodeComment extends BaseEntity {
     @Column(nullable = false)
     private Long episodeId;
 
-    @Column(nullable = false, length =500)
+    @Column(nullable = false, length = 500)
     private String content;
 
 

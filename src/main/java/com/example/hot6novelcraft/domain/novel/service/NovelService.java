@@ -12,6 +12,9 @@ import com.example.hot6novelcraft.domain.novel.dto.response.*;
 import com.example.hot6novelcraft.domain.novel.entity.Novel;
 import com.example.hot6novelcraft.domain.novel.entity.enums.NovelStatus;
 import com.example.hot6novelcraft.domain.novel.repository.NovelRepository;
+import com.example.hot6novelcraft.domain.user.entity.User;
+import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
+import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,12 +28,9 @@ import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.hot6novelcraft.domain.user.entity.User;
-import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
-import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
-
 import java.time.Duration;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -200,9 +200,10 @@ public class NovelService {
                 // 실패 시 캐시 무효화 후 DB 경로로 폴백
                 try {
                     redisTemplate.delete(cacheKey);
-                } catch (RuntimeException ignored) {}
+                } catch (RuntimeException ignored) {
                 }
             }
+        }
 //            return (PageResponse<NovelListResponse>) cached;
 //        }
 

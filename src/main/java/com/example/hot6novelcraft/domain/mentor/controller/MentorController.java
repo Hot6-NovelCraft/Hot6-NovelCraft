@@ -69,6 +69,7 @@ public class MentorController {
         MentorStatisticsResponse response = mentorService.getStatistics(userDetails.getUser().getId());
         return ResponseEntity.ok(BaseResponse.success("200", "멘토링 통계 조회가 완료되었습니다", response));
     }
+
     @GetMapping("/me/mentees")
     public ResponseEntity<BaseResponse<List<MenteeInfoResponse>>> getMyMentees(
             @AuthenticationPrincipal UserDetailsImpl userDetails
@@ -76,6 +77,7 @@ public class MentorController {
         List<MenteeInfoResponse> response = mentorService.getMyMentees(userDetails.getUser().getId());
         return ResponseEntity.ok(BaseResponse.success("200", "내 멘티 목록 조회가 완료되었습니다", response));
     }
+
     // 내 멘티 목록 조회 v2 - QueryDSL N+1 개선
     @GetMapping("/v2/me/mentees")
     public ResponseEntity<BaseResponse<List<MenteeInfoResponse>>> getMyMenteesV2(
@@ -84,6 +86,7 @@ public class MentorController {
         List<MenteeInfoResponse> response = mentorService.getMyMenteesV2(userDetails.getUser().getId());
         return ResponseEntity.ok(BaseResponse.success("200", "내 멘티 목록 조회가 완료되었습니다", response));
     }
+
     @GetMapping("/me/statistics/detail")
     public ResponseEntity<BaseResponse<MentorStatisticsDetailResponse>> getStatisticsDetail(
             @AuthenticationPrincipal UserDetailsImpl userDetails

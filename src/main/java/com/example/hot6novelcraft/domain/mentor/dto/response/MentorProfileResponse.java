@@ -45,7 +45,8 @@ public record MentorProfileResponse(
             return Collections.emptyList();
         }
         try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
+            return objectMapper.readValue(json, new TypeReference<>() {
+            });
         } catch (Exception e) {
             return Collections.emptyList();
         }

@@ -7,7 +7,6 @@ import com.example.hot6novelcraft.domain.mentoring.dto.response.ManuscriptUrlRes
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringDetailResponse;
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringFeedbackResponse;
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentoringReceivedResponse;
-import org.springframework.http.ResponseEntity;
 import com.example.hot6novelcraft.domain.mentoring.service.MentoringService;
 import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
 import jakarta.validation.Valid;

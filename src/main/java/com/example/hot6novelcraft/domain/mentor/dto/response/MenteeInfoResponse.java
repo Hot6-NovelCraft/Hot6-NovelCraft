@@ -2,6 +2,7 @@ package com.example.hot6novelcraft.domain.mentor.dto.response;
 
 import com.example.hot6novelcraft.domain.mentoring.entity.Mentorship;
 import com.example.hot6novelcraft.domain.mentoring.entity.enums.MentorshipStatus;
+
 import java.time.LocalDateTime;
 
 public record MenteeInfoResponse(

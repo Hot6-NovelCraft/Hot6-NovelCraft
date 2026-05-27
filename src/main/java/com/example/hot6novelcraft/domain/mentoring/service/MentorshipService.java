@@ -6,8 +6,6 @@ import com.example.hot6novelcraft.common.exception.domain.MentoringExceptionEnum
 import com.example.hot6novelcraft.common.exception.domain.UserExceptionEnum;
 import com.example.hot6novelcraft.domain.file.service.FileUploadService;
 import com.example.hot6novelcraft.domain.mentor.entity.Mentor;
-import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
-import org.springframework.context.ApplicationEventPublisher;
 import com.example.hot6novelcraft.domain.mentor.repository.MentorRepository;
 import com.example.hot6novelcraft.domain.mentoring.dto.request.MentorshipCreateRequest;
 import com.example.hot6novelcraft.domain.mentoring.dto.response.*;
@@ -15,6 +13,7 @@ import com.example.hot6novelcraft.domain.mentoring.entity.Mentorship;
 import com.example.hot6novelcraft.domain.mentoring.entity.enums.MentorshipStatus;
 import com.example.hot6novelcraft.domain.mentoring.repository.MentorshipRepository;
 import com.example.hot6novelcraft.domain.mentoring.repository.MentorshipReviewRepository;
+import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
 import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.entity.enums.CareerLevel;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
@@ -24,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -195,7 +195,7 @@ public class MentorshipService {
                     Mentor mentor = mentorRepository.findById(m.getMentorId()).orElse(null);
                     String mentorNickname = mentor == null ? "알 수 없는 멘토"
                             : userRepository.findById(mentor.getUserId())
-                                    .map(User::getNickname).orElse("알 수 없는 멘토");
+                            .map(User::getNickname).orElse("알 수 없는 멘토");
                     boolean hasReview = mentorshipReviewRepository.existsByMentorshipId(m.getId());
 
                     return new MentorshipHistoryResponse(
@@ -234,8 +234,8 @@ public class MentorshipService {
         return list.stream()
                 .map(h -> reviewedIds.contains(h.mentorshipId())
                         ? new MentorshipHistoryResponse(h.mentorshipId(), h.mentorId(), h.mentorNickname(),
-                                h.status(), h.appliedAt(), h.motivation(), h.manuscriptUrl(),
-                                h.currentNovelId(), true)
+                        h.status(), h.appliedAt(), h.motivation(), h.manuscriptUrl(),
+                        h.currentNovelId(), true)
                         : h)
                 .toList();
     }
@@ -261,7 +261,8 @@ public class MentorshipService {
             return List.of();
         }
         try {
-            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {
+            });
         } catch (JsonProcessingException e) {
             return List.of();
         }

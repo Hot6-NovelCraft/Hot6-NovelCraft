@@ -36,9 +36,9 @@ public class NovelRankingService {
     public List<NovelRankingResponse> getNovelRanking(String type) {
         String redisKey;
 
-        if("realtime".equalsIgnoreCase(type)) {
+        if ("realtime".equalsIgnoreCase(type)) {
             redisKey = REALTIME_RANKING_KEY;
-        } else if("weekly".equalsIgnoreCase(type)) {
+        } else if ("weekly".equalsIgnoreCase(type)) {
             redisKey = WEEKLY_RANKING_KEY;
         } else {
             throw new ServiceErrorException(NovelExceptionEnum.INVALID_RANKING_TYPE);
@@ -60,10 +60,10 @@ public class NovelRankingService {
 
         // ZSet에서 Score(조회수) 기준 내림차순 TOP 5 조회
         Set<ZSetOperations.TypedTuple<Object>> topNovels
-                = redisTemplate.opsForZSet().reverseRangeWithScores(redisKey, 0, limit -1);
+                = redisTemplate.opsForZSet().reverseRangeWithScores(redisKey, 0, limit - 1);
 
         // Redis 데이터에 없으면 빈 리스트 반환
-        if(topNovels == null || topNovels.isEmpty()) {
+        if (topNovels == null || topNovels.isEmpty()) {
             return new ArrayList<>();
         }
 
@@ -94,7 +94,7 @@ public class NovelRankingService {
 
         int rank = 1;
 
-        for(ZSetOperations.TypedTuple<Object> tuple : topNovels) {
+        for (ZSetOperations.TypedTuple<Object> tuple : topNovels) {
             Long novelId = Long.valueOf(tuple.getValue().toString());
             Long viewCount = tuple.getScore().longValue();
             Novel novel = novelMap.get(novelId);
@@ -121,13 +121,13 @@ public class NovelRankingService {
         List<Novel> topNovels;
 
         // 타입에 따라 DB에서 직접 집계해서 가져오기 (QueryDSL 활용)
-        if("realtime".equalsIgnoreCase(type)) {
+        if ("realtime".equalsIgnoreCase(type)) {
             topNovels = novelRepository.findHourlyTopNovels(limit);
         } else {
             topNovels = novelRepository.findWeeklyTopNovels(limit);
         }
 
-        if(topNovels.isEmpty()) {
+        if (topNovels.isEmpty()) {
             return new ArrayList<>();
         }
 
@@ -146,11 +146,11 @@ public class NovelRankingService {
 
         int rank = 1;
 
-        for(Novel novel : topNovels) {
-            if(novel.getStatus() == NovelStatus.PENDING || novel.getStatus() == NovelStatus.HIATUS) {
+        for (Novel novel : topNovels) {
+            if (novel.getStatus() == NovelStatus.PENDING || novel.getStatus() == NovelStatus.HIATUS) {
                 continue;
             }
-            if(novel.getTags() != null && (novel.getTags().contains("성인") || novel.getTags().contains("19금"))) {
+            if (novel.getTags() != null && (novel.getTags().contains("성인") || novel.getTags().contains("19금"))) {
                 continue;
             }
             rankingList.add(NovelRankingResponse.of(

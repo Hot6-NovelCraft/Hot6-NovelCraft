@@ -13,7 +13,6 @@ import com.example.hot6novelcraft.domain.episode.entity.Episode;
 import com.example.hot6novelcraft.domain.episode.entity.enums.EpisodeStatus;
 import com.example.hot6novelcraft.domain.episode.repository.EpisodeRepository;
 import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
-import org.springframework.context.ApplicationEventPublisher;
 import com.example.hot6novelcraft.domain.novel.entity.Novel;
 import com.example.hot6novelcraft.domain.novel.entity.enums.MainTag;
 import com.example.hot6novelcraft.domain.novel.entity.enums.NovelStatus;
@@ -26,6 +25,7 @@ import com.example.hot6novelcraft.domain.user.repository.AuthorFollowRepository;
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -409,7 +409,6 @@ public class EpisodeService {
     }
 
 
-
     // [독자용] 성인 열람 권한 확인
     private void validateReaderAdultAccess(Long novelId, UserDetailsImpl userDetails) {
         Novel novel = novelRepository.findById(novelId)
@@ -417,8 +416,8 @@ public class EpisodeService {
 
         boolean isAdultContent = novel.getTags() != null && novel.getTags().contains(MainTag.ADULT.name());
 
-        if(isAdultContent) {
-            if(!userDetails.getUser().isAdultVerificationValid()) {
+        if (isAdultContent) {
+            if (!userDetails.getUser().isAdultVerificationValid()) {
                 throw new ServiceErrorException(UserExceptionEnum.ERR_ADULT_VERIFICATION_REQUIRED);
             }
         }
