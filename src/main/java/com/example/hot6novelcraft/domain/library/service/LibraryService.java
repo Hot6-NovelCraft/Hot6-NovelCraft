@@ -23,9 +23,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LibraryService {
 
-    private final LibraryRepository      libraryRepository;
+    private final LibraryRepository libraryRepository;
     private final LibraryQueryRepository libraryQueryRepository;
-    private final EpisodeRepository      episodeRepository;
+    private final EpisodeRepository episodeRepository;
 
     @Transactional
     public LibraryAddResponse addToLibrary(Long userId, LibraryAddRequest request) {

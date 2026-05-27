@@ -4,4 +4,5 @@ public record CoverGenerationEvent(
         String jobId,
         Long novelId,
         Long userId
-) {}
+) {
+}

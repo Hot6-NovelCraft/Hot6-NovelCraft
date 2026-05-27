@@ -3,9 +3,6 @@ package com.example.hot6novelcraft.common.security;
 import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
 import com.example.hot6novelcraft.domain.user.service.UserCacheService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +18,6 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Date;
 import java.util.List;
 
 @Slf4j(topic = "JwtFilter")
@@ -56,32 +52,32 @@ public class JwtFilter extends OncePerRequestFilter {
     // 토큰 없이 통과 가능한 URL
     private static final List<String> PUBLIC_URLS
             = List.of(
-                    "/api/auth/signup"
-                    ,"/api/auth/signup/admin"
-                    ,"/api/auth/login"
-                    , "/api/auth/email/check"
-                    , "/api/auth/nickname/check"
-                    , "/api/auth/phone/send"
-                    , "/api/auth/phone/verify"
-                    , "/api/auth/users/restore"
-                    , "/api/auth/users/abandon-recovery"
-                    , "/api/webhooks/portone"
-                    , "/favicon.ico"
-                    , "/login"          // 구글이 에러 시 여기로 리다이렉트
-                    , "/login?error"
-                    , "/api/novels/ranking"
-                    , "/actuator/prometheus"
-                    , "/api/novels/new"             // 신작 목록
-                    , "/api/search/keywords/popular"   // 인기 검색어
-                    , "/api/search/tags/popular"
-                    , "/api/v2/novels");
+            "/api/auth/signup"
+            , "/api/auth/signup/admin"
+            , "/api/auth/login"
+            , "/api/auth/email/check"
+            , "/api/auth/nickname/check"
+            , "/api/auth/phone/send"
+            , "/api/auth/phone/verify"
+            , "/api/auth/users/restore"
+            , "/api/auth/users/abandon-recovery"
+            , "/api/webhooks/portone"
+            , "/favicon.ico"
+            , "/login"          // 구글이 에러 시 여기로 리다이렉트
+            , "/login?error"
+            , "/api/novels/ranking"
+            , "/actuator/prometheus"
+            , "/api/novels/new"             // 신작 목록
+            , "/api/search/keywords/popular"   // 인기 검색어
+            , "/api/search/tags/popular"
+            , "/api/v2/novels");
 
     // 토큰이 있으면 인증하고, 없어도 통과가능한 URL (선택적 인증)
     private static final List<String> OPTIONAL_AUTH_URLS = List.of(
             "/api/search/v2/novels"
-            ,"/api/search/v2/tags"
-            ,"/api/search/v2/authors"
-            ,"/api/ai/recommendation"
+            , "/api/search/v2/tags"
+            , "/api/search/v2/authors"
+            , "/api/ai/recommendation"
     );
 
     @Override
@@ -130,7 +126,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 String token = jwtUtil.substringToken(authHeader);
 
                 // 토큰 유효성 검사
-                if(!jwtUtil.validateToken(token)){
+                if (!jwtUtil.validateToken(token)) {
                     sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "토큰이 만료되었거나 유효하지 않습니다.");
                     return;
                 }
@@ -187,8 +183,9 @@ public class JwtFilter extends OncePerRequestFilter {
                 log.error("[Redis 장애] 블랙리스트 확인 불가, URL: {}", requestURL);
 
                 // 중요 보안 API (결제, 수정, 삭제 등) : Fail-Closed 무조건 차단
-                if(isSafeApi(request)) {
-                    log.warn("[Redis 장애] 가용성을 위해 읽기 전용 API 접근을 허용합니다. URL: {}", requestURL);                    sendErrorResponse(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "서버 불안정으로 해당 기능을 사용할 수 없습니다.");
+                if (isSafeApi(request)) {
+                    log.warn("[Redis 장애] 가용성을 위해 읽기 전용 API 접근을 허용합니다. URL: {}", requestURL);
+                    sendErrorResponse(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "서버 불안정으로 해당 기능을 사용할 수 없습니다.");
                 } else {
                     log.error("[Redis 장애] 데이터 보호를 위해 해당 API 접근을 기본 차단합니다. URL: {}", requestURL);
                     sendErrorResponse(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "현재 서버 불안정으로 해당 기능을 사용할 수 없습니다.");
@@ -201,14 +198,14 @@ public class JwtFilter extends OncePerRequestFilter {
                 return;
             }
 
-                // 인증 실패 시 return
-                if (!setAuthentication(response, accessToken, requestURL)) {
-                    return;
-                }
-
-                // AccessToken 인증인가 필터 종료
-                filterChain.doFilter(request, response);
+            // 인증 실패 시 return
+            if (!setAuthentication(response, accessToken, requestURL)) {
                 return;
+            }
+
+            // AccessToken 인증인가 필터 종료
+            filterChain.doFilter(request, response);
+            return;
 
         }
 
@@ -216,7 +213,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String refreshTokenHeader = request.getHeader("Refresh-Token");
 
-        if(refreshTokenHeader == null || !refreshTokenHeader.startsWith(JwtUtil.BEARER_PREFIX)) {
+        if (refreshTokenHeader == null || !refreshTokenHeader.startsWith(JwtUtil.BEARER_PREFIX)) {
 
             log.warn("[Silent Refresh] Refresh-Token 헤더가 없습니다.");
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "AccessToken이 만료되었습니다. Refresh-Token을 보내주세요.");
@@ -224,7 +221,7 @@ public class JwtFilter extends OncePerRequestFilter {
         }
         String refreshToken = jwtUtil.substringToken(refreshTokenHeader);
 
-        if(!jwtUtil.validateToken(refreshToken)) {
+        if (!jwtUtil.validateToken(refreshToken)) {
 
             log.warn("[Silent Refresh] RefreshToken이 만료되었습니다");
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "다시 로그인해주세요.");
@@ -234,7 +231,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String email = jwtUtil.extractEmail(refreshToken);
         String savedRefreshToken = userCacheService.getRefreshToken(email);
 
-        if(savedRefreshToken == null || !savedRefreshToken.equals(refreshTokenHeader)) {
+        if (savedRefreshToken == null || !savedRefreshToken.equals(refreshTokenHeader)) {
 
             log.warn("[Silent Refresh] Redis에 RefreshToken과 불일치. email: {}", email);
             sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "RefreshToken이 유효하지 않습니다. 다시 로그인해주세요.");
@@ -249,7 +246,7 @@ public class JwtFilter extends OncePerRequestFilter {
         log.info("[Silent Refresh] 새로운 AccessToken 발급 완료, email: {}", email);
 
         String pureNewAccessToken = jwtUtil.substringToken(newAccessToken);
-        if(!setAuthentication(response, pureNewAccessToken, requestURL)) {
+        if (!setAuthentication(response, pureNewAccessToken, requestURL)) {
             return;
         }
 
@@ -304,7 +301,7 @@ public class JwtFilter extends OncePerRequestFilter {
         } catch (Exception e) {
 
             log.error("인증 처리 중 오류 발생: {}", e.getMessage());
-            sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,"인증 처리 중 서버 오류가 발생했습니다.");
+            sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "인증 처리 중 서버 오류가 발생했습니다.");
             return false;
         }
     }
@@ -328,7 +325,7 @@ public class JwtFilter extends OncePerRequestFilter {
         AntPathMatcher pathMatcher = new AntPathMatcher();
 
         // 상태를 변경하는 요청 (POST, PUT, PATCH, DELETE)는 차단
-        if(!method.equalsIgnoreCase("GET")) {
+        if (!method.equalsIgnoreCase("GET")) {
             return false;
         }
 

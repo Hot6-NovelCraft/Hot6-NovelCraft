@@ -29,9 +29,9 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class UserEventService {
 
-    private static final String EVENT_LIST_CACHE_KEY    = "event:list:";
-    private static final String EVENT_DETAIL_CACHE_KEY  = "event:detail:";
-    private static final String EVENT_LOCK_KEY          = "lock:event:participate:";
+    private static final String EVENT_LIST_CACHE_KEY = "event:list:";
+    private static final String EVENT_DETAIL_CACHE_KEY = "event:detail:";
+    private static final String EVENT_LOCK_KEY = "lock:event:participate:";
 
     private final EventRepository eventRepository;
     private final EventParticipateService eventParticipateService;
@@ -51,7 +51,8 @@ public class UserEventService {
         Object cached = redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
             try {
-                return objectMapper.convertValue(cached, new TypeReference<>() {});
+                return objectMapper.convertValue(cached, new TypeReference<>() {
+                });
             } catch (Exception e) {
                 log.warn("이벤트 목록 캐시 역직렬화에 실패하여 DB 조회로 전환합니다. key={}", cacheKey);
             }
@@ -60,8 +61,8 @@ public class UserEventService {
         LocalDateTime now = LocalDateTime.now();
         Page<Event> events = switch (status) {
             case UPCOMING -> eventRepository.findAllUpcoming(now, pageable);
-            case ONGOING  -> eventRepository.findAllOngoing(now, pageable);
-            case ENDED    -> eventRepository.findAllEnded(now, pageable);
+            case ONGOING -> eventRepository.findAllOngoing(now, pageable);
+            case ENDED -> eventRepository.findAllEnded(now, pageable);
         };
 
         Page<EventSummaryResponse> result = events.map(e -> EventSummaryResponse.from(e, status));

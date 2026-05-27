@@ -27,9 +27,9 @@ public record EventCreateRequest(
         LocalDateTime endedAt
 
 ) {
-        @AssertTrue(message = "이벤트 시작일은 종료일보다 이전이어야 합니다")
-        public boolean isValidPeriod() {
-                if (startedAt == null || endedAt == null) return true;
-                return startedAt.isBefore(endedAt);
-        }
+    @AssertTrue(message = "이벤트 시작일은 종료일보다 이전이어야 합니다")
+    public boolean isValidPeriod() {
+        if (startedAt == null || endedAt == null) return true;
+        return startedAt.isBefore(endedAt);
+    }
 }

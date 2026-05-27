@@ -23,4 +23,5 @@ public record NationalLibraryApiItem(
 
         @JsonProperty("imageUrl")
         String imageUrl
-) {}
+) {
+}

@@ -42,12 +42,12 @@ public class Library extends BaseEntity {
 
     private Library(Long userId, Long novelId, LibraryType libraryType,
                     String novelTitle, String authorNickname, String coverImageUrl) {
-        this.userId          = userId;
-        this.novelId         = novelId;
-        this.libraryType     = libraryType;
-        this.novelTitle      = novelTitle;
-        this.authorNickname  = authorNickname;
-        this.coverImageUrl   = coverImageUrl;
+        this.userId = userId;
+        this.novelId = novelId;
+        this.libraryType = libraryType;
+        this.novelTitle = novelTitle;
+        this.authorNickname = authorNickname;
+        this.coverImageUrl = coverImageUrl;
     }
 
     public static Library create(Long userId, Long novelId, LibraryType libraryType,

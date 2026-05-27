@@ -11,13 +11,13 @@ import com.example.hot6novelcraft.domain.calendar.dto.response.ReadingRecordResp
 import com.example.hot6novelcraft.domain.calendar.entity.ReadingRecord;
 import com.example.hot6novelcraft.domain.calendar.entity.enums.ReadingStatus;
 import com.example.hot6novelcraft.domain.calendar.entity.enums.RecordSource;
-import com.example.hot6novelcraft.domain.library.repository.LibraryRepository;
 import com.example.hot6novelcraft.domain.calendar.repository.ReadingRecordRepository;
-import org.springframework.transaction.annotation.Transactional;
+import com.example.hot6novelcraft.domain.library.repository.LibraryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -69,6 +69,7 @@ public class CalendarService {
 
         return PageResponse.register(page);
     }
+
     @Transactional(readOnly = true)
     public List<CalendarDailyResponse> getCalendarRecords(
             Long userId,
@@ -101,6 +102,7 @@ public class CalendarService {
                 })
                 .toList();
     }
+
     @Transactional(readOnly = true)
     public MonthlyStatResponse getMonthlyStatistics(Long userId, int year, int month) {
 

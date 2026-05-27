@@ -12,7 +12,6 @@ import com.example.hot6novelcraft.domain.event.entity.enums.EventStatus;
 import com.example.hot6novelcraft.domain.event.repository.EventParticipantRepository;
 import com.example.hot6novelcraft.domain.event.repository.EventRepository;
 import com.example.hot6novelcraft.domain.notification.dto.event.NotificationEvent;
-import com.example.hot6novelcraft.domain.notification.producer.NotificationProducer;
 import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
@@ -84,8 +83,8 @@ public class AdminEventService {
         LocalDateTime now = LocalDateTime.now();
         Page<Event> events = switch (status) {
             case UPCOMING -> eventRepository.findAllUpcoming(now, pageable);
-            case ONGOING  -> eventRepository.findAllOngoing(now, pageable);
-            case ENDED    -> eventRepository.findAllEnded(now, pageable);
+            case ONGOING -> eventRepository.findAllOngoing(now, pageable);
+            case ENDED -> eventRepository.findAllEnded(now, pageable);
         };
         return events.map(e -> EventSummaryResponse.from(e, resolveStatus(e)));
     }
@@ -109,7 +108,7 @@ public class AdminEventService {
     private EventStatus resolveStatus(Event event) {
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(event.getStartedAt())) return EventStatus.UPCOMING;
-        if (now.isAfter(event.getEndedAt()))    return EventStatus.ENDED;
+        if (now.isAfter(event.getEndedAt())) return EventStatus.ENDED;
         return EventStatus.ONGOING;
     }
 

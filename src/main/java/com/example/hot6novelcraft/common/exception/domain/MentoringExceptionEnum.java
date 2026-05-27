@@ -27,7 +27,6 @@ public enum MentoringExceptionEnum implements ErrorCode {
     MENTORING_CANCEL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "대기 중인 신청만 취소할 수 있습니다");
 
 
-
     private final HttpStatus httpStatus;
     private final String message;
 }

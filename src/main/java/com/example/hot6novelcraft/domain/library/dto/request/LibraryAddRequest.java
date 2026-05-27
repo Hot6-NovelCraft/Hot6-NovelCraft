@@ -1,7 +1,10 @@
 package com.example.hot6novelcraft.domain.library.dto.request;
 
 import com.example.hot6novelcraft.domain.library.entity.enums.LibraryType;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 public record LibraryAddRequest(
 
@@ -22,4 +25,5 @@ public record LibraryAddRequest(
 
         @NotNull(message = "서재 타입은 필수입니다")
         LibraryType libraryType
-) {}
+) {
+}
