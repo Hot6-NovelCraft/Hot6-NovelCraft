@@ -4,6 +4,7 @@ import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.UserExceptionEnum;
 import com.example.hot6novelcraft.common.security.JwtUtil;
 import com.example.hot6novelcraft.common.security.RedisUtil;
+import com.example.hot6novelcraft.domain.admin.service.AdminCacheService;
 import com.example.hot6novelcraft.domain.novel.entity.enums.MainGenre;
 import com.example.hot6novelcraft.domain.user.dto.request.*;
 import com.example.hot6novelcraft.domain.user.dto.response.AdminSignupResponse;
@@ -13,8 +14,11 @@ import com.example.hot6novelcraft.domain.user.entity.enums.CareerLevel;
 import com.example.hot6novelcraft.domain.user.entity.enums.ProviderSns;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
 import com.example.hot6novelcraft.domain.user.repository.AuthorProfileRepository;
+import com.example.hot6novelcraft.domain.user.repository.ReaderProfileRepository;
 import com.example.hot6novelcraft.domain.user.repository.SocialAuthRepository;
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -46,6 +51,9 @@ class SignupServiceTest {
     private AuthorProfileRepository authorProfileRepository;
 
     @Mock
+    private ReaderProfileRepository readerProfileRepository;
+
+    @Mock
     private JwtUtil jwtUtil;
 
     @Mock
@@ -56,6 +64,12 @@ class SignupServiceTest {
 
     @Mock
     private RedisUtil redisUtil;
+
+    @Mock
+    private AdminCacheService adminCacheService;
+
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @InjectMocks
     private SignupService signupService;
@@ -422,5 +436,4 @@ class SignupServiceTest {
                     .hasMessage(UserExceptionEnum.ERR_PHONE_NOT_VERIFIED.getMessage());
         }
     }
-
 }

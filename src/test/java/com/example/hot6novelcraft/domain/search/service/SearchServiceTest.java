@@ -1,5 +1,6 @@
 package com.example.hot6novelcraft.domain.search.service;
 
+import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.domain.search.dto.IntegratedAuthorSearchResponse;
 import com.example.hot6novelcraft.domain.search.dto.NovelSearchResponse;
 import com.example.hot6novelcraft.domain.search.dto.TagGroupSearchResponse;
@@ -32,6 +33,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -90,7 +92,7 @@ public class SearchServiceTest {
                     new NovelSearchResponse(null, null,"바다 위의 던전", "바다작가", "FANTASY")
             );
             Page<NovelSearchResponse> mockPage = new PageImpl<>(novels, pageable, 2);
-            given(customSearchRepository.searchNovelsByTitle("바다", pageable, false)).willReturn(mockPage);
+            given(customSearchRepository.searchNovelsByTitle("바다", pageable, true)).willReturn(mockPage);
 
             Page<NovelSearchResponse> result = searchService.searchNovelsV1("바다", pageable);
 
@@ -111,7 +113,7 @@ public class SearchServiceTest {
                             new NovelSimpleResponse("바다 위의 던전", "바다작가")
                     ))
             );
-            given(customSearchRepository.searchNovelsByTags(tags, false)).willReturn(mockResult);
+            given(customSearchRepository.searchNovelsByTags(tags, true)).willReturn(mockResult);
 
             List<TagGroupSearchResponse> result = searchService.searchByTagsV1(tags);
 
@@ -128,7 +130,7 @@ public class SearchServiceTest {
                     List.of(new AuthorSearchResponse(1L, "백산", "판타지 작가", List.of())),
                     List.of(new NovelSimpleResponse("백산의 이세계 모험", "백산"))
             );
-            given(customSearchRepository.searchByAuthorKeyword("백산", false)).willReturn(mockResult);
+            given(customSearchRepository.searchByAuthorKeyword("백산", true)).willReturn(mockResult);
 
             IntegratedAuthorSearchResponse result = searchService.searchAuthorsV1("백산");
 
@@ -287,9 +289,9 @@ public class SearchServiceTest {
         class FailureTest {
 
             @Test
-            @DisplayName("인증 만료 유저 검색 - 1년 유효기간이 지난 경우 isAdult=false로 전달됨")
-            void search_ExpiredAdultUser_TreatedAsMinor() {
-                // given: 2년 전에 인증한 유저 (만료됨)
+            @DisplayName("인증 만료 유저 검색 - ADULT 태그 검색 시 성인 인증 예외 발생")
+            void search_ExpiredAdultUser_ThrowsException() {
+                // given: 인증 만료 유저
                 User expiredUser = mock(User.class);
                 given(expiredUser.isAdultVerificationValid()).willReturn(false);
                 UserDetailsImpl expiredUserDetails = mock(UserDetailsImpl.class);
@@ -297,11 +299,11 @@ public class SearchServiceTest {
 
                 List<String> tags = List.of("ADULT");
 
-                // when
-                searchService.searchByTags(tags, expiredUserDetails);
+                // when & then: ADULT 태그 + 미인증 → 예외 발생
+                assertThatThrownBy(() -> searchService.searchByTags(tags, expiredUserDetails))
+                        .isInstanceOf(ServiceErrorException.class);
 
-                // then: 유효기간이 지났으므로 레포지토리에는 false가 전달되어야 함
-                verify(customSearchRepository).searchNovelsByTags(eq(tags), eq(false));
+                verify(customSearchRepository, never()).searchNovelsByTags(any(), anyBoolean());
             }
 
             @Test
