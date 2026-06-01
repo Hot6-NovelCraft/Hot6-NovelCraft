@@ -13,10 +13,12 @@ import com.example.hot6novelcraft.domain.mentoring.dto.response.MentorshipDetail
 import com.example.hot6novelcraft.domain.mentoring.dto.response.MentorshipHistoryResponse;
 import com.example.hot6novelcraft.domain.mentoring.entity.Mentorship;
 import com.example.hot6novelcraft.domain.mentoring.repository.MentorshipRepository;
+import com.example.hot6novelcraft.domain.mentoring.repository.MentorshipReviewRepository;
 import com.example.hot6novelcraft.domain.user.entity.User;
 import com.example.hot6novelcraft.domain.user.entity.enums.CareerLevel;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
 import com.example.hot6novelcraft.domain.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -58,6 +60,10 @@ class MentorshipServiceTest {
     private MentorRepository mentorRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private MentorshipReviewRepository mentorshipReviewRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
     @Mock
     private FileUploadService fileUploadService;
 
@@ -119,10 +125,10 @@ class MentorshipServiceTest {
             setField(savedMentorship, "id", 10L);
 
             given(userRepository.findById(MENTEE_ID)).willReturn(Optional.of(menteeUser));
-            given(mentorRepository.findByUserId(MENTOR_USER_ID)).willReturn(Optional.of(mentor));
+            given(mentorRepository.findById(MENTOR_USER_ID)).willReturn(Optional.of(mentor));
             given(mentorshipRepository.existsByMenteeIdAndStatusIn(eq(MENTEE_ID), any()))
                     .willReturn(false);
-            given(mentorshipRepository.save(any(Mentorship.class))).willReturn(savedMentorship);  // ← 추가!
+            given(mentorshipRepository.save(any(Mentorship.class))).willReturn(savedMentorship);
 
             mentorshipService.applyMentorship(MENTEE_ID, request);
 
@@ -166,7 +172,7 @@ class MentorshipServiceTest {
             );
 
             given(userRepository.findById(MENTEE_ID)).willReturn(Optional.of(menteeUser));
-            given(mentorRepository.findByUserId(MENTEE_ID)).willReturn(Optional.of(selfMentor));
+            given(mentorRepository.findById(MENTEE_ID)).willReturn(Optional.of(selfMentor));
 
             assertThatThrownBy(() -> mentorshipService.applyMentorship(MENTEE_ID, request))
                     .isInstanceOf(ServiceErrorException.class)
@@ -181,7 +187,7 @@ class MentorshipServiceTest {
             );
 
             given(userRepository.findById(MENTEE_ID)).willReturn(Optional.of(menteeUser));
-            given(mentorRepository.findByUserId(MENTOR_USER_ID)).willReturn(Optional.of(mentor));
+            given(mentorRepository.findById(MENTOR_USER_ID)).willReturn(Optional.of(mentor));
             given(mentorshipRepository.existsByMenteeIdAndStatusIn(eq(MENTEE_ID), any()))
                     .willReturn(true);
 
@@ -205,7 +211,7 @@ class MentorshipServiceTest {
             );
 
             given(userRepository.findById(MENTEE_ID)).willReturn(Optional.of(menteeUser));
-            given(mentorRepository.findByUserId(MENTOR_USER_ID)).willReturn(Optional.of(fullMentor));
+            given(mentorRepository.findById(MENTOR_USER_ID)).willReturn(Optional.of(fullMentor));
             given(mentorshipRepository.existsByMenteeIdAndStatusIn(eq(MENTEE_ID), any()))
                     .willReturn(false);
 
@@ -222,7 +228,7 @@ class MentorshipServiceTest {
             );
 
             given(userRepository.findById(MENTEE_ID)).willReturn(Optional.of(menteeUser));
-            given(mentorRepository.findByUserId(MENTOR_USER_ID)).willReturn(Optional.empty());
+            given(mentorRepository.findById(MENTOR_USER_ID)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> mentorshipService.applyMentorship(MENTEE_ID, request))
                     .isInstanceOf(ServiceErrorException.class)
