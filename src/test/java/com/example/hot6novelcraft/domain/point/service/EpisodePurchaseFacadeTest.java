@@ -6,6 +6,11 @@ import com.example.hot6novelcraft.common.exception.domain.PaymentExceptionEnum;
 import com.example.hot6novelcraft.common.security.RedisUtil;
 import com.example.hot6novelcraft.domain.episode.dto.response.EpisodePurchaseResponse;
 import com.example.hot6novelcraft.domain.episode.dto.response.NovelBulkPurchaseResponse;
+import com.example.hot6novelcraft.domain.exchange.service.RevenueService;
+import com.example.hot6novelcraft.domain.exchange.service.StatisticsService;
+import com.example.hot6novelcraft.domain.notification.producer.NotificationProducer;
+import com.example.hot6novelcraft.domain.novel.repository.NovelRepository;
+import com.example.hot6novelcraft.domain.point.repository.PointHistoryRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -38,6 +43,21 @@ class EpisodePurchaseFacadeTest {
 
     @Mock
     private RedisUtil redisUtil;
+
+    @Mock
+    private NotificationProducer notificationProducer;
+
+    @Mock
+    private NovelRepository novelRepository;
+
+    @Mock
+    private PointHistoryRepository pointHistoryRepository;
+
+    @Mock
+    private RevenueService revenueService;
+
+    @Mock
+    private StatisticsService statisticsService;
 
     private static final Long USER_ID = 1L;
     private static final Long EPISODE_ID = 100L;
