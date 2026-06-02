@@ -23,11 +23,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -586,7 +588,7 @@ class SubscriptionTransactionServiceTest {
         void getActiveSubscription_activeSubscriptionExists_returnsSubscription() {
             // given
             Subscription subscription = createMockSubscription(SUBSCRIPTION_ID, USER_ID, SubscriptionStatus.ACTIVE);
-            given(subscriptionRepository.findByUserIdAndSubscriptionStatus(USER_ID, SubscriptionStatus.ACTIVE))
+            given(subscriptionRepository.findCurrentSubscription(eq(USER_ID), any(LocalDateTime.class)))
                     .willReturn(Optional.of(subscription));
 
             // when

@@ -9,6 +9,8 @@ import com.example.hot6novelcraft.domain.episode.dto.response.NovelBulkPurchaseR
 import com.example.hot6novelcraft.domain.episode.entity.Episode;
 import com.example.hot6novelcraft.domain.episode.entity.enums.EpisodeStatus;
 import com.example.hot6novelcraft.domain.episode.repository.EpisodeRepository;
+import com.example.hot6novelcraft.domain.exchange.repository.RevenueRepository;
+import com.example.hot6novelcraft.domain.novel.repository.NovelRepository;
 import com.example.hot6novelcraft.domain.point.entity.Point;
 import com.example.hot6novelcraft.domain.point.entity.PointHistory;
 import com.example.hot6novelcraft.domain.point.entity.enums.PointHistoryType;
@@ -53,6 +55,12 @@ class EpisodePurchaseTransactionServiceTest {
 
     @Mock
     private EpisodePurchaseConfig purchaseConfig;
+
+    @Mock
+    private NovelRepository novelRepository;
+
+    @Mock
+    private RevenueRepository revenueRepository;
 
     private static final Long USER_ID = 1L;
     private static final Long EPISODE_ID = 100L;

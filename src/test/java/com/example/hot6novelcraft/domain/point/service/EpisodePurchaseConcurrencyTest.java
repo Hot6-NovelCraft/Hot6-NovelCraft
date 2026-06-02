@@ -7,6 +7,11 @@ import com.example.hot6novelcraft.domain.episode.dto.response.EpisodePurchaseRes
 import com.example.hot6novelcraft.domain.episode.dto.response.NovelBulkPurchaseResponse;
 import com.example.hot6novelcraft.domain.episode.entity.Episode;
 import com.example.hot6novelcraft.domain.episode.entity.enums.EpisodeStatus;
+import com.example.hot6novelcraft.domain.exchange.service.RevenueService;
+import com.example.hot6novelcraft.domain.exchange.service.StatisticsService;
+import com.example.hot6novelcraft.domain.notification.producer.NotificationProducer;
+import com.example.hot6novelcraft.domain.novel.repository.NovelRepository;
+import com.example.hot6novelcraft.domain.point.repository.PointHistoryRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -45,6 +50,21 @@ class EpisodePurchaseConcurrencyTest {
 
     @Mock
     private RedisUtil redisUtil;
+
+    @Mock
+    private NotificationProducer notificationProducer;
+
+    @Mock
+    private NovelRepository novelRepository;
+
+    @Mock
+    private PointHistoryRepository pointHistoryRepository;
+
+    @Mock
+    private RevenueService revenueService;
+
+    @Mock
+    private StatisticsService statisticsService;
 
     private static final Long USER_ID = 1L;
     private static final Long EPISODE_ID = 100L;
