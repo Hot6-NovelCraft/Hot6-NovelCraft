@@ -94,9 +94,9 @@ public class AdminDashboardService {
         Long newMentosToday = adminCacheService.getNewMentosByDate();
 
         // 전체 지표는 병합 쿼리 사용
-        AdminDashboardUserStatusResponse dbUsersStatus = adminRepository.getIntegratedUserStatus(role);
-        AdminDashboardNovelStatusResponse dbNovelsStatus = adminRepository.getIntegratedNovelStatus(novelStatus, novelFilter, isDeleted);
-        AdminDashboardMentorsStatusResponse dbMentorsStatus = adminRepository.getIntegratedMentorsStatus();
+        AdminDashboardUserStatusResponse dbUsersStatus = adminRepository.getUserStatusForeLive(role);
+        AdminDashboardNovelStatusResponse dbNovelsStatus = adminRepository.getNovelStatusForLive(novelStatus, novelFilter, isDeleted);
+        AdminDashboardMentorsStatusResponse dbMentorsStatus = adminRepository.getMentorsStatusForLive();
 
         return AdminDashboardResponse.of(
                 AdminDashboardUserStatusResponse.of(dbUsersStatus.totalUsers(), newUsersToday, dbUsersStatus.filterUserRole()),

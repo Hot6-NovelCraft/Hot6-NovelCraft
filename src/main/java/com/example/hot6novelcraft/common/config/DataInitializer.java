@@ -240,9 +240,9 @@
 //            // 1. 공통 비밀번호 (한 번만 인코딩해서 재사용)
 //            String encodedPassword = passwordEncoder.encode("test1234!");
 //
-//            // 2. 유저 10만 명 삽입
+//            // 2. 유저 50만 명 삽입
 //            String userSql = "INSERT INTO users (email, password, nickname, phone_no, role, is_deleted, created_at, is_adult_verified, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-//            int totalUsers = 100000;
+//            int totalUsers = 500000;
 //            int batchSize = 1000; // 1,000건씩 묶어서 처리
 //
 //            for (int i = 0; i < totalUsers; i += batchSize) {
@@ -273,9 +273,9 @@
 //            }
 //            log.info("[DataInitializer] 유저 10만 건 삽입 완료");
 //
-//            // 3. 소설 5만 건 삽입 (작가가 작성한 것으로 가정)
+//            // 3. 소설 25만 건 삽입 (작가가 작성한 것으로 가정)
 //            String novelSql = "INSERT INTO novels (author_id, title, description, genre, tags, status, is_deleted, created_at, bookmark_count, updated_at, view_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-//            int totalNovels = 50000;
+//            int totalNovels = 250000;
 //
 //            for (int i = 0; i < totalNovels; i += batchSize) {
 //                int currentBatchSize = Math.min(batchSize, totalNovels - i);
