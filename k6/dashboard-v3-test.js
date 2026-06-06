@@ -33,7 +33,7 @@ export const options = {
 const BASE_URL = 'http://localhost:8080/api';
 
 // 포스트맨 발급 토큰 넣기
-const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdXBlckBhZG1pbi5jb20iLCJyb2xlIjoiU1VQRVJfQURNSU4iLCJ0eXBlIjoiQUNDRVNTIiwiaXNBZHVsdCI6ZmFsc2UsImlhdCI6MTc4MDc1MjEyMCwiZXhwIjoxNzgwNzczNzIwfQ.oaAJqADjcxoAfZE-C7uEjYJH6V52RQL9len6vSA6JaQ"
+const TOKEN = "POSTMAN_TOKEN"
 
 export default function () {
     const params = {
