@@ -2,6 +2,7 @@ package com.example.hot6novelcraft.domain.admin.repository;
 
 import com.example.hot6novelcraft.domain.admin.dto.response.AdminDashboardMentorsStatusResponse;
 import com.example.hot6novelcraft.domain.admin.dto.response.AdminDashboardNovelStatusResponse;
+import com.example.hot6novelcraft.domain.admin.dto.response.AdminDashboardResponse;
 import com.example.hot6novelcraft.domain.admin.dto.response.AdminDashboardUserStatusResponse;
 import com.example.hot6novelcraft.domain.novel.entity.enums.NovelStatus;
 import com.example.hot6novelcraft.domain.user.entity.enums.UserRole;
@@ -38,4 +39,11 @@ public interface CustomAdminRepository {
     AdminDashboardNovelStatusResponse getIntegratedNovelStatus(String totalStatusFilter, NovelStatus filterStatus, Boolean isDeleted);
 
     AdminDashboardMentorsStatusResponse getIntegratedMentorsStatus();
+
+    /**
+     * ======= v3 쿼리 병합 + Redis 신규 통계 =======
+     **/
+    AdminDashboardUserStatusResponse getUserStatusForeLive(UserRole role);
+    AdminDashboardNovelStatusResponse getNovelStatusForLive(String totalStatusFilter, NovelStatus filterStatus, Boolean isDeleted);
+    AdminDashboardMentorsStatusResponse getMentorsStatusForLive();
 }

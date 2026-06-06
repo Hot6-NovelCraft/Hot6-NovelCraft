@@ -12,6 +12,7 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -224,6 +225,71 @@ public class CustomAdminRepositoryImpl implements CustomAdminRepository {
                                 .when(mentor.createdAt.goe(startOfDay))
                                 .then(1L).otherwise(0L)
                                 .sum().coalesce(0L)
+                ))
+                .from(mentor)
+                .fetchOne();
+    }
+
+    /**
+     * v3 쿼리 병합 + Redis 신규 라이브 통계
+     */
+    @Override
+    public AdminDashboardUserStatusResponse getUserStatusForeLive(UserRole role) {
+        return queryFactory
+                .select(Projections.constructor(AdminDashboardUserStatusResponse.class
+                        , user.count() // 전체 회원
+                        , Expressions.constant(0L)      // newUsersToday placeholder (Redis가 채움)
+                        , new CaseBuilder().when(role != null // 오늘 신규
+                                        ? user.role.eq(role)
+                                        : user.role.in(UserRole.AUTHOR, UserRole.READER))
+                                .then(1L).otherwise(0L)
+                                .sum().coalesce(0L) // 필터
+                ))
+                .from(user)
+                .where(user.isDeleted.eq(false) // 제외
+                        , user.role.notIn(
+                                UserRole.SUPER_ADMIN
+                                , UserRole.ADMIN
+                                , UserRole.PENDING_ADMIN
+                                , UserRole.REJECTED_ADMIN)
+                )
+                .fetchOne();
+
+
+    }
+
+    @Override
+    public AdminDashboardNovelStatusResponse getNovelStatusForLive(String totalStatusFilter, NovelStatus filterStatus, Boolean isSoftDel) {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+
+        return queryFactory
+                .select(Projections.constructor(AdminDashboardNovelStatusResponse.class
+                        // 전체 소설 : ALL 이면 통과, 아니면 삭제 안된 것만
+                        , new CaseBuilder().when("ALL".equalsIgnoreCase(totalStatusFilter)
+                                        ? novel.id.isNotNull()
+                                        : novel.isDeleted.eq(false))
+                                .then(1L).otherwise(0L)
+                                .sum().coalesce(0L)
+                        , Expressions.constant(0L)      // newUsersToday placeholder (Redis가 채움)
+                        // 필터 적용 소설
+                        , new CaseBuilder().when(filterNovelByCondition(filterStatus, isSoftDel))
+                                .then(1L).otherwise(0L)
+                                .sum().coalesce(0L)
+                ))
+                .from(novel)
+                .fetchOne();
+    }
+
+    // 멘토
+    @Override
+    public AdminDashboardMentorsStatusResponse getMentorsStatusForLive() {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+
+        return queryFactory
+                .select(Projections.constructor(AdminDashboardMentorsStatusResponse.class
+                        , mentor.count() // 멘토, 멘티 전체 (status 안나눠져 있음)
+                        // 오늘 신규 멘토/멘티
+                        , Expressions.constant(0L)      // newUsersToday placeholder (Redis가 채움)
                 ))
                 .from(mentor)
                 .fetchOne();

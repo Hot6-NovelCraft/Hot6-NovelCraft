@@ -1,20 +1,19 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-/** =========================================================
- 1. 흐름
- superAdmin 로그인
-    -> superAdmin 로그인 토큰 입력
- 2. 부하 테스트 시나리오
- 더미 데이터 유저 10만 건, 소설 5만 건을 넣는다.
- 쿼리 병합 + 인덱스 적용 + Redis 캐시(신규 회원/신작 소설) 적용 시, 가동 속도 및 부하 테스트, N+1 문제를 확인한다.
- ========================================================= */
+/** V3 테스트
+ * 인덱스 적용 + 쿼리 병합 (DB 쿼리 I/O 3회) + 신규 카운트 (오늘 신규 회원, 소설, 멘토 등록)만 Redis 캐싱
+ * V3 = V2 병합 쿼리 3개 + Redis 호출 3건 (DB는 그대로 호출)
+ * 주의!!! V2 평균 대비 미세하게 느릴 수 있는 구조
+ * 시나리오 : V1, V2와 완전 동일, 엔드포인트만 /live 로 변경
+ * 부하 테스트 옵션 : 30초, ramp up -> 1분 유지, ramp down 30초 (총 2분)
+ * 가상 유저 : 최대 20명
+ */
 
-// V1, V2와 완전히 동일한 부하 조건
 export const options = {
     stages: [
-        { duration: '30s', target: 20 },
-        { duration: '1m', target: 20 },
+        { duration: '30s', target: 100 },
+        { duration: '1m', target: 100 },
         { duration: '30s', target: 0 },
     ],
     thresholds: {
@@ -22,29 +21,39 @@ export const options = {
     },
 };
 
+/** =========================================================
+ 1. 흐름
+ superAdmin 로그인
+ -> superAdmin 로그인 토큰 입력
+ 2. 부하 테스트 시나리오
+ 더미 데이터 유저 10만 건, 소설 5만 건을 넣는다.
+ 쿼리 병합 + 인덱스 적용 + Redis 캐시(신규 회원/신작 소설) 적용 시, 가동 속도 및 부하 테스트, N+1 문제를 확인한다.
+ ========================================================= */
+
 const BASE_URL = 'http://localhost:8080/api';
 
 // 포스트맨 발급 토큰 넣기
-const TOKEN = 'POSTMAN_ACCESS_TOKEN'
+const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdXBlckBhZG1pbi5jb20iLCJyb2xlIjoiU1VQRVJfQURNSU4iLCJ0eXBlIjoiQUNDRVNTIiwiaXNBZHVsdCI6ZmFsc2UsImlhdCI6MTc4MDc1MjEyMCwiZXhwIjoxNzgwNzczNzIwfQ.oaAJqADjcxoAfZE-C7uEjYJH6V52RQL9len6vSA6JaQ"
 
 export default function () {
     const params = {
         headers: {
-            'Authorization': `Bearer ${TOKEN}`, // 다시 Bearer 방식으로 원복
+            'Authorization': `Bearer ${TOKEN}`,
             'Content-Type': 'application/json',
         },
-        // 이 태그가 있어야 그라파나에서 V3 그래프가 보임
+        // 그라파나 V1, V2, V3 매트릭 구분 태그
         tags: {
-            name: 'V3_Redis_Live'
-        }
+            name: 'V3_Redis_Live',
+        },
     };
 
-    // V3 전용 API 호출
-    let res1 = http.get(`${BASE_URL}/admin/dashboard/live`, params);
+    // 호출 1 - 필터 OFF
+    const resAll = http.get(`${BASE_URL}/admin/dashboard/live`, params);
+    check(resAll, { 'v3 status 200 (ALL)': (r) => r.status === 200 });
 
-    // 응답 200 확인
-    check(res1, { 'v3 status 200': (r) => r.status === 200 });
+    // 호출 2 - 필터 ON
+    const resUserRole = http.get(`${BASE_URL}/admin/dashboard/live?userRole=USER`, params);
+    check(resUserRole, { 'v3 status 200 (FILTER)': (r) => r.status === 200 });
 
-    // V1, V2와 동일하게 1초 대기
-    sleep(1);
+    //sleep(1);
 }
