@@ -2,6 +2,7 @@ package com.example.hot6novelcraft.domain.mentor.service;
 
 import com.example.hot6novelcraft.common.exception.ServiceErrorException;
 import com.example.hot6novelcraft.common.exception.domain.MentorExceptionEnum;
+import com.example.hot6novelcraft.domain.admin.service.AdminCacheService;
 import com.example.hot6novelcraft.domain.episode.entity.enums.EpisodeStatus;
 import com.example.hot6novelcraft.domain.episode.repository.EpisodeRepository;
 import com.example.hot6novelcraft.domain.mentor.dto.request.MentorRegisterRequest;
@@ -59,6 +60,7 @@ class MentorServiceTest {
     @Mock private EpisodeRepository episodeRepository;
     @Mock private ObjectMapper objectMapper;
     @Mock private MentorshipReviewRepository mentorshipReviewRepository;
+    @Mock private AdminCacheService adminCacheService;
 
     private static final Long USER_ID = 1L;
 

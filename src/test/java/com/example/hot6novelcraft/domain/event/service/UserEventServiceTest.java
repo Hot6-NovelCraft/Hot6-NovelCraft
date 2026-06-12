@@ -47,6 +47,7 @@ class UserEventServiceTest {
     @Mock private RedisTemplate<String, Object> redisTemplate;
     @Mock private ObjectMapper objectMapper;
     @Mock private ValueOperations<String, Object> valueOperations;
+    @Mock private EventParticipateService eventParticipateService;
 
     private final Long USER_ID = 1L;
     private final Long EVENT_ID = 10L;
@@ -69,7 +70,7 @@ class UserEventServiceTest {
     private RLock setupLock(boolean acquired) throws InterruptedException {
         RLock mockLock = mock(RLock.class);
         given(redissonClient.getLock(anyString())).willReturn(mockLock);
-        given(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).willReturn(acquired);
+        given(mockLock.tryLock(anyLong(), any(TimeUnit.class))).willReturn(acquired);
         lenient().when(mockLock.isHeldByCurrentThread()).thenReturn(acquired);
         return mockLock;
     }
@@ -229,16 +230,14 @@ class UserEventServiceTest {
         @DisplayName("정상 참여 신청 - 포인트 즉시 지급")
         void participate_success() throws Exception {
             setupLock(true);
-            given(eventRepository.findById(EVENT_ID)).willReturn(Optional.of(ongoingEvent()));
-            given(eventParticipantRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).willReturn(false);
-            given(eventParticipantRepository.countByEventId(EVENT_ID)).willReturn(0L);
-            given(eventParticipantRepository.save(any())).willReturn(EventParticipant.create(EVENT_ID, USER_ID));
+            EventParticipateResponse fakeResponse = new EventParticipateResponse(
+                    EVENT_ID, USER_ID, 5000L, NOW);
+            given(eventParticipateService.execute(EVENT_ID, USER_ID)).willReturn(fakeResponse);
 
             EventParticipateResponse response = userEventService.participate(EVENT_ID, USER_ID);
 
             assertThat(response).isNotNull();
             assertThat(response.rewardPoints()).isEqualTo(5000L);
-            then(pointService).should().chargeEventReward(eq(USER_ID), eq(5000L), eq(EVENT_ID));
         }
 
         @Test
@@ -246,7 +245,7 @@ class UserEventServiceTest {
         void participate_lockFailed() throws Exception {
             RLock mockLock = mock(RLock.class);
             given(redissonClient.getLock(anyString())).willReturn(mockLock);
-            given(mockLock.tryLock(anyLong(), anyLong(), any(TimeUnit.class))).willReturn(false);
+            given(mockLock.tryLock(anyLong(), any(TimeUnit.class))).willReturn(false);
 
             assertThatThrownBy(() -> userEventService.participate(EVENT_ID, USER_ID))
                     .isInstanceOf(ServiceErrorException.class)
@@ -257,7 +256,8 @@ class UserEventServiceTest {
         @DisplayName("진행 중이 아닌 이벤트 - 예외 발생")
         void participate_notOngoing() throws Exception {
             setupLock(true);
-            given(eventRepository.findById(EVENT_ID)).willReturn(Optional.of(endedEvent()));
+            given(eventParticipateService.execute(EVENT_ID, USER_ID))
+                    .willThrow(new ServiceErrorException(EventExceptionEnum.EVENT_NOT_ONGOING));
 
             assertThatThrownBy(() -> userEventService.participate(EVENT_ID, USER_ID))
                     .isInstanceOf(ServiceErrorException.class)
@@ -268,8 +268,8 @@ class UserEventServiceTest {
         @DisplayName("중복 참여 시도 - 예외 발생")
         void participate_alreadyParticipated() throws Exception {
             setupLock(true);
-            given(eventRepository.findById(EVENT_ID)).willReturn(Optional.of(ongoingEvent()));
-            given(eventParticipantRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).willReturn(true);
+            given(eventParticipateService.execute(EVENT_ID, USER_ID))
+                    .willThrow(new ServiceErrorException(EventExceptionEnum.EVENT_ALREADY_PARTICIPATED));
 
             assertThatThrownBy(() -> userEventService.participate(EVENT_ID, USER_ID))
                     .isInstanceOf(ServiceErrorException.class)
@@ -280,9 +280,8 @@ class UserEventServiceTest {
         @DisplayName("선착순 마감 - 예외 발생")
         void participate_participantsFull() throws Exception {
             setupLock(true);
-            given(eventRepository.findById(EVENT_ID)).willReturn(Optional.of(ongoingEvent()));
-            given(eventParticipantRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).willReturn(false);
-            given(eventParticipantRepository.countByEventId(EVENT_ID)).willReturn(100L);
+            given(eventParticipateService.execute(EVENT_ID, USER_ID))
+                    .willThrow(new ServiceErrorException(EventExceptionEnum.EVENT_PARTICIPANTS_FULL));
 
             assertThatThrownBy(() -> userEventService.participate(EVENT_ID, USER_ID))
                     .isInstanceOf(ServiceErrorException.class)
@@ -293,7 +292,8 @@ class UserEventServiceTest {
         @DisplayName("존재하지 않는 이벤트 - 예외 발생")
         void participate_eventNotFound() throws Exception {
             setupLock(true);
-            given(eventRepository.findById(EVENT_ID)).willReturn(Optional.empty());
+            given(eventParticipateService.execute(EVENT_ID, USER_ID))
+                    .willThrow(new ServiceErrorException(EventExceptionEnum.EVENT_NOT_FOUND));
 
             assertThatThrownBy(() -> userEventService.participate(EVENT_ID, USER_ID))
                     .isInstanceOf(ServiceErrorException.class)
@@ -306,7 +306,7 @@ class UserEventServiceTest {
             RLock mockLock = mock(RLock.class);
             given(redissonClient.getLock(anyString())).willReturn(mockLock);
             doThrow(new InterruptedException())
-                    .when(mockLock).tryLock(anyLong(), anyLong(), any(TimeUnit.class));
+                    .when(mockLock).tryLock(anyLong(), any(TimeUnit.class));
 
             assertThatThrownBy(() -> userEventService.participate(EVENT_ID, USER_ID))
                     .isInstanceOf(ServiceErrorException.class)
