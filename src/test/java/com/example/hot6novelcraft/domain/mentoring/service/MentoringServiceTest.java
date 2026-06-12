@@ -57,6 +57,7 @@ class MentoringServiceTest {
     @Mock private MentorRepository mentorRepository;
     @Mock private UserRepository userRepository;
     @Mock private NovelRepository novelRepository;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private static final Long USER_ID          = 1L;
     private static final Long MENTOR_ENTITY_ID = 5L;

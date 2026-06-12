@@ -106,7 +106,7 @@ class AdminDashboardServiceIntegrationTest {
             novelRepository.save(pending);
 
             AdminDashboardResponse result =
-                    adminDashboardService.getDashboardStatusIntegrated(null, NovelStatus.ONGOING.name(), null, null);
+                    adminDashboardService.getDashboardStatusIntegrated(null, null, NovelStatus.ONGOING, null);
 
             assertThat(result.novelStatus().novelsByFilter()).isEqualTo(2L);
         }
