@@ -194,16 +194,35 @@ NovelCraft 는 독자와 작가 모두를 위한 웹소설 양성 플랫폼입�
 ---
 
 ## 4. 아키텍처
-<img width="1052" height="660" alt="Image" src="https://github.com/user-attachments/assets/01ea8e51-c133-47c1-a6b2-dc64edc05049" />
+<img width="2410" height="1728" alt="616282351-6992a1bd-988d-4c33-9b6a-ec3aef6cfb18" src="https://github.com/user-attachments/assets/b7febfe3-50ed-4998-9901-2b6f2a96f55e" />
+<a href="https://cacoo.com/diagrams/dkxibDW7JyEEE8hj/BE544" target="_blank">
+  아키텍처 원본 링크
+</a>
 
 ---
 
 ## 5. ERD
 <img width="5390" height="3022" alt="Image" src="https://github.com/user-attachments/assets/d63f58eb-acec-44fd-9701-b029c095835a" />
+<a href="https://www.erdcloud.com/p/Xxh8eQyM4EqKGRnwr" target="_blank">
+  ERD 원본 링크
+</a>
 
 ---
 
-## 6. API 명세서
+## 6. 와이어프레임
+<img width="996" height="687" alt="Image" src="https://github.com/user-attachments/assets/8be12283-7fc4-4d6b-bbf9-d0ee4f10f78b" />
+<a href="https://www.figma.com/board/X1kNy80VmJSHhqKJqYoIpm/%ED%95%AB%EC%8B%9D%EC%8A%A4-NovelCraft?node-id=0-1&t=9KavyTlO05tRe7C5-1" target="_blank">
+  와이어프레임 원본 링크
+</a>
+
+---
+
+## 7. 서비스 플로우
+
+
+---
+
+## 8. API 명세서
 <a href="https://imaginary-push-a5d.notion.site/839009bf1a918246b947011cb45cb88b?v=f1e009bf1a9183a8ae7c88ced2cbd8d0" target="_blank">
   API 명세서 원본 링크
   <p></p>
@@ -504,15 +523,6 @@ NovelCraft 는 독자와 작가 모두를 위한 웹소설 양성 플랫폼입�
 | 일반 관리자 거절 | `PATCH` | `/api/admin/users/{userId}/reject` | 슈퍼 관리자 전용 | 서하나 |
 
 </details>
-
----
-
-## 7. 와이어프레임
-<img width="996" height="687" alt="Image" src="https://github.com/user-attachments/assets/8be12283-7fc4-4d6b-bbf9-d0ee4f10f78b" />
-
----
-
-## 8. 서비스 플로우
 
 ---
 
