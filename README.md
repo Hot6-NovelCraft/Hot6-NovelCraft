@@ -250,7 +250,7 @@ NovelCraft 는 독자와 작가 모두를 위한 웹소설 양성 플랫폼입�
 <details>
 <summary><b> 결제 </b></summary>
 <br>
-<img width="3742" height="4275" alt="Image" src="https://github.com/user-attachments/assets/b228e12d-253a-4763-b202-8c14b549a54a" />
+<img width="3744" height="4272" alt="Image" src="https://github.com/user-attachments/assets/2c0cf692-cd15-4ab2-b187-ab3e4174de5f" />
 </details>
 
 
