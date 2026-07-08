@@ -194,7 +194,7 @@ NovelCraft 는 독자와 작가 모두를 위한 웹소설 양성 플랫폼입�
 ---
 
 ## 4. 아키텍처
-<img width="2410" height="1728" alt="616282351-6992a1bd-988d-4c33-9b6a-ec3aef6cfb18" src="https://github.com/user-attachments/assets/b7febfe3-50ed-4998-9901-2b6f2a96f55e" />
+<img width="2407" height="1830" alt="617081537-8b36f26b-ea6f-4db9-b1b4-9efd2455a558" src="https://github.com/user-attachments/assets/406326e5-4843-44ac-aabf-36bfa8fd1b98" />
 <a href="https://cacoo.com/diagrams/dkxibDW7JyEEE8hj/BE544" target="_blank">
   아키텍처 원본 링크
 </a>
@@ -218,6 +218,41 @@ NovelCraft 는 독자와 작가 모두를 위한 웹소설 양성 플랫폼입�
 ---
 
 ## 7. 서비스 플로우
+<details>
+<summary><b>회원가입</b></summary>
+<br>
+<img width="5283" height="3028" alt="Image" src="https://github.com/user-attachments/assets/8a335d61-328f-4d75-b773-e98de833c994" />
+</details>
+<details>
+<summary><b>회차조회</b></summary>
+<br>
+<img width="5538" height="2888" alt="Image" src="https://github.com/user-attachments/assets/a748c245-0457-4194-9a4d-8d8d745ecf87" />
+</details>
+<details>
+<summary><b>이벤트 선착 참여</b></summary>
+<br>
+<img width="4425" height="3615" alt="Image" src="https://github.com/user-attachments/assets/b4619e6f-6f9f-4a63-86e3-294befb24c07" />
+</details>
+<details>
+<summary><b>AI 커버 생성</b></summary>
+<br>
+<img width="5921" height="2702" alt="Image" src="https://github.com/user-attachments/assets/ba7c981a-455f-4c86-aa18-0d91d53a57c9" />
+<img width="4354" height="3674" alt="Image" src="https://github.com/user-attachments/assets/47546c5a-a5a9-442d-a486-7175f27fb443" />
+</details>
+<details>
+<summary><b>정산/출금</b></summary>
+<br>
+<img width="4782" height="3345" alt="Image" src="https://github.com/user-attachments/assets/2a3ccf64-0fa8-4fdb-86c4-073e75691609" />
+<img width="5872" height="2724" alt="Image" src="https://github.com/user-attachments/assets/44cc5f98-aed1-4ba0-9e1e-6e4c979c1f13" />
+<img width="4413" height="3625" alt="Image" src="https://github.com/user-attachments/assets/84db24d2-d0c3-4acd-8f64-fa6d76f1b5d1" />
+<img width="4646" height="3443" alt="Image" src="https://github.com/user-attachments/assets/eb9e1ef4-8a73-491e-a199-b4029d954fa2" />
+</details>
+<details>
+<summary><b> 결제 </b></summary>
+<br>
+<img width="3742" height="4275" alt="Image" src="https://github.com/user-attachments/assets/b228e12d-253a-4763-b202-8c14b549a54a" />
+</details>
+
 
 
 ---
