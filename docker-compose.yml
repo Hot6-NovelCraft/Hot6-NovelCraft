@@ -349,6 +349,27 @@ services:
     networks:
       - pgvector-net
 
+  # --------------------------
+  # [신규 추가] Spring Boot App (ECR 이미지)
+  # --------------------------
+  app:
+    image: 123865824090.dkr.ecr.ap-northeast-2.amazonaws.com/novelcraft-dev-app:latest
+    container_name: novelcraft-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      redis-master:
+        condition: service_healthy
+      postgres-vector:
+        condition: service_healthy
+    networks:
+      - redis-net
+      - kafka-net
+      - pgvector-net
+    restart: unless-stopped
+
 volumes:
   kafka1_data:
   kafka2_data:
