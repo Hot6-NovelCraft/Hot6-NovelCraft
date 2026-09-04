@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'novelcraft'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+
+  - job_name: 'kafka-1'
+    static_configs:
+      - targets: ['kafka-1-jmx-exporter:5556']
+
+  - job_name: 'kafka-2'
+    static_configs:
+      - targets: ['kafka-2-jmx-exporter:5556']
+
+  - job_name: 'kafka-3'
+    static_configs:
+      - targets: ['kafka-3-jmx-exporter:5556']

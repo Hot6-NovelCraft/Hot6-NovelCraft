@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소설 상세 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        .page-wrap { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
+
+        /* 히어로 */
+        .hero { display: flex; gap: 28px; margin-bottom: 32px; }
+        .hero__cover {
+            width: 140px; height: 196px; flex-shrink: 0; border-radius: 12px;
+            background: linear-gradient(135deg, var(--surface2), var(--bg3));
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3rem; overflow: hidden;
+        }
+        .hero__cover img { width: 100%; height: 100%; object-fit: cover; }
+        .hero__info { flex: 1; min-width: 0; }
+        .hero__title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.5rem; font-weight: 900; margin-bottom: 6px; line-height: 1.3;
+        }
+        .hero__author { font-size: 0.85rem; color: var(--text3); margin-bottom: 12px; }
+        .hero__badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 0.72rem; font-weight: 600;
+        }
+        .hero__stats {
+            display: flex; gap: 20px; font-size: 0.8rem; color: var(--text3);
+            margin-bottom: 18px;
+        }
+        .hero__stats span strong { color: var(--text2); font-weight: 700; }
+        .hero__actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .btn {
+            padding: 10px 20px; border-radius: 10px; font-size: 0.875rem;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            transition: all 0.2s; border: none;
+        }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn--bookmark {
+            background: rgba(240,200,66,0.1); border: 1px solid rgba(240,200,66,0.3);
+            color: #f0c842;
+        }
+        .btn--bookmark:hover:not(:disabled), .btn--bookmark.active {
+            background: #f0c842; color: #0f0f13;
+        }
+        .btn--follow {
+            background: rgba(124,90,240,0.1); border: 1px solid rgba(124,90,240,0.3);
+            color: var(--primary-light);
+        }
+        .btn--follow:hover:not(:disabled), .btn--follow.active {
+            background: var(--primary); color: white;
+        }
+
+        /* 줄거리 */
+        .section { margin-bottom: 32px; }
+        .section__title {
+            font-size: 1rem; font-weight: 700; margin-bottom: 12px;
+            padding-bottom: 8px; border-bottom: 1px solid var(--border);
+        }
+        .synopsis {
+            font-size: 0.9rem; color: var(--text2); line-height: 1.8;
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px;
+        }
+
+        /* 전체 구매 바 */
+        .bulk-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;
+        }
+        .bulk-bar__text { font-size: 0.85rem; color: var(--text2); }
+        .bulk-bar__text strong { color: var(--accent); }
+        .btn--bulk {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border: none; padding: 8px 18px; border-radius: 8px;
+            font-size: 0.82rem; font-weight: 700; cursor: pointer; font-family: inherit;
+            transition: opacity 0.2s;
+        }
+        .btn--bulk:hover { opacity: 0.85; }
+
+        /* 회차 목록 */
+        .episode-list { display: flex; flex-direction: column; }
+        .episode-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 4px; border-bottom: 1px solid var(--border);
+        }
+        .episode-row:first-child { border-top: 1px solid var(--border); }
+        .ep-num { font-size: 0.75rem; color: var(--text3); min-width: 32px; text-align: right; flex-shrink: 0; }
+        .ep-info { flex: 1; min-width: 0; }
+        .ep-title {
+            font-size: 0.9rem; font-weight: 600; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+        }
+        .ep-date { font-size: 0.72rem; color: var(--text3); }
+        .ep-badge { flex-shrink: 0; }
+        .badge--free { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge--price { background: rgba(124,90,240,0.15); color: var(--primary-light); border: 1px solid rgba(124,90,240,0.3); }
+        .badge--bought { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.3); }
+        .btn--read {
+            flex-shrink: 0; padding: 6px 16px; border-radius: 8px;
+            background: rgba(124,90,240,0.12); border: 1px solid rgba(124,90,240,0.3);
+            color: var(--primary-light); font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; font-family: inherit; transition: all 0.2s;
+        }
+        .btn--read:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* 페이지네이션 */
+        .ep-pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 24px 0; }
+        .pg-btn {
+            min-width: 36px; height: 36px; border-radius: 8px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text2); cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.875rem; font-family: inherit;
+        }
+        .pg-btn:hover { background: var(--surface); }
+        .pg-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* 구매 모달 */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 16px; padding: 28px; max-width: 400px; width: 90%;
+            box-shadow: 0 8px 48px rgba(0,0,0,0.6);
+        }
+        .modal-title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;
+            padding-bottom: 12px; border-bottom: 1px solid var(--border);
+        }
+        .modal-body { font-size: 0.9rem; color: var(--text2); margin-bottom: 20px; line-height: 1.7; }
+        .modal-body .price { font-size: 1.1rem; color: var(--accent); font-weight: 700; }
+        .modal-actions { display: flex; gap: 10px; }
+        .btn--cancel {
+            flex: 1; padding: 10px; border-radius: 10px;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2); font-size: 0.875rem; cursor: pointer; font-family: inherit;
+        }
+        .btn--confirm {
+            flex: 2; padding: 10px; border-radius: 10px;
+            background: var(--primary); border: none;
+            color: white; font-size: 0.875rem; font-weight: 700;
+            cursor: pointer; font-family: inherit; transition: background 0.2s;
+        }
+        .btn--confirm:hover:not(:disabled) { background: var(--primary-dark); }
+        .btn--confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* 공통 */
+        .loading-box { padding: 60px; display: flex; align-items: center; justify-content: center; }
+        .empty-box { padding: 40px; text-align: center; color: var(--text3); font-size: 0.9rem; }
+
+        @media (max-width: 600px) {
+            .hero { flex-direction: column; }
+            .hero__cover { width: 100%; height: 200px; }
+            .page-wrap { padding: 20px 16px; }
+        }
+    </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="page-wrap">
+    <div class="hero" id="novel-hero">
+        <div class="loading-box" style="width:100%"><div class="nc-spinner"></div></div>
+    </div>
+
+    <div class="section" id="synopsis-section" style="display:none">
+        <div class="section__title">줄거리</div>
+        <div class="synopsis" id="synopsis-text"></div>
+    </div>
+
+    <div class="section">
+        <div class="section__title">회차 목록</div>
+        <div id="bulk-bar-wrap"></div>
+        <div class="episode-list" id="episode-list">
+            <div class="loading-box"><div class="nc-spinner"></div></div>
+        </div>
+        <div class="ep-pagination" id="ep-pagination"></div>
+    </div>
+</div>
+
+<!-- 구매 모달 -->
+<div class="modal-overlay" id="purchase-modal">
+    <div class="modal-box">
+        <div class="modal-title" id="modal-title">회차 구매</div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-actions">
+            <button class="btn--cancel" onclick="closePurchaseModal()">취소</button>
+            <button class="btn--confirm" id="modal-confirm-btn">구매하기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const GENRE_MAP = {
+        FANTASY: '판타지', ROMANCE_FANTASY: '로판', MODERN: '현대',
+        CHIVALROUS: '무협', BL: 'BL', SF: 'SF', HORROR: '공포',
+        CLASSIC: '고전', DAILY_LIFE: '일상물',
+    };
+    const NOVEL_STATUS = {
+        ONGOING:   { label: '연재중',  color: '#10b981' },
+        COMPLETED: { label: '완결',    color: '#6366f1' },
+        HIATUS:    { label: '중단',    color: '#f59e0b' },
+        PENDING:   { label: '보류',    color: '#9ca3af' },
+        PUBLISHED: { label: '공개',    color: '#3b82f6' },
+    };
+
+    let novelId = null;
+    let novelData = null;
+    let epPage = 0;
+    let epTotalPages = 0;
+    let pendingEpisode = null;
+    let purchasedEpisodeIds = new Set(); // 서버에서 조회한 구매 완료 회차 ID
+
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtNum(n) {
+        if (!n && n !== 0) return '0';
+        return n >= 10000 ? (n / 10000).toFixed(1) + '만' : Number(n).toLocaleString();
+    }
+    function fmtDate(str) {
+        if (!str) return '';
+        return str.substring(0, 10);
+    }
+
+    // ── 소설 상세 ──
+    async function loadNovel() {
+        try {
+            const res = await fetch('/api/novels/' + novelId);
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || '소설 정보 오류');
+            novelData = json.data;
+            renderHero(novelData);
+        } catch (err) {
+            console.error('[novel-detail] loadNovel:', err);
+            document.getElementById('novel-hero').innerHTML =
+                '<div class="empty-box">소설 정보를 불러오지 못했습니다.<br><small>' + esc(err.message) + '</small></div>';
+        }
+    }
+
+    function renderHero(n) {
+        const coverHtml = n.coverImageUrl
+            ? `<img src="${esc(n.coverImageUrl)}" alt="${esc(n.title)}" onerror="this.src='/images/default-cover.svg'">`
+            : `<img src="/images/default-cover.svg" alt="표지 없음">`;
+
+        const genreLabel = GENRE_MAP[n.genre] || n.genre || '';
+        const st = NOVEL_STATUS[n.status] || { label: n.status || '', color: '#9ca3af' };
+
+        const isLoggedIn = Auth.isLoggedIn();
+        const bookmarkBtn = isLoggedIn
+            ? `<button class="btn btn--bookmark" id="btn-bookmark" onclick="toggleBookmark()">♡ 찜하기</button>`
+            : `<button class="btn btn--bookmark" onclick="window.location.href='/login.html'">♡ 찜하기</button>`;
+        const followBtn = isLoggedIn
+            ? `<button class="btn btn--follow" id="btn-follow" onclick="toggleFollow()">+ 작가 팔로우</button>`
+            : `<button class="btn btn--follow" onclick="window.location.href='/login.html'">+ 작가 팔로우</button>`;
+
+        document.getElementById('novel-hero').innerHTML = `
+            <div class="hero__cover">${coverHtml}</div>
+            <div class="hero__info">
+                <div class="hero__title">${esc(n.title)}</div>
+                <div class="hero__author">${esc(n.authorNickname || '')} 작가</div>
+                <div class="hero__badges">
+                    ${genreLabel ? `<span class="badge" style="background:#7c5af020;color:#9b7ef8;border:1px solid #7c5af038">${genreLabel}</span>` : ''}
+                    <span class="badge" style="background:${st.color}20;color:${st.color};border:1px solid ${st.color}38">${st.label}</span>
+                </div>
+                <div class="hero__stats">
+                    <span>👁 <strong>${fmtNum(n.viewCount)}</strong></span>
+                    <span>❤ <strong>${fmtNum(n.bookmarkCount)}</strong></span>
+                </div>
+                <div class="hero__actions">
+                    ${bookmarkBtn}
+                    ${followBtn}
+                </div>
+            </div>`;
+
+        if (n.description) {
+            document.getElementById('synopsis-section').style.display = '';
+            document.getElementById('synopsis-text').textContent = n.description;
+        }
+
+        // localStorage에서 찜/팔로우 상태 복원
+        if (Auth.isLoggedIn()) {
+            if (localStorage.getItem('bm_' + novelId) === '1') {
+                const bmBtn = document.getElementById('btn-bookmark');
+                if (bmBtn) { bmBtn.textContent = '❤ 찜됨'; bmBtn.classList.add('active'); }
+            }
+            if (n.authorId && localStorage.getItem('follow_' + n.authorId) === '1') {
+                const fBtn = document.getElementById('btn-follow');
+                if (fBtn) { fBtn.textContent = '✓ 팔로잉'; fBtn.classList.add('active'); }
+            }
+        }
+    }
+
+    // ── 찜하기 ──
+    async function toggleBookmark() {
+        const btn = document.getElementById('btn-bookmark');
+        if (!btn) return;
+        btn.disabled = true;
+        try {
+            const data = await api.post('/novels/' + novelId + '/bookmark', {}, true);
+            // Java record boolean 필드 isBookmarked → JSON key 는 "isBookmarked"
+            const bookmarked = data?.isBookmarked ?? data?.bookmarked ?? false;
+            btn.textContent = bookmarked ? '❤ 찜됨' : '♡ 찜하기';
+            btn.classList.toggle('active', bookmarked);
+            localStorage.setItem('bm_' + novelId, bookmarked ? '1' : '0');
+            Toast.success(bookmarked ? '찜 목록에 추가했습니다!' : '찜을 취소했습니다');
+            // 찜할 때 서재 BOOKMARKED 자동 등록 (이미 있으면 무시)
+            if (bookmarked && novelData) {
+                api.post('/libraries/' + novelId, {
+                    novelId: Number(novelId),
+                    novelTitle: novelData.title,
+                    authorNickname: novelData.authorNickname || '작가',
+                    coverImageUrl: novelData.coverImageUrl || null,
+                    libraryType: 'BOOKMARKED'
+                }, true).catch(() => {});
+            }
+        } catch (e) {
+            Toast.error(e.message || '요청 실패');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ── 작가 팔로우 ──
+    async function toggleFollow() {
+        if (!novelData?.authorId) { Toast.error('작가 정보를 불러올 수 없습니다.'); return; }
+        const btn = document.getElementById('btn-follow');
+        if (!btn) return;
+        btn.disabled = true;
+        try {
+            // 실제 API 경로: /api/authors/{authorId}/follow
+            const data = await api.post('/authors/' + novelData.authorId + '/follow', {}, true);
+            // Java record boolean 필드 isFollowing → JSON key 는 "isFollowing"
+            const following = data?.isFollowing ?? data?.following ?? false;
+            btn.textContent = following ? '✓ 팔로잉' : '+ 작가 팔로우';
+            btn.classList.toggle('active', following);
+            localStorage.setItem('follow_' + novelData.authorId, following ? '1' : '0');
+            Toast.success(following ? '팔로우했습니다!' : '팔로우를 취소했습니다');
+        } catch (e) {
+            Toast.error(e.message || '요청 실패');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // ── 구매한 회차 ID 로드 (로그인 시) ──
+    async function loadPurchasedIds() {
+        if (!Auth.isLoggedIn()) return;
+        try {
+            const token = localStorage.getItem('accessToken');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
+            const res = await fetch('/api/novels/' + novelId + '/episodes/purchased', { headers });
+            if (!res.ok) return;
+            const json = await res.json();
+            const ids = json.data || [];
+            purchasedEpisodeIds = new Set(ids.map(String));
+        } catch (_) {}
+    }
+
+    // ── 회차 목록 ──
+    async function loadEpisodes() {
+        const listEl = document.getElementById('episode-list');
+        listEl.innerHTML = '<div class="loading-box"><div class="nc-spinner"></div></div>';
+        try {
+            // 구매 목록과 에피소드 목록 병렬 조회
+            await loadPurchasedIds();
+            const res = await fetch('/api/novels/' + novelId + '/episodes?page=' + epPage + '&size=20&sort=episodeNumber,asc');
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || '회차 목록 오류');
+            const pageData = json.data;
+            const list = pageData?.content || [];
+            epTotalPages = pageData?.totalPages || 0;
+            renderEpisodes(list);
+            renderBulkBar(pageData?.totalElements || 0);
+            renderEpPagination();
+        } catch (err) {
+            console.error('[novel-detail] loadEpisodes:', err);
+            document.getElementById('episode-list').innerHTML =
+                '<div class="empty-box">회차 목록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderEpisodes(list) {
+        const listEl = document.getElementById('episode-list');
+        if (!list.length) {
+            listEl.innerHTML = '<div class="empty-box">등록된 회차가 없습니다.</div>';
+            return;
+        }
+        listEl.innerHTML = list.map(ep => {
+            // 서버 구매 목록 우선, 없으면 localStorage 폴백
+            const purchased = !ep.isFree && (
+                purchasedEpisodeIds.has(String(ep.id)) ||
+                localStorage.getItem('ep_purchased_' + ep.id) === '1'
+            );
+            const priceBadge = ep.isFree
+                ? `<span class="badge badge--free">무료</span>`
+                : purchased
+                    ? `<span class="badge badge--bought">구매함</span>`
+                    : `<span class="badge badge--price">${ep.pointPrice}P</span>`;
+            const epTitleEsc = esc(ep.title).replace(/'/g, "\\'");
+            return `
+            <div class="episode-row">
+                <div class="ep-num">${ep.episodeNumber}화</div>
+                <div class="ep-info">
+                    <div class="ep-title">${esc(ep.title)}</div>
+                    <div class="ep-date">${fmtDate(ep.publishedAt)}</div>
+                </div>
+                <div class="ep-badge">${priceBadge}</div>
+                <button class="btn--read" onclick="handleEpisodeClick(${ep.id}, ${ep.isFree}, ${ep.pointPrice}, '${epTitleEsc}')">읽기</button>
+            </div>`;
+        }).join('');
+    }
+
+    function renderBulkBar(totalElements) {
+        const wrap = document.getElementById('bulk-bar-wrap');
+        if (!Auth.isLoggedIn() || !totalElements) { wrap.innerHTML = ''; return; }
+        wrap.innerHTML = `
+            <div class="bulk-bar">
+                <div class="bulk-bar__text">총 <strong>${totalElements}</strong>화 · 유료 회차 일괄 구매 가능</div>
+                <button class="btn--bulk" onclick="handleBulkPurchase()">전체 구매</button>
+            </div>`;
+    }
+
+    function renderEpPagination() {
+        const el = document.getElementById('ep-pagination');
+        if (epTotalPages <= 1) { el.innerHTML = ''; return; }
+        let html = `<button class="pg-btn" onclick="goEpPage(${epPage - 1})" ${epPage === 0 ? 'disabled' : ''}>‹</button>`;
+        for (let i = Math.max(0, epPage - 2); i <= Math.min(epTotalPages - 1, epPage + 2); i++) {
+            html += `<button class="pg-btn ${i === epPage ? 'active' : ''}" onclick="goEpPage(${i})">${i + 1}</button>`;
+        }
+        html += `<button class="pg-btn" onclick="goEpPage(${epPage + 1})" ${epPage === epTotalPages - 1 ? 'disabled' : ''}>›</button>`;
+        el.innerHTML = html;
+    }
+
+    function goEpPage(p) {
+        if (p < 0 || p >= epTotalPages) return;
+        epPage = p;
+        loadEpisodes();
+        window.scrollTo({ top: document.getElementById('episode-list').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    // ── 회차 클릭 ──
+    function epReaderUrl(epId) {
+        const nTitle = encodeURIComponent(novelData?.title || '');
+        return '/episode-reader.html?id=' + epId + '&novelId=' + novelId + '&title=' + nTitle;
+    }
+
+    async function handleEpisodeClick(episodeId, isFree, price, title) {
+        if (isFree) {
+            window.location.href = epReaderUrl(episodeId);
+            return;
+        }
+        if (!Auth.isLoggedIn()) {
+            window.location.href = '/login.html';
+            return;
+        }
+        // 유료 회차: 이미 구매했는지 서버에 확인 후 바로 이동, 아니면 구매 모달
+        try {
+            const token = localStorage.getItem('accessToken');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
+            const res = await fetch('/api/v2/episodes/' + episodeId, { method: 'GET', headers });
+            if (res.ok) {
+                // 이미 구매했거나 접근 가능 → 구매 표시 저장 후 이동
+                localStorage.setItem('ep_purchased_' + episodeId, '1');
+                window.location.href = epReaderUrl(episodeId);
+                return;
+            }
+        } catch (_) { /* 네트워크 오류 → 그냥 모달 표시 */ }
+
+        // 구매 필요 → 모달
+        pendingEpisode = { id: episodeId, title, price };
+        document.getElementById('modal-title').textContent = '회차 구매';
+        document.getElementById('modal-body').innerHTML =
+            `<b>${esc(title)}</b><br><br>이 회차는 유료입니다.<br>구매 가격: <span class="price">${price}P</span>`;
+        const btn = document.getElementById('modal-confirm-btn');
+        btn.textContent = '구매하기';
+        btn.disabled = false;
+        btn.onclick = purchaseEpisode;
+        document.getElementById('purchase-modal').classList.add('active');
+    }
+
+    function closePurchaseModal() {
+        document.getElementById('purchase-modal').classList.remove('active');
+        pendingEpisode = null;
+    }
+
+    async function purchaseEpisode() {
+        if (!pendingEpisode) return;
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        const ep = pendingEpisode; // closePurchaseModal()이 null로 만들기 전에 저장
+        const btn = document.getElementById('modal-confirm-btn');
+        btn.disabled = true; btn.textContent = '처리 중...';
+        try {
+            await api.post('/episodes/' + ep.id + '/purchase', {}, true);
+            localStorage.setItem('ep_purchased_' + ep.id, '1');
+            Toast.success('구매 완료!');
+            closePurchaseModal();
+            window.location.href = epReaderUrl(ep.id);
+        } catch (e) {
+            if (e.message && (e.message.includes('이미') || e.message.toLowerCase().includes('already'))) {
+                closePurchaseModal();
+                window.location.href = epReaderUrl(ep.id);
+            } else {
+                Toast.error(e.message || '구매 실패');
+                btn.disabled = false; btn.textContent = '구매하기';
+            }
+        }
+    }
+
+    // ── 전체 구매 ──
+    function handleBulkPurchase() {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        document.getElementById('modal-title').textContent = '전체 구매';
+        document.getElementById('modal-body').innerHTML =
+            `이 소설의 유료 회차를 <b>전체 구매</b>합니다.<br>이미 구매한 회차는 제외됩니다.`;
+        const btn = document.getElementById('modal-confirm-btn');
+        btn.textContent = '전체 구매';
+        btn.disabled = false;
+        btn.onclick = doBulkPurchase;
+        document.getElementById('purchase-modal').classList.add('active');
+    }
+
+    async function doBulkPurchase() {
+        const btn = document.getElementById('modal-confirm-btn');
+        btn.disabled = true; btn.textContent = '처리 중...';
+        try {
+            const data = await api.post('/novels/' + novelId + '/episodes/purchase', {}, true);
+            const count = data?.totalEpisodes ?? 0;
+            const remaining = data?.remainingBalance ?? 0;
+            Toast.success(count + '화 구매 완료! 잔여 포인트: ' + remaining.toLocaleString() + 'P');
+            closePurchaseModal();
+            loadEpisodes();
+        } catch (e) {
+            Toast.error(e.message || '전체 구매 실패');
+            btn.disabled = false; btn.textContent = '전체 구매';
+        }
+    }
+
+    // ── 초기화 ──
+    document.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(location.search);
+        novelId = params.get('id');
+        if (!novelId) {
+            document.getElementById('novel-hero').innerHTML = '<div class="empty-box">소설 ID가 없습니다.</div>';
+            return;
+        }
+        loadNovel();
+        loadEpisodes();
+
+        document.getElementById('purchase-modal').addEventListener('click', function (e) {
+            if (e.target === this) closePurchaseModal();
+        });
+    });
+
+    // 인라인 onclick 전역 노출
+    window.toggleBookmark     = toggleBookmark;
+    window.toggleFollow       = toggleFollow;
+    window.handleEpisodeClick = handleEpisodeClick;
+    window.handleBulkPurchase = handleBulkPurchase;
+    window.closePurchaseModal = closePurchaseModal;
+    window.goEpPage           = goEpPage;
+
+})();
+</script>
+</body>
+</html>

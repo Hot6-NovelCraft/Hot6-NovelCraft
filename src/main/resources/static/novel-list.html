@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소설 목록 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        .page-wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+        .page-title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.6rem; font-weight: 900;
+            margin-bottom: 24px; display: flex; align-items: center; gap: 10px;
+        }
+
+        /* 필터 바 */
+        .filter-bar {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;
+        }
+        .filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .filter-row + .filter-row { margin-top: 12px; }
+        .filter-label {
+            font-size: 0.75rem; font-weight: 700; color: var(--text3);
+            text-transform: uppercase; letter-spacing: 0.06em;
+            white-space: nowrap; min-width: 40px;
+        }
+        .filter-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+        .filter-chip {
+            padding: 5px 14px; border-radius: 20px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text2); font-size: 0.78rem; cursor: pointer;
+            transition: all 0.2s; font-family: inherit;
+        }
+        .filter-chip:hover { border-color: var(--primary); color: var(--primary-light); }
+        .filter-chip.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .filter-chip--special { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); color: #f87171; }
+        .filter-chip--special.active { background: #ef4444; border-color: #ef4444; color: white; }
+
+        /* 결과 헤더 */
+        .result-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .result-count { font-size: 0.85rem; color: var(--text3); }
+        .result-count strong { color: var(--text); font-weight: 700; }
+        .sort-select {
+            padding: 6px 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--surface);
+            color: var(--text2); font-size: 0.8rem; cursor: pointer;
+            font-family: inherit; outline: none;
+        }
+
+        /* 소설 카드 */
+        .novel-grid { display: flex; flex-direction: column; gap: 10px; }
+        .novel-card {
+            display: flex; align-items: center; gap: 16px;
+            padding: 16px; border-radius: 14px;
+            background: var(--bg2); border: 1px solid var(--border);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .novel-card:hover {
+            border-color: rgba(124,90,240,0.35);
+            background: var(--surface);
+            transform: translateX(2px);
+        }
+        .novel-card__cover {
+            width: 54px; height: 76px; border-radius: 8px; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--surface), var(--surface2));
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; overflow: hidden;
+        }
+        .novel-card__cover img { width: 100%; height: 100%; object-fit: cover; }
+        .novel-card__info { flex: 1; min-width: 0; }
+        .novel-card__title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .novel-card__meta { font-size: 0.75rem; color: var(--text3); margin-bottom: 8px; }
+        .novel-card__badges { display: flex; gap: 5px; flex-wrap: wrap; }
+        .novel-card__stats { font-size: 0.72rem; color: var(--text3); margin-top: 5px; }
+        .novel-card__actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+
+        .fav-btn {
+            padding: 7px 14px; border-radius: 8px;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text3); font-size: 0.82rem; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap; font-family: inherit;
+        }
+        .fav-btn:hover { border-color: #f0c842; color: #f0c842; background: rgba(240,200,66,0.08); }
+        .fav-btn.bookmarked { color: #f0c842; border-color: #f0c842; background: rgba(240,200,66,0.1); }
+
+        .read-btn {
+            padding: 7px 16px; border-radius: 8px;
+            background: rgba(124,90,240,0.12); border: 1px solid rgba(124,90,240,0.28);
+            color: var(--primary-light); font-size: 0.82rem; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap; font-family: inherit;
+        }
+        .read-btn:hover { background: var(--primary); color: white; }
+
+        /* 배지 */
+        .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; }
+
+        /* 페이지네이션 */
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 32px 0; }
+        .pg-btn {
+            min-width: 36px; height: 36px; border-radius: 8px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text2); cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.875rem; padding: 0 8px; font-family: inherit;
+        }
+        .pg-btn:hover { background: var(--surface); }
+        .pg-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* 로딩 / 빈 상태 */
+        .loading-box { padding: 60px; display: flex; align-items: center; justify-content: center; }
+        .empty-box { padding: 80px 20px; text-align: center; color: var(--text3); }
+        .empty-box__icon { font-size: 3.5rem; margin-bottom: 14px; }
+        .empty-box__text { font-size: 0.95rem; }
+
+        @media (max-width: 640px) {
+            .page-wrap { padding: 20px 16px; }
+            .novel-card__actions { flex-direction: row; }
+        }
+    </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="page-wrap">
+    <div class="page-title">📚 소설 목록</div>
+
+    <div class="filter-bar">
+        <div class="filter-row">
+            <span class="filter-label">장르</span>
+            <div class="filter-chips" id="genre-chips">
+                <button class="filter-chip active" data-genre="">전체</button>
+                <button class="filter-chip" data-genre="FANTASY">판타지</button>
+                <button class="filter-chip" data-genre="ROMANCE_FANTASY">로판</button>
+                <button class="filter-chip" data-genre="MODERN">현대</button>
+                <button class="filter-chip" data-genre="CHIVALROUS">무협</button>
+                <button class="filter-chip" data-genre="BL">BL</button>
+                <button class="filter-chip" data-genre="SF">SF</button>
+                <button class="filter-chip" data-genre="HORROR">공포</button>
+                <button class="filter-chip" data-genre="CLASSIC">고전</button>
+                <button class="filter-chip" data-genre="DAILY_LIFE">일상물</button>
+            </div>
+        </div>
+        <div class="filter-row">
+            <span class="filter-label">상태</span>
+            <div class="filter-chips" id="status-chips">
+                <button class="filter-chip active" data-status="">전체</button>
+                <button class="filter-chip" data-status="ONGOING">연재중</button>
+                <button class="filter-chip filter-chip--special" data-status="COMPLETED">완결</button>
+                <button class="filter-chip" data-status="HIATUS">중단</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-header">
+        <div class="result-count" id="result-count">소설을 불러오는 중...</div>
+        <select class="sort-select" id="sort-select">
+            <option value="latest">최신순</option>
+            <option value="popular">인기순</option>
+        </select>
+    </div>
+
+    <div class="novel-grid" id="novel-grid">
+        <div class="loading-box"><div class="nc-spinner"></div></div>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+(function () {
+    const GENRE_MAP = {
+        FANTASY:         { label: '판타지',   color: '#7c3aed' },
+        ROMANCE_FANTASY: { label: '로판',     color: '#be185d' },
+        MODERN:          { label: '현대',     color: '#0891b2' },
+        CHIVALROUS:      { label: '무협',     color: '#92400e' },
+        BL:              { label: 'BL',       color: '#db2777' },
+        SF:              { label: 'SF',       color: '#1d4ed8' },
+        HORROR:          { label: '공포',     color: '#374151' },
+        CLASSIC:         { label: '고전',     color: '#065f46' },
+        DAILY_LIFE:      { label: '일상물',   color: '#059669' },
+    };
+    const NOVEL_STATUS = {
+        ONGOING:   { label: '연재중', color: '#10b981' },
+        COMPLETED: { label: '완결',   color: '#6366f1' },
+        HIATUS:    { label: '중단',   color: '#f59e0b' },
+        PENDING:   { label: '보류',   color: '#9ca3af' },
+        PUBLISHED: { label: '공개',   color: '#3b82f6' },
+    };
+
+    let state = {
+        genre: '',
+        status: '',
+        page: 0,
+        size: 20,
+        totalPages: 0,
+        totalElements: 0,
+        loading: false,
+    };
+
+    function genreTag(genre) {
+        const g = GENRE_MAP[genre];
+        if (!g) return genre ? `<span class="badge" style="background:#ffffff18;color:#a0a0b8;border:1px solid #2a2a3a">${genre}</span>` : '';
+        return `<span class="badge" style="background:${g.color}20;color:${g.color};border:1px solid ${g.color}38">${g.label}</span>`;
+    }
+    function statusTag(status) {
+        const s = NOVEL_STATUS[status];
+        if (!s) return '';
+        return `<span class="badge" style="background:${s.color}20;color:${s.color};border:1px solid ${s.color}38">${s.label}</span>`;
+    }
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtNum(n) {
+        if (!n && n !== 0) return '0';
+        return n >= 10000 ? (n / 10000).toFixed(1) + '만' : Number(n).toLocaleString();
+    }
+
+    async function loadNovels() {
+        if (state.loading) return;
+        state.loading = true;
+
+        const grid = document.getElementById('novel-grid');
+        const countEl = document.getElementById('result-count');
+        if (!grid) { state.loading = false; return; }
+
+        grid.innerHTML = '<div class="loading-box"><div class="nc-spinner"></div></div>';
+        if (countEl) countEl.textContent = '불러오는 중...';
+
+        try {
+            const params = new URLSearchParams({ page: state.page, size: state.size });
+            if (state.genre)  params.append('genre', state.genre);
+            if (state.status) params.append('status', state.status);
+
+            const url = '/api/v2/novels?' + params.toString();
+            const headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('accessToken');
+            if (token) headers['Authorization'] = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
+
+            const res = await fetch(url, { method: 'GET', headers });
+            const json = await res.json();
+
+            if (!res.ok) {
+                throw new Error(json.message || '서버 오류 (' + res.status + ')');
+            }
+
+            const pageData = json.data;
+            const list = pageData?.content || [];
+            state.totalPages    = pageData?.totalPages    || 0;
+            state.totalElements = pageData?.totalElements || 0;
+
+            if (countEl) countEl.innerHTML = '총 <strong>' + state.totalElements.toLocaleString() + '</strong>편';
+
+            if (!list.length) {
+                grid.innerHTML = `
+                    <div class="empty-box">
+                        <div class="empty-box__icon">📭</div>
+                        <div class="empty-box__text">조건에 맞는 소설이 없습니다</div>
+                    </div>`;
+            } else {
+                grid.innerHTML = list.map(renderCard).join('');
+            }
+            renderPagination();
+
+        } catch (err) {
+            console.error('[novel-list] loadNovels 오류:', err);
+            if (grid) grid.innerHTML = `
+                <div class="empty-box">
+                    <div class="empty-box__icon">⚠️</div>
+                    <div class="empty-box__text">소설을 불러오지 못했습니다<br><small style="color:var(--text3)">${esc(err.message)}</small></div>
+                </div>`;
+            if (countEl) countEl.textContent = '';
+        } finally {
+            state.loading = false;
+        }
+    }
+
+    function renderCard(n) {
+        const coverHtml = n.coverImageUrl
+            ? `<img src="${esc(n.coverImageUrl)}" alt="${esc(n.title)}" onerror="this.src='/images/default-cover.svg'">`
+            : `<img src="/images/default-cover.svg" alt="표지 없음">`;
+
+        return `
+        <div class="novel-card" onclick="window.location.href='/novel-detail.html?id=${n.novelId}'">
+            <div class="novel-card__cover">${coverHtml}</div>
+            <div class="novel-card__info">
+                <div class="novel-card__title">${esc(n.title)}</div>
+                <div class="novel-card__meta">${esc(n.authorNickname || '')}</div>
+                <div class="novel-card__badges">
+                    ${genreTag(n.genre)}
+                    ${statusTag(n.status)}
+                </div>
+                <div class="novel-card__stats">
+                    👁 ${fmtNum(n.viewCount)}&nbsp;&nbsp;❤ ${fmtNum(n.bookmarkCount)}
+                </div>
+            </div>
+            <div class="novel-card__actions">
+                <button class="read-btn" onclick="event.stopPropagation();window.location.href='/novel-detail.html?id=${n.novelId}'">읽기</button>
+            </div>
+        </div>`;
+    }
+
+
+    function renderPagination() {
+        const el = document.getElementById('pagination');
+        if (!el) return;
+        if (state.totalPages <= 1) { el.innerHTML = ''; return; }
+
+        const cur = state.page;
+        const total = state.totalPages;
+        let html = '';
+        html += `<button class="pg-btn" onclick="goPage(${cur - 1})" ${cur === 0 ? 'disabled' : ''}>‹</button>`;
+        for (let i = Math.max(0, cur - 2); i <= Math.min(total - 1, cur + 2); i++) {
+            html += `<button class="pg-btn ${i === cur ? 'active' : ''}" onclick="goPage(${i})">${i + 1}</button>`;
+        }
+        html += `<button class="pg-btn" onclick="goPage(${cur + 1})" ${cur === total - 1 ? 'disabled' : ''}>›</button>`;
+        el.innerHTML = html;
+    }
+
+    function goPage(p) {
+        if (p < 0 || p >= state.totalPages) return;
+        state.page = p;
+        loadNovels();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setFilter(type, value, clickedBtn, groupId) {
+        document.querySelectorAll('#' + groupId + ' .filter-chip').forEach(b => b.classList.remove('active'));
+        clickedBtn.classList.add('active');
+        state[type] = value;
+        state.page = 0;
+        loadNovels();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // URL 파라미터 반영
+        const params = new URLSearchParams(location.search);
+        const genreParam  = params.get('genre')  || '';
+        const statusParam = params.get('status') || '';
+
+        if (genreParam) {
+            state.genre = genreParam;
+            document.querySelectorAll('#genre-chips .filter-chip').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.genre === genreParam);
+            });
+        }
+        if (statusParam) {
+            state.status = statusParam;
+            document.querySelectorAll('#status-chips .filter-chip').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.status === statusParam);
+            });
+        }
+
+        // 장르 칩 이벤트
+        document.querySelectorAll('#genre-chips .filter-chip').forEach(btn => {
+            btn.addEventListener('click', () => setFilter('genre', btn.dataset.genre, btn, 'genre-chips'));
+        });
+
+        // 상태 칩 이벤트
+        document.querySelectorAll('#status-chips .filter-chip').forEach(btn => {
+            btn.addEventListener('click', () => setFilter('status', btn.dataset.status, btn, 'status-chips'));
+        });
+
+        document.getElementById('sort-select').addEventListener('change', () => {
+            state.page = 0;
+            loadNovels();
+        });
+
+        loadNovels();
+    });
+
+    // 인라인 onclick에서 접근 가능하도록 전역 노출
+    window.goPage = goPage;
+    window.setFilter = setFilter;
+
+})();
+</script>
+</body>
+</html>

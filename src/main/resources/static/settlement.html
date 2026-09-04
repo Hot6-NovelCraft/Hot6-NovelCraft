@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정산 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        /* ── 네비 ── */
+        .nc-nav__inner { height: 62px; }
+        .nc-point-btn {
+            padding: 5px 14px; border-radius: 20px;
+            background: linear-gradient(135deg, rgba(240,200,66,.18), rgba(240,200,66,.08));
+            border: 1px solid rgba(240,200,66,.4); color: var(--accent);
+            font-size: .82rem; font-weight: 700; cursor: pointer;
+            transition: all .2s; white-space: nowrap; font-family: inherit;
+        }
+        .nc-alarm-btn {
+            position: relative; padding: 6px 10px; border-radius: 8px;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text2); font-size: 1rem; cursor: pointer;
+            transition: all .2s; font-family: inherit;
+        }
+        .nc-alarm-btn:hover { background: var(--surface); }
+        .nc-user-menu { position: relative; }
+        .nc-user-dropdown {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--radius); min-width: 160px;
+            box-shadow: var(--shadow-lg); z-index: 300; display: none; overflow: hidden;
+        }
+        .nc-user-menu.open .nc-user-dropdown { display: block; }
+        .nc-user-dropdown__item {
+            display: block; width: 100%; padding: 11px 16px; text-align: left;
+            background: none; border: none; color: var(--text2); font-size: .875rem;
+            cursor: pointer; transition: background .15s; font-family: inherit; text-decoration: none;
+        }
+        .nc-user-dropdown__item:hover { background: var(--surface); color: var(--text); }
+        .nc-user-dropdown__item--danger { color: #f87171; }
+
+        /* ── 레이아웃 ── */
+        .settle-layout {
+            max-width: 1140px; margin: 0 auto; padding: 28px 24px;
+            display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start;
+        }
+
+        /* ── 공통 카드 ── */
+        .card {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 22px; margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: .88rem; font-weight: 700; color: var(--text2);
+            margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        /* ── 상단 통계 ── */
+        .stat-row {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;
+        }
+        .stat-card {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 18px 20px;
+        }
+        .stat-label { font-size: .78rem; color: var(--text3); margin-bottom: 8px; }
+        .stat-value { font-size: 1.5rem; font-weight: 900; font-family: 'Noto Serif KR', serif; }
+        .stat-value.green { color: var(--success); }
+        .stat-value.accent { color: var(--accent); }
+        .stat-value.warn { color: var(--warning); }
+
+        /* ── 공지 박스 ── */
+        .notice-box {
+            background: rgba(124,90,240,.07); border: 1px solid rgba(124,90,240,.2);
+            border-radius: 10px; padding: 12px 16px;
+            font-size: .8rem; color: var(--text2); margin-bottom: 16px; line-height: 1.7;
+        }
+
+        /* ── 수익 구성 ── */
+        .revenue-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+            font-size: .875rem;
+        }
+        .revenue-row:last-child { border-bottom: none; }
+        .revenue-row.total {
+            padding-top: 14px; margin-top: 4px;
+            border-top: 1px solid var(--border); border-bottom: none;
+            font-weight: 700; font-size: 1rem;
+        }
+        .revenue-row .label { color: var(--text2); }
+        .revenue-row .amount { font-weight: 700; }
+        .revenue-row .amount.minus { color: #f87171; }
+        .revenue-row .amount.total-amt { color: var(--primary-light); font-size: 1.1rem; }
+
+        /* ── 환전 금액 선택 ── */
+        .amount-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+        .amount-btn {
+            padding: 12px; border-radius: 10px; text-align: center;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text2); font-size: .875rem; cursor: pointer;
+            transition: all .2s; font-family: inherit; font-weight: 600;
+        }
+        .amount-btn:hover { border-color: var(--primary); color: var(--primary-light); }
+        .amount-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+        .amount-input-wrap {
+            position: relative; display: flex; align-items: center;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; overflow: hidden;
+        }
+        .amount-input {
+            flex: 1; padding: 12px 16px; background: transparent;
+            border: none; color: var(--text); font-size: 1rem; font-family: inherit;
+            outline: none;
+        }
+        .amount-unit { padding: 0 16px 0 8px; color: var(--text3); font-size: .875rem; }
+        .amount-hint { font-size: .75rem; color: var(--text3); margin-top: 6px; }
+
+        /* ── 입금 계좌 ── */
+        .account-box {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 0;
+        }
+        .account-info .account-num { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
+        .account-info .account-meta { font-size: .78rem; color: var(--text3); }
+        .verified-badge {
+            font-size: .72rem; padding: 3px 10px; border-radius: 10px;
+            background: rgba(16,185,129,.14); color: var(--success);
+            border: 1px solid rgba(16,185,129,.3); margin-left: 8px;
+        }
+        .no-account {
+            font-size: .875rem; color: var(--text3); padding: 8px 0;
+        }
+
+        /* ── 사이드바 ── */
+        .sidebar .card { margin-bottom: 14px; padding: 18px; }
+
+        /* 환전 요약 */
+        .summary-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; font-size: .875rem;
+        }
+        .summary-row .s-label { color: var(--text3); }
+        .summary-row .s-value { font-weight: 600; }
+        .summary-row .s-value.highlight { color: var(--primary-light); }
+        .summary-row .s-value.actual { color: var(--accent); font-size: 1rem; font-weight: 700; }
+        .summary-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+        .summary-note { font-size: .72rem; color: var(--text3); margin-top: 10px; line-height: 1.6; }
+
+        /* 이번 달 현황 */
+        .monthly-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; font-size: .875rem; border-bottom: 1px solid rgba(255,255,255,.04);
+        }
+        .monthly-row:last-child { border-bottom: none; }
+        .monthly-row .m-label { color: var(--text3); }
+        .monthly-row .m-value { font-weight: 600; }
+
+        /* 수익 발생 소설 */
+        .novel-rev-item {
+            padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+            font-size: .875rem;
+        }
+        .novel-rev-item:last-child { border-bottom: none; }
+        .novel-rev-title { font-weight: 600; margin-bottom: 3px; }
+        .novel-rev-amount { color: var(--success); font-weight: 700; font-size: .82rem; }
+
+        /* ── 계좌 등록 모달 ── */
+        .bank-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+        .bank-btn {
+            padding: 10px 6px; border-radius: 8px; text-align: center; font-size: .78rem;
+            border: 1px solid var(--border); background: transparent; cursor: pointer;
+            color: var(--text2); transition: all .2s; font-family: inherit;
+        }
+        .bank-btn:hover, .bank-btn.active { border-color: var(--primary); color: var(--primary-light); background: rgba(124,90,240,.08); }
+
+        /* ── 환전 최종 확인 모달 ── */
+        .confirm-row {
+            display: flex; justify-content: space-between; padding: 10px 0;
+            border-bottom: 1px solid var(--border); font-size: .9rem;
+        }
+        .confirm-row:last-of-type { border-bottom: none; }
+        .confirm-row .c-label { color: var(--text3); }
+        .confirm-row .c-value { font-weight: 700; }
+
+        /* ── 로딩 ── */
+        .loading-row { padding: 32px; display: flex; align-items: center; justify-content: center; }
+
+        /* ── 반응형 ── */
+        @media (max-width: 900px) {
+            .settle-layout { grid-template-columns: 1fr; }
+            .stat-row { grid-template-columns: 1fr; }
+            .amount-btns { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="settle-layout">
+
+    <!-- ── 왼쪽 메인 ── -->
+    <div class="settle-main">
+
+        <!-- 상단 통계 -->
+        <div class="stat-row">
+            <div class="stat-card">
+                <div class="stat-label">이번 달 수익</div>
+                <div class="stat-value accent" id="stat-monthly">···</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">환전 가능 금액</div>
+                <div class="stat-value green" id="stat-available">···</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">대기 중</div>
+                <div class="stat-value warn" id="stat-pending">···</div>
+            </div>
+        </div>
+
+        <!-- 공지 -->
+        <div class="notice-box">
+            💡 환전 안내 · 매월 1일~10일 신청 가능 · 신청 후 3~5영업일 내 입금 · 최소 환전 금액 10,000원
+        </div>
+
+        <!-- 수익 구성 -->
+        <div class="card">
+            <div class="card-title">수익 구성</div>
+            <div id="revenue-breakdown">
+                <div class="loading-row"><div class="nc-spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- 환전 금액 선택 -->
+        <div class="card">
+            <div class="card-title">환전 금액 선택</div>
+            <div class="amount-btns">
+                <button class="amount-btn" data-amount="30000" onclick="selectAmount(this)">3만원</button>
+                <button class="amount-btn" data-amount="50000" onclick="selectAmount(this)">5만원</button>
+                <button class="amount-btn" data-amount="100000" onclick="selectAmount(this, true)">10만원</button>
+                <button class="amount-btn" data-amount="all" onclick="selectAmount(this)">전액</button>
+            </div>
+            <div class="amount-input-wrap">
+                <input type="number" class="amount-input" id="input-amount" placeholder="0"
+                       min="10000" oninput="onAmountInput()">
+                <span class="amount-unit">원</span>
+            </div>
+            <div class="amount-hint" id="amount-hint">최소 10,000원 · 최대 <span id="max-amount">···</span>원</div>
+            <button class="nc-btn nc-btn--primary nc-btn--full" style="margin-top:14px"
+                    onclick="openConfirmModal()">환전 신청</button>
+        </div>
+
+        <!-- 입금 계좌 -->
+        <div class="card">
+            <div class="card-title">
+                입금 계좌
+                <button class="nc-btn nc-btn--outline nc-btn--sm" onclick="openBankModal()">변경</button>
+            </div>
+            <div id="account-area">
+                <div class="loading-row"><div class="nc-spinner"></div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── 오른쪽 사이드바 ── -->
+    <div class="sidebar">
+
+        <!-- 환전 요약 -->
+        <div class="card">
+            <div class="card-title">환전 요약</div>
+            <div class="summary-row">
+                <span class="s-label">신청 금액</span>
+                <span class="s-value highlight" id="sum-request">0원</span>
+            </div>
+            <div class="summary-row">
+                <span class="s-label">수수료 (10%)</span>
+                <span class="s-value" id="sum-fee">0원</span>
+            </div>
+            <hr class="summary-divider">
+            <div class="summary-row">
+                <span class="s-label">실수령액</span>
+                <span class="s-value actual" id="sum-actual">0원</span>
+            </div>
+            <div class="summary-note">신청 후 3~5영업일 내<br>등록 계좌로 입금</div>
+            <div id="latest-withdrawal" style="margin-top:14px"></div>
+        </div>
+
+        <!-- 이번 달 현황 -->
+        <div class="card">
+            <div class="card-title">이번 달 현황</div>
+            <div id="monthly-status">
+                <div class="loading-row" style="padding:16px"><div class="nc-spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- 수익 발생 소설 -->
+        <div class="card">
+            <div class="card-title">수익 발생 소설</div>
+            <div id="revenue-novels">
+                <div class="loading-row" style="padding:16px"><div class="nc-spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- 내역 / 상세 버튼 -->
+        <div style="display:flex;flex-direction:column;gap:10px">
+            <button class="nc-btn nc-btn--outline nc-btn--full" onclick="window.location.href='/withdrawal-history.html'">📋 환전 내역</button>
+            <button class="nc-btn nc-btn--outline nc-btn--full" onclick="window.location.href='/revenue-stats.html'">📊 수익 상세</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── 계좌 등록/변경 모달 ── -->
+<div class="nc-modal" id="modal-bank">
+    <div class="nc-modal__backdrop" onclick="Modal.close('modal-bank')"></div>
+    <div class="nc-modal__box">
+        <button class="nc-modal__close" onclick="Modal.close('modal-bank')">✕</button>
+        <div class="nc-modal__title">💳 입금 계좌 등록</div>
+
+        <div id="bank-form-area">
+            <!-- 은행 선택 -->
+            <div class="nc-form-group">
+                <label class="nc-label">은행 선택</label>
+                <div class="bank-list">
+                    <button class="bank-btn" onclick="selectBank(this,'카카오뱅크')">카카오뱅크</button>
+                    <button class="bank-btn" onclick="selectBank(this,'국민')">국민</button>
+                    <button class="bank-btn" onclick="selectBank(this,'신한')">신한</button>
+                    <button class="bank-btn" onclick="selectBank(this,'우리')">우리</button>
+                    <button class="bank-btn" onclick="selectBank(this,'하나')">하나</button>
+                    <button class="bank-btn" onclick="selectBank(this,'기업')">기업</button>
+                    <button class="bank-btn" onclick="selectBank(this,'농협')">농협</button>
+                    <button class="bank-btn" onclick="selectBank(this,'토스')">토스</button>
+                </div>
+                <input type="hidden" id="selected-bank">
+            </div>
+            <div class="nc-form-group">
+                <label class="nc-label">계좌번호</label>
+                <input class="nc-input" id="input-account-num" placeholder="숫자만 입력 (7~16자리)">
+            </div>
+            <div class="nc-form-group">
+                <label class="nc-label">예금주</label>
+                <input class="nc-input" id="input-holder" placeholder="예금주 이름">
+            </div>
+            <button class="nc-btn nc-btn--primary nc-btn--full" onclick="requestBankVerify()">1원 인증 요청</button>
+        </div>
+
+        <!-- 인증 코드 입력 -->
+        <div id="verify-form-area" style="display:none">
+            <div style="background:var(--bg3);border-radius:8px;padding:14px;margin-bottom:16px;font-size:.82rem;color:var(--text2)">
+                등록하신 계좌로 1원이 입금됩니다. 입금자명에 표시된 숫자를 입력해주세요.
+            </div>
+            <div class="nc-form-group">
+                <label class="nc-label">인증 코드</label>
+                <input type="number" class="nc-input" id="input-verify-code" placeholder="입금자명 숫자 입력">
+            </div>
+            <button class="nc-btn nc-btn--primary nc-btn--full" onclick="confirmBankVerify()">인증 완료</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── 환전 최종 확인 모달 ── -->
+<div class="nc-modal" id="modal-confirm">
+    <div class="nc-modal__backdrop" onclick="Modal.close('modal-confirm')"></div>
+    <div class="nc-modal__box">
+        <button class="nc-modal__close" onclick="Modal.close('modal-confirm')">✕</button>
+        <div class="nc-modal__title">💸 환전 최종 확인</div>
+        <div class="confirm-row">
+            <span class="c-label">신청 금액</span>
+            <span class="c-value" id="conf-request">0원</span>
+        </div>
+        <div class="confirm-row">
+            <span class="c-label">수수료 (10%)</span>
+            <span class="c-value" id="conf-fee" style="color:#f87171">0원</span>
+        </div>
+        <div class="confirm-row">
+            <span class="c-label">실수령액</span>
+            <span class="c-value" id="conf-actual" style="color:var(--accent);font-size:1.1rem">0원</span>
+        </div>
+        <div style="background:var(--bg3);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:.78rem;color:var(--text3)">
+            입금 계좌: <span id="conf-account" style="color:var(--text2);font-weight:600">-</span>
+        </div>
+        <button class="nc-btn nc-btn--primary nc-btn--full" onclick="submitWithdrawal()">환전 신청 완료</button>
+    </div>
+</div>
+
+<!-- ── 환전 내역 모달 ── -->
+<div class="nc-modal" id="modal-history">
+    <div class="nc-modal__backdrop" onclick="Modal.close('modal-history')"></div>
+    <div class="nc-modal__box" style="max-width:560px">
+        <button class="nc-modal__close" onclick="Modal.close('modal-history')">✕</button>
+        <div class="nc-modal__title">📋 환전 내역</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="nc-btn nc-btn--outline nc-btn--sm" data-status="" onclick="filterHistory(this)">전체</button>
+            <button class="nc-btn nc-btn--outline nc-btn--sm" data-status="PENDING" onclick="filterHistory(this)">대기</button>
+            <button class="nc-btn nc-btn--outline nc-btn--sm" data-status="APPROVED" onclick="filterHistory(this)">승인</button>
+            <button class="nc-btn nc-btn--outline nc-btn--sm" data-status="COMPLETED" onclick="filterHistory(this)">완료</button>
+            <button class="nc-btn nc-btn--outline nc-btn--sm" data-status="REJECTED" onclick="filterHistory(this)">거절</button>
+        </div>
+        <div id="history-list">
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 수익 상세 모달 ── -->
+<div class="nc-modal" id="modal-statistics">
+    <div class="nc-modal__backdrop" onclick="Modal.close('modal-statistics')"></div>
+    <div class="nc-modal__box" style="max-width:560px">
+        <button class="nc-modal__close" onclick="Modal.close('modal-statistics')">✕</button>
+        <div class="nc-modal__title">📊 수익 상세</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button class="nc-btn nc-btn--outline nc-btn--sm active" data-period="MONTHLY" onclick="switchPeriod(this)">월별</button>
+            <button class="nc-btn nc-btn--outline nc-btn--sm" data-period="WEEKLY" onclick="switchPeriod(this)">주별</button>
+            <select class="nc-select" id="stats-year" style="margin-left:auto;width:100px;font-size:.8rem"
+                    onchange="loadStatistics()">
+            </select>
+        </div>
+        <div id="statistics-list">
+            <div class="loading-row"><div class="nc-spinner"></div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ── 상태 ── */
+    let overviewData = null;
+    let selectedBankName = '';
+    let pendingBankAccountId = null;
+    let currentPeriod = 'MONTHLY';
+    let currentHistoryStatus = '';
+
+    /* ── 네비 ── */
+    function initNav() {
+        const nav = document.getElementById('nc-nav');
+        if (!nav) return;
+        const user = Auth.getUser();
+        const isLoggedIn = Auth.isLoggedIn();
+        const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
+
+        nav.innerHTML = `
+      <div class="nc-nav__inner">
+        <a href="/index.html" class="nc-nav__logo"><span class="logo-icon">✦</span>NovelCraft</a>
+        <div class="nc-nav__search-wrap" id="nav-search-wrap">
+          <input type="text" class="nc-nav__search" id="nav-search" placeholder="소설, 작가, 태그 검색...">
+          <div class="nc-search-dropdown" id="search-dropdown"></div>
+        </div>
+        <div class="nc-nav__right">
+          ${isLoggedIn ? `
+            <button class="nc-point-btn" id="nav-point">···P</button>
+            <button class="nc-alarm-btn" id="nav-alarm" onclick="window.location.href='/mypage.html?tab=notification'">
+              🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
+            </button>
+            <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+            ${isAuthorOrMentor ? `
+              <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
+              <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+            ` : ''}
+            <div class="nc-user-menu" id="user-menu">
+              <button class="nc-nav__btn" onclick="toggleUserMenu()" style="font-weight:600;user-select:none">
+                ${user?.nickname || '내 프로필'} ▾
+              </button>
+              <div class="nc-user-dropdown" id="user-dropdown">
+                ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
+                <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
+                <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
+                <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="Auth.logout()">로그아웃</button>
+              </div>
+            </div>
+          ` : `
+            <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
+            <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
+          `}
+        </div>
+      </div>`;
+
+        if (isLoggedIn) {
+            api.get('/points/balance', true).then(d => {
+                const el = document.getElementById('nav-point');
+                if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+            }).catch(() => {});
+
+            api.get('/notifications/unread-count', true).then(d => {
+                const dot = document.getElementById('alarm-dot');
+                if (dot) dot.style.display = (d?.count > 0) ? 'block' : 'none';
+            }).catch(() => {});
+        }
+
+        initSearch();
+        document.addEventListener('click', e => {
+            const menu = document.getElementById('user-menu');
+            if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+        });
+    }
+
+    function toggleUserMenu() { document.getElementById('user-menu')?.classList.toggle('open'); }
+
+    /* ── 수익 현황 로드 ── */
+    async function loadOverview() {
+        try {
+            const data = await api.get('/revenues/me', true);
+            overviewData = data;
+
+            const available = data?.availableBalance ?? 0;
+            const totalEarned = data?.totalEarned ?? 0;
+            const totalWithdrawn = data?.totalWithdrawn ?? 0;
+            const pending = Math.max(0, totalEarned - totalWithdrawn - available);
+
+            document.getElementById('stat-monthly').textContent = `${totalEarned.toLocaleString()}원`;
+            document.getElementById('stat-available').textContent = `${available.toLocaleString()}원`;
+            document.getElementById('stat-pending').textContent = `${pending.toLocaleString()}원`;
+            document.getElementById('max-amount').textContent = available.toLocaleString();
+            document.getElementById('amount-hint').innerHTML =
+                `최소 10,000원 · 최대 <span id="max-amount">${available.toLocaleString()}</span>원`;
+
+            renderRevenueBreakdown(data);
+            renderMonthlyStatus(data);
+            renderAccount(data?.bankAccount);
+            loadLatestWithdrawal();
+        } catch (e) {
+            Toast.error('수익 정보를 불러오지 못했습니다');
+        }
+    }
+
+    /* ── 수익 구성 렌더링 ── */
+    function renderRevenueBreakdown(data) {
+        const el = document.getElementById('revenue-breakdown');
+        const available = data?.availableBalance ?? 0;
+        const total = data?.totalEarned ?? 0;
+        const episodeSale = data?.episodeSaleAmount ?? 0;
+        const subShare = data?.subscriptionAmount ?? 0;
+        el.innerHTML = `
+      <div class="revenue-row"><span class="label">회차 판매 수익</span><span class="amount">${episodeSale.toLocaleString()}원</span></div>
+      <div class="revenue-row"><span class="label">구독 분배 수익</span><span class="amount">${subShare.toLocaleString()}원</span></div>
+      <div class="revenue-row total">
+        <span class="label">환전 가능 금액</span>
+        <span class="amount total-amt">${available.toLocaleString()}원</span>
+      </div>`;
+    }
+
+    /* ── 이번 달 현황 렌더링 ── */
+    async function renderMonthlyStatus(data) {
+        const el = document.getElementById('monthly-status');
+        try {
+            const stats = await api.get('/revenues/me/exchanges?page=0&size=100', true);
+            const list = stats?.content || [];
+            const now = new Date();
+            const thisMonth = list.filter(w => {
+                const d = new Date(w.requestedAt);
+                return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+            });
+            const pendingCnt = thisMonth.filter(w => w.status === 'PENDING').length;
+            const completedAmt = thisMonth.filter(w => w.status === 'COMPLETED')
+                .reduce((s, w) => s + (w.actualAmount || 0), 0);
+
+            el.innerHTML = `
+        <div class="monthly-row"><span class="m-label">환전 신청</span><span class="m-value">${pendingCnt}회</span></div>
+        <div class="monthly-row"><span class="m-label">환전 완료</span><span class="m-value">${completedAmt.toLocaleString()}원</span></div>
+        <div class="monthly-row"><span class="m-label">잔여 한도</span><span class="m-value" style="color:var(--success)">${(data?.availableBalance ?? 0).toLocaleString()}원</span></div>`;
+        } catch {
+            el.innerHTML = `
+        <div class="monthly-row"><span class="m-label">환전 신청</span><span class="m-value">0회</span></div>
+        <div class="monthly-row"><span class="m-label">환전 완료</span><span class="m-value">0원</span></div>
+        <div class="monthly-row"><span class="m-label">잔여 한도</span><span class="m-value" style="color:var(--success)">${(data?.availableBalance ?? 0).toLocaleString()}원</span></div>`;
+        }
+    }
+
+    /* ── 수익 발생 소설 로드 ── */
+    async function loadRevenueNovels() {
+        const el = document.getElementById('revenue-novels');
+        try {
+            const res = await api.get('/revenues/me/statistics?period=MONTHLY', true);
+            const items = res?.items || [];
+            if (!items.length) { el.innerHTML = '<div style="color:var(--text3);font-size:.82rem;padding:8px 0">수익 데이터가 없습니다</div>'; return; }
+            el.innerHTML = items.slice(0, 3).map(item => `
+        <div class="novel-rev-item">
+          <div class="novel-rev-title">${escHtml(item.label || '-')}</div>
+          <div class="novel-rev-amount">+${(item.totalAmount || 0).toLocaleString()}원</div>
+        </div>`).join('');
+        } catch {
+            el.innerHTML = '<div style="color:var(--text3);font-size:.82rem;padding:8px 0">불러올 수 없습니다</div>';
+        }
+    }
+
+    /* ── 계좌 렌더링 ── */
+    function renderAccount(account) {
+        const el = document.getElementById('account-area');
+        if (!account) {
+            el.innerHTML = `
+        <div class="no-account">등록된 계좌가 없습니다</div>
+        <button class="nc-btn nc-btn--outline nc-btn--sm" style="margin-top:8px" onclick="openBankModal()">계좌 등록</button>`;
+            return;
+        }
+        el.innerHTML = `
+      <div class="account-box">
+        <div class="account-info">
+          <div class="account-num">
+            ${escHtml(account.bankName)} ${escHtml(account.maskedAccountNumber)}
+            ${account.isVerified ? '<span class="verified-badge">인증됨</span>' : ''}
+          </div>
+          <div class="account-meta">예금주: ${escHtml(account.accountHolder)} · 본인 인증 완료</div>
+        </div>
+      </div>`;
+    }
+
+    /* ── 금액 선택 ── */
+    function selectAmount(btn, isDefault = false) {
+        document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const available = overviewData?.availableBalance ?? 0;
+        const val = btn.dataset.amount === 'all' ? available : parseInt(btn.dataset.amount);
+        document.getElementById('input-amount').value = val;
+        updateSummary(val);
+    }
+
+    function onAmountInput() {
+        document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+        const val = parseInt(document.getElementById('input-amount').value) || 0;
+        updateSummary(val);
+    }
+
+    function updateSummary(amount) {
+        const fee = Math.floor(amount * 0.10);
+        const actual = amount - fee;
+        document.getElementById('sum-request').textContent = `${amount.toLocaleString()}원`;
+        document.getElementById('sum-fee').textContent = `${fee.toLocaleString()}원`;
+        document.getElementById('sum-actual').textContent = `${actual.toLocaleString()}원`;
+    }
+
+    /* ── 최종 확인 모달 ── */
+    function openConfirmModal() {
+        const amount = parseInt(document.getElementById('input-amount').value) || 0;
+        const available = overviewData?.availableBalance ?? 0;
+        const account = overviewData?.bankAccount;
+
+        if (!account || !account.isVerified) { Toast.error('인증된 계좌를 먼저 등록해주세요'); return; }
+        if (amount < 10000) { Toast.error('최소 10,000원 이상 입력해주세요'); return; }
+        if (amount > available) { Toast.error('환전 가능 금액을 초과했습니다'); return; }
+
+        const fee = Math.floor(amount * 0.10);
+        const actual = amount - fee;
+        document.getElementById('conf-request').textContent = `${amount.toLocaleString()}원`;
+        document.getElementById('conf-fee').textContent = `-${fee.toLocaleString()}원`;
+        document.getElementById('conf-actual').textContent = `${actual.toLocaleString()}원`;
+        document.getElementById('conf-account').textContent = `${account.bankName} ${account.maskedAccountNumber}`;
+        Modal.open('modal-confirm');
+    }
+
+    /* ── 환전 신청 ── */
+    async function submitWithdrawal() {
+        const amount = parseInt(document.getElementById('input-amount').value) || 0;
+        try {
+            await api.post('/revenues/me/exchanges', { requestAmount: amount }, true);
+            Modal.close('modal-confirm');
+            Toast.success('환전 신청이 완료되었습니다');
+            await loadOverview();
+            document.getElementById('input-amount').value = '';
+            updateSummary(0);
+        } catch (e) {
+            Toast.error(e.message || '환전 신청 실패');
+        }
+    }
+
+    /* ── 계좌 등록 ── */
+    function openBankModal() {
+        document.getElementById('bank-form-area').style.display = 'block';
+        document.getElementById('verify-form-area').style.display = 'none';
+        document.getElementById('input-account-num').value = '';
+        document.getElementById('input-holder').value = '';
+        document.getElementById('input-verify-code').value = '';
+        selectedBankName = '';
+        pendingBankAccountId = null;
+        document.querySelectorAll('.bank-btn').forEach(b => b.classList.remove('active'));
+        Modal.open('modal-bank');
+    }
+
+    function selectBank(btn, name) {
+        document.querySelectorAll('.bank-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedBankName = name;
+    }
+
+    async function requestBankVerify() {
+        if (!selectedBankName) { Toast.error('은행을 선택해주세요'); return; }
+        const accountNumber = document.getElementById('input-account-num').value.trim();
+        const accountHolder = document.getElementById('input-holder').value.trim();
+        if (!accountNumber) { Toast.error('계좌번호를 입력해주세요'); return; }
+        if (!accountHolder) { Toast.error('예금주를 입력해주세요'); return; }
+        try {
+            const res = await api.post('/revenues/me/account/verify', {
+                bankName: selectedBankName, accountNumber, accountHolder
+            }, true);
+            pendingBankAccountId = res?.bankAccountId;
+            document.getElementById('bank-form-area').style.display = 'none';
+            document.getElementById('verify-form-area').style.display = 'block';
+            Toast.info('1원이 입금됩니다. 입금자명 숫자를 입력해주세요');
+        } catch (e) {
+            Toast.error(e.message || '인증 요청 실패');
+        }
+    }
+
+    async function confirmBankVerify() {
+        const rawCode = document.getElementById('input-verify-code').value.trim();
+        if (!rawCode) { Toast.error('인증 코드를 입력해주세요'); return; }
+        const verificationCode = rawCode.padStart(4, '0');
+        if (!pendingBankAccountId) { Toast.error('인증 요청을 먼저 진행해주세요'); return; }
+        try {
+            const res = await api.post('/revenues/me/account/verify/confirm', {
+                bankAccountId: pendingBankAccountId,
+                verificationCode
+            }, true);
+            if (res?.isVerified) {
+                Toast.success('계좌 인증이 완료되었습니다');
+                Modal.close('modal-bank');
+                await loadOverview();
+            } else {
+                Toast.error(`인증 실패 (남은 횟수: ${res?.remainingAttempts ?? '?'}회)`);
+            }
+        } catch (e) {
+            Toast.error(e.message || '인증 실패');
+        }
+    }
+
+    /* ── 최근 환전 상태 (사이드바) ── */
+    async function loadLatestWithdrawal() {
+        const el = document.getElementById('latest-withdrawal');
+        if (!el) return;
+        try {
+            const res = await api.get('/revenues/me/exchanges?page=0&size=1', true);
+            const latest = res?.content?.[0];
+            if (!latest) {
+                el.innerHTML = `<div style="font-size:.78rem;color:var(--text3);text-align:center;padding:6px 0">최근 환전 내역 없음</div>`;
+                return;
+            }
+            const STATUS_LABEL = { PENDING:'처리 대기', APPROVED:'승인됨', COMPLETED:'입금 완료', REJECTED:'거절됨' };
+            const STATUS_COLOR = { PENDING:'#fbbf24', APPROVED:'var(--primary-light)', COMPLETED:'var(--success)', REJECTED:'#f87171' };
+            const color = STATUS_COLOR[latest.status] || 'var(--text2)';
+            const label = STATUS_LABEL[latest.status] || latest.status;
+            el.innerHTML = `
+              <div style="border:1px solid var(--border);border-radius:8px;padding:12px">
+                <div style="font-size:.72rem;color:var(--text3);margin-bottom:6px">최근 환전 신청</div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-weight:700;font-size:.9rem">${(latest.requestAmount||0).toLocaleString()}원</span>
+                  <span style="font-size:.75rem;padding:3px 10px;border-radius:10px;background:${color}22;color:${color};border:1px solid ${color}44">${label}</span>
+                </div>
+                <div style="font-size:.72rem;color:var(--text3);margin-top:4px">실수령 ${(latest.actualAmount||0).toLocaleString()}원 · ${formatDate(latest.requestedAt)}</div>
+              </div>`;
+        } catch {
+            el.innerHTML = '';
+        }
+    }
+
+    /* ── 환전 내역 ── */
+    async function openHistoryModal() {
+        Modal.open('modal-history');
+        await loadHistory('');
+    }
+
+    async function loadHistory(status) {
+        currentHistoryStatus = status;
+        const el = document.getElementById('history-list');
+        el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+        try {
+            const qs = status ? `?status=${status}` : '';
+            const res = await api.get(`/revenues/me/exchanges${qs}`, true);
+            const list = res?.content || [];
+            if (!list.length) {
+                el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:24px">내역이 없습니다</div>';
+                return;
+            }
+            const statusLabel = { PENDING:'대기', APPROVED:'승인', COMPLETED:'완료', REJECTED:'거절' };
+            const statusColor = { PENDING:'var(--warning)', APPROVED:'var(--primary-light)', COMPLETED:'var(--success)', REJECTED:'#f87171' };
+            el.innerHTML = list.map(w => `
+        <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:700;font-size:.9rem">${(w.requestAmount || 0).toLocaleString()}원 신청</div>
+            <div style="font-size:.75rem;color:var(--text3);margin-top:3px">
+              실수령 ${(w.actualAmount || 0).toLocaleString()}원 · ${formatDate(w.requestedAt)}
+            </div>
+          </div>
+          <span style="font-size:.78rem;padding:3px 10px;border-radius:10px;background:${statusColor[w.status]}22;color:${statusColor[w.status]};border:1px solid ${statusColor[w.status]}44">
+            ${statusLabel[w.status] || w.status}
+          </span>
+        </div>`).join('');
+        } catch {
+            el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:24px">불러올 수 없습니다</div>';
+        }
+    }
+
+    function filterHistory(btn) {
+        document.querySelectorAll('#modal-history .nc-btn').forEach(b => b.classList.remove('nc-btn--primary'));
+        btn.classList.add('nc-btn--primary');
+        loadHistory(btn.dataset.status);
+    }
+
+    /* ── 수익 상세 ── */
+    async function openStatisticsModal() {
+        const select = document.getElementById('stats-year');
+        const now = new Date().getFullYear();
+        if (!select.options.length) {
+            for (let y = now; y >= now - 2; y--) {
+                const opt = document.createElement('option');
+                opt.value = y; opt.textContent = `${y}년`;
+                select.appendChild(opt);
+            }
+        }
+        Modal.open('modal-statistics');
+        await loadStatistics();
+    }
+
+    async function loadStatistics() {
+        const el = document.getElementById('statistics-list');
+        const year = document.getElementById('stats-year').value || new Date().getFullYear();
+        el.innerHTML = '<div class="loading-row"><div class="nc-spinner"></div></div>';
+        try {
+            const res = await api.get(`/revenues/me/statistics?period=${currentPeriod}&year=${year}`, true);
+            const items = res?.items || [];
+            if (!items.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:24px">데이터가 없습니다</div>'; return; }
+            el.innerHTML = `
+        <div style="margin-bottom:12px;font-size:.82rem;color:var(--text3)">총 수익: <strong style="color:var(--accent)">${(res?.totalAmount || 0).toLocaleString()}원</strong></div>` +
+                items.map(item => `
+          <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:.875rem">
+            <span style="color:var(--text2)">${escHtml(item.label)}</span>
+            <div style="text-align:right">
+              <div style="font-weight:700">${(item.totalAmount || 0).toLocaleString()}원</div>
+              <div style="font-size:.72rem;color:var(--text3)">회차 ${(item.episodeSaleAmount || 0).toLocaleString()} · 구독 ${(item.subscriptionAmount || 0).toLocaleString()}</div>
+            </div>
+          </div>`).join('');
+        } catch {
+            el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:24px">불러올 수 없습니다</div>';
+        }
+    }
+
+    function switchPeriod(btn) {
+        document.querySelectorAll('#modal-statistics .nc-btn[data-period]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentPeriod = btn.dataset.period;
+        loadStatistics();
+    }
+
+    /* ── 유틸 ── */
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ── 초기화 ── */
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+        const user = Auth.getUser();
+        if (user?.role !== 'AUTHOR' && user?.role !== 'MENTOR') {
+            Toast.error('작가 회원만 이용 가능한 페이지입니다');
+            setTimeout(() => window.location.href = '/index.html', 1500);
+            return;
+        }
+        loadOverview();
+        loadRevenueNovels();
+        updateSummary(0);
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>신청 완료 - NovelCraft</title>
+  <script src="/common.js"></script>
+  <style>
+    body {
+      background: var(--bg); color: var(--text1); font-family: var(--font-sans);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-start;
+    }
+
+    /* ── 상단 바 ── */
+    .top-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 56px; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px;
+    }
+    .top-bar__title { font-size: .95rem; font-weight: 600; color: var(--text1); }
+    .top-bar__close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--surface2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; cursor: pointer; color: var(--text2);
+      transition: all .2s;
+    }
+    .top-bar__close:hover { background: var(--bg3); color: var(--text1); }
+
+    /* ── 콘텐츠 ── */
+    .content {
+      width: 100%; max-width: 480px;
+      padding: 88px 20px 40px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* ── 체크 아이콘 ── */
+    .check-circle {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: rgba(163,207,107,.2); border: 2px solid rgba(163,207,107,.4);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .check-icon {
+      width: 36px; height: 36px;
+    }
+    .check-icon path { stroke: #7eb356; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+
+    /* ── 제목 ── */
+    .complete-title {
+      font-family: 'Noto Serif KR', serif;
+      font-size: 1.45rem; font-weight: 700;
+      margin-bottom: 8px; text-align: center;
+    }
+    .complete-sub {
+      font-size: .9rem; color: var(--text3); margin-bottom: 32px; text-align: center;
+    }
+    .complete-sub strong { color: var(--text2); font-weight: 600; }
+
+    /* ── 다음 단계 카드 ── */
+    .next-card {
+      width: 100%; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px 22px; margin-bottom: 28px;
+    }
+    .next-card__title {
+      font-size: .85rem; font-weight: 700; color: var(--text1);
+      margin-bottom: 16px;
+    }
+    .next-step {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 11px 0; font-size: .88rem;
+    }
+    .next-step + .next-step { border-top: 1px solid var(--border); }
+    .next-step__label {
+      font-size: .76rem; font-weight: 700; color: var(--primary-light);
+      white-space: nowrap; padding-top: 1px; min-width: 60px;
+    }
+    .next-step__desc { color: var(--text2); line-height: 1.5; }
+
+    /* ── 버튼 ── */
+    .btn-group {
+      width: 100%; display: flex; flex-direction: column; gap: 10px;
+    }
+    .btn-primary {
+      width: 100%; padding: 15px; border-radius: 12px;
+      background: var(--primary); border: none; color: white;
+      font-size: .95rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; transition: opacity .2s;
+    }
+    .btn-primary:hover { opacity: .88; }
+    .btn-secondary {
+      width: 100%; padding: 14px; border-radius: 12px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text2); font-size: .92rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all .2s;
+    }
+    .btn-secondary:hover { border-color: var(--text2); color: var(--text1); }
+  </style>
+</head>
+<body>
+<!-- 상단 바 -->
+<div class="top-bar">
+  <span class="top-bar__title">신청 완료</span>
+  <div class="top-bar__close" onclick="location.href='/index.html'" title="홈으로">✕</div>
+</div>
+
+<div class="content">
+  <!-- 체크 아이콘 -->
+  <div class="check-circle">
+    <svg class="check-icon" viewBox="0 0 36 36">
+      <path d="M8 18l7 7 13-13"/>
+    </svg>
+  </div>
+
+  <!-- 제목 -->
+  <h1 class="complete-title">신청이 완료됐어요!</h1>
+  <p class="complete-sub" id="sub-text">멘토님께 신청서를 보냈어요</p>
+
+  <!-- 다음 단계 안내 -->
+  <div class="next-card">
+    <div class="next-card__title">다음 단계 안내</div>
+    <div class="next-step">
+      <span class="next-step__label">1~3일 내</span>
+      <span class="next-step__desc">멘토님의 수락/거절 알림</span>
+    </div>
+    <div class="next-step">
+      <span class="next-step__label">수락 시</span>
+      <span class="next-step__desc">1:1 채팅방 자동 개설</span>
+    </div>
+    <div class="next-step">
+      <span class="next-step__label">채팅방에서</span>
+      <span class="next-step__desc">원고 공유 및 피드백 시작</span>
+    </div>
+  </div>
+
+  <!-- 버튼 -->
+  <div class="btn-group">
+    <button class="btn-primary" onclick="location.href='/mentor-list.html'">
+      멘토링 리스트 페이지로
+    </button>
+    <button class="btn-secondary" onclick="location.href='/index.html'">
+      홈으로
+    </button>
+  </div>
+</div>
+
+<script>
+  /* URL 파라미터에서 멘토 닉네임 가져오기 */
+  const params = new URLSearchParams(location.search);
+  const mentorNickname = params.get('mentorNickname') || '멘토';
+  const subEl = document.getElementById('sub-text');
+  if (subEl) {
+    subEl.innerHTML = `<strong>${mentorNickname}</strong> 멘토님께 신청서를 보냈어요`;
+  }
+</script>
+</body>
+</html>

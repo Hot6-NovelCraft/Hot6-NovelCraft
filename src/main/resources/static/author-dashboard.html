@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>작가 대시보드 - NovelCraft</title>
+    <script src="/common.js"></script>
+    <style>
+        .page-wrap { max-width: 960px; margin: 0 auto; padding: 32px 24px 60px; }
+
+        /* ── 헤더 ── */
+        .dash-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 28px; flex-wrap: wrap;
+        }
+        .dash-header__title {
+            font-family: 'Noto Serif KR', serif;
+            font-size: 1.35rem; font-weight: 900; flex: 1;
+        }
+        .btn-header {
+            padding: 9px 18px; border-radius: 10px; font-size: 0.82rem;
+            font-weight: 700; cursor: pointer; font-family: inherit;
+            transition: all 0.18s; white-space: nowrap;
+        }
+        .btn-header--primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white;
+        }
+        .btn-header--primary:hover { opacity: 0.88; }
+        .btn-header--outline {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text2);
+        }
+        .btn-header--outline:hover { border-color: var(--primary-light); color: var(--primary-light); }
+
+        /* ── 통계 카드 ── */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+            margin-bottom: 32px;
+        }
+        .stat-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px 22px;
+        }
+        .stat-card__label { font-size: 0.78rem; color: var(--text3); margin-bottom: 8px; }
+        .stat-card__value {
+            font-size: 1.55rem; font-weight: 900; color: var(--text1);
+            font-family: 'Noto Serif KR', serif; letter-spacing: -0.02em;
+        }
+
+        /* ── 섹션 ── */
+        .section { margin-bottom: 32px; }
+        .section__head {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 16px;
+        }
+        .section__title {
+            font-size: 1rem; font-weight: 700; flex: 1;
+        }
+
+        /* ── 필터 탭 ── */
+        .filter-tabs { display: flex; gap: 6px; }
+        .filter-tab {
+            padding: 6px 16px; border-radius: 20px; font-size: 0.78rem;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text3); transition: all 0.18s;
+        }
+        .filter-tab.active {
+            background: var(--primary); border-color: var(--primary); color: white;
+        }
+        .filter-tab:hover:not(.active) { border-color: var(--primary-light); color: var(--primary-light); }
+
+        /* ── 소설 카드 ── */
+        #novel-list-wrap {
+            max-height: 540px; overflow-y: auto;
+            padding-right: 4px; scroll-behavior: smooth;
+        }
+        #novel-list-wrap::-webkit-scrollbar { width: 4px; }
+        #novel-list-wrap::-webkit-scrollbar-track { background: transparent; }
+        #novel-list-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .novel-list { display: flex; flex-direction: column; gap: 10px; }
+        .novel-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 16px 18px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .novel-card__cover {
+            width: 52px; height: 72px; border-radius: 8px; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--surface2), var(--bg3));
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; overflow: hidden;
+        }
+        .novel-card__cover img { width: 100%; height: 100%; object-fit: cover; }
+        .novel-card__info { flex: 1; min-width: 0; }
+        .novel-card__title {
+            font-weight: 700; font-size: 0.95rem; margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .novel-card__meta {
+            font-size: 0.75rem; color: var(--text3); margin-bottom: 6px;
+        }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 20px;
+            font-size: 0.68rem; font-weight: 600;
+        }
+        .badge--ongoing { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge--completed { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); }
+        .badge--hiatus { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+        .badge--pending { background: rgba(156,163,175,0.15); color: #9ca3af; border: 1px solid rgba(156,163,175,0.3); }
+
+        .novel-card__actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .btn-action {
+            padding: 7px 14px; border-radius: 8px; font-size: 0.78rem;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            transition: all 0.18s; white-space: nowrap;
+        }
+        .btn-action--danger {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+            color: #f87171;
+        }
+        .btn-action--danger:hover { background: #ef4444; border-color: #ef4444; color: white; }
+        .btn-action--edit {
+            background: rgba(124,90,240,0.1); border: 1px solid rgba(124,90,240,0.28);
+            color: var(--primary-light);
+        }
+        .btn-action--edit:hover { background: var(--primary); border-color: var(--primary); color: white; }
+        .btn-action--stats {
+            background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.28);
+            color: #10b981;
+        }
+        .btn-action--stats:hover { background: #10b981; border-color: #10b981; color: white; }
+        .btn-action--new {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white; padding: 7px 16px;
+        }
+        .btn-action--new:hover { opacity: 0.88; }
+
+        /* ── 연재 현황 ── */
+        .serial-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 20px;
+        }
+        .serial-card__head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px; gap: 12px;
+        }
+        .serial-card__novel-title {
+            font-size: 1rem; font-weight: 700; flex: 1;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .serial-select {
+            background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+            color: var(--text2); font-size: 0.8rem; padding: 5px 10px;
+            font-family: inherit; cursor: pointer; max-width: 180px;
+        }
+        .serial-stats {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+        }
+        .serial-stat {
+            background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 14px 16px; text-align: center;
+        }
+        .serial-stat__label { font-size: 0.72rem; color: var(--text3); margin-bottom: 6px; }
+        .serial-stat__value { font-size: 1.1rem; font-weight: 800; color: var(--text1); }
+
+        /* ── 소설 추가 버튼 ── */
+        .btn-new-novel {
+            width: 100%; padding: 14px; border-radius: 14px;
+            background: transparent; border: 1.5px dashed var(--border);
+            color: var(--text3); font-size: 0.875rem; font-weight: 600;
+            cursor: pointer; font-family: inherit; transition: all 0.18s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-new-novel:hover { border-color: var(--primary-light); color: var(--primary-light); }
+
+        .btn-action--modify {
+            background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.28);
+            color: #f59e0b;
+        }
+        .btn-action--modify:hover { background: #f59e0b; border-color: #f59e0b; color: white; }
+
+        /* ── 빈 상태 / 로딩 ── */
+        .empty-box { padding: 40px; text-align: center; color: var(--text3); font-size: 0.875rem; }
+        .loading-box { padding: 40px; display: flex; align-items: center; justify-content: center; }
+
+        /* ── 소설 등록/수정 모달 ── */
+        .nm-backdrop {
+            position: fixed; inset: 0; z-index: 600;
+            background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .nm-backdrop.show { opacity: 1; pointer-events: all; }
+        .nm-box {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 18px; width: min(540px, 96vw);
+            max-height: 90vh; overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.96) translateY(12px); transition: transform 0.2s;
+        }
+        .nm-backdrop.show .nm-box { transform: scale(1) translateY(0); }
+        .nm-box::-webkit-scrollbar { width: 4px; }
+        .nm-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .nm-hd {
+            padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 10px; position: sticky; top: 0;
+            background: var(--surface2); z-index: 1;
+        }
+        .nm-hd__title { font-size: 1.05rem; font-weight: 700; flex: 1; }
+        .nm-hd__close {
+            background: none; border: none; color: var(--text3); font-size: 1.1rem;
+            cursor: pointer; padding: 4px 9px; border-radius: 7px; transition: background 0.15s;
+        }
+        .nm-hd__close:hover { background: var(--surface); color: var(--text); }
+        .nm-body { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+        .nm-field label {
+            display: block; font-size: 0.78rem; font-weight: 700; color: var(--text3);
+            margin-bottom: 7px; letter-spacing: 0.04em; text-transform: uppercase;
+        }
+        .nm-input, .nm-textarea, .nm-select {
+            width: 100%; padding: 10px 14px; background: var(--bg2);
+            border: 1px solid var(--border); border-radius: 10px;
+            color: var(--text); font-size: 0.88rem; font-family: inherit;
+            outline: none; transition: border-color 0.15s; box-sizing: border-box;
+        }
+        .nm-input:focus, .nm-textarea:focus, .nm-select:focus { border-color: var(--primary-light); }
+        .nm-textarea { resize: vertical; min-height: 90px; max-height: 200px; line-height: 1.6; }
+        .nm-select { cursor: pointer; }
+        .nm-input-hint { font-size: 0.7rem; color: var(--text3); text-align: right; margin-top: 4px; }
+        .nm-tags-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+        }
+        .nm-tag-chip {
+            display: flex; align-items: center; justify-content: center;
+            padding: 7px 6px; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+            border: 1px solid var(--border); background: transparent;
+            color: var(--text3); cursor: pointer; transition: all 0.14s;
+            user-select: none;
+        }
+        .nm-tag-chip:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .nm-tag-chip.selected {
+            background: rgba(124,90,240,0.15); border-color: var(--primary);
+            color: var(--primary-light);
+        }
+        .nm-tag-hint { font-size: 0.72rem; color: var(--text3); margin-top: 6px; }
+        .nm-foot {
+            padding: 0 22px 22px; display: flex; gap: 10px;
+        }
+        .nm-btn {
+            flex: 1; padding: 12px; border-radius: 11px; font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; font-family: inherit; transition: all 0.15s;
+        }
+        .nm-btn--cancel {
+            background: transparent; border: 1px solid var(--border); color: var(--text2);
+        }
+        .nm-btn--cancel:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .nm-btn--submit {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none; color: white;
+        }
+        .nm-btn--submit:hover { opacity: 0.88; }
+        .nm-btn--submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        @media (max-width: 640px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .serial-stats { grid-template-columns: 1fr; }
+            .novel-card { flex-wrap: wrap; }
+            .novel-card__actions { width: 100%; justify-content: flex-end; }
+        }
+
+        /* ── 관리자 대시보드 ── */
+        #admin-section { display: none; }
+        .admin-section-title {
+            font-size: 1rem; font-weight: 700; margin-bottom: 14px;
+            color: var(--text1); display: flex; align-items: center; gap: 8px;
+        }
+        .admin-badge {
+            font-size: 0.68rem; font-weight: 700; padding: 2px 8px;
+            border-radius: 20px; background: rgba(239,68,68,0.12);
+            color: #ef4444; border: 1px solid rgba(239,68,68,0.3);
+        }
+        .admin-stats-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+            margin-bottom: 16px;
+        }
+        @media(max-width: 760px) { .admin-stats-grid { grid-template-columns: repeat(3, 1fr); } }
+        .admin-stat-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 14px 16px;
+        }
+        .admin-stat-card__label { font-size: 0.72rem; color: var(--text3); margin-bottom: 6px; }
+        .admin-stat-card__value {
+            font-size: 1.3rem; font-weight: 900; color: var(--text1);
+            font-family: 'Noto Serif KR', serif;
+        }
+        .admin-stat-card__sub { font-size: 0.72rem; color: var(--primary-light); margin-top: 4px; }
+        .admin-filter-row {
+            display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+            margin-bottom: 12px;
+        }
+        .admin-select {
+            padding: 6px 12px; border-radius: 8px; font-size: 0.8rem;
+            background: var(--surface2); border: 1px solid var(--border);
+            color: var(--text1); font-family: inherit; cursor: pointer;
+        }
+        .admin-btn {
+            padding: 6px 14px; border-radius: 8px; font-size: 0.8rem;
+            font-weight: 600; cursor: pointer; font-family: inherit;
+            background: var(--primary); border: none; color: white;
+            transition: opacity 0.15s;
+        }
+        .admin-btn:hover { opacity: 0.85; }
+        .admin-btn--outline {
+            background: transparent; border: 1px solid var(--border); color: var(--text2);
+        }
+        .admin-btn--outline:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .admin-history-row {
+            display: flex; gap: 8px; align-items: center; margin-bottom: 14px;
+        }
+        .admin-date-input {
+            padding: 6px 10px; border-radius: 8px; font-size: 0.8rem;
+            background: var(--surface2); border: 1px solid var(--border);
+            color: var(--text1); font-family: inherit;
+        }
+        .admin-divider {
+            border: none; border-top: 1px solid var(--border); margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="page-wrap">
+    <!-- 헤더 -->
+    <div class="dash-header">
+        <div class="dash-header__title">작가 대시보드</div>
+        <button class="btn-header btn-header--primary" onclick="window.location.href='/settlement.html'">환전 신청</button>
+        <button class="btn-header btn-header--outline" onclick="window.location.href='/mypage.html'">회원정보 수정</button>
+    </div>
+
+    <!-- 관리자 전용 플랫폼 통계 -->
+    <div id="admin-section">
+        <hr class="admin-divider" style="margin-top:0">
+        <div class="admin-section-title">
+            플랫폼 통계 <span class="admin-badge">ADMIN</span>
+        </div>
+
+        <!-- 실시간 통계 카드 -->
+        <div class="admin-stats-grid">
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">전체 유저</div>
+                <div class="admin-stat-card__value" id="adm-total-users">-</div>
+                <div class="admin-stat-card__sub" id="adm-new-users-today"></div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">역할 필터 유저</div>
+                <div class="admin-stat-card__value" id="adm-filter-users">-</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">전체 소설</div>
+                <div class="admin-stat-card__value" id="adm-total-novels">-</div>
+                <div class="admin-stat-card__sub" id="adm-new-novels-today"></div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">필터 소설</div>
+                <div class="admin-stat-card__value" id="adm-filter-novels">-</div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-card__label">전체 멘토</div>
+                <div class="admin-stat-card__value" id="adm-total-mentors">-</div>
+                <div class="admin-stat-card__sub" id="adm-new-mentors-today"></div>
+            </div>
+        </div>
+
+        <!-- 실시간 필터 -->
+        <div class="admin-filter-row">
+            <select class="admin-select" id="adm-role-filter">
+                <option value="">전체 역할</option>
+                <option value="READER">독자</option>
+                <option value="AUTHOR">작가</option>
+                <option value="ADMIN">관리자</option>
+            </select>
+            <select class="admin-select" id="adm-novel-status-filter">
+                <option value="ALL">전체 소설</option>
+                <option value="ONGOING">연재중</option>
+                <option value="COMPLETED">완결</option>
+                <option value="HIATUS">중단</option>
+                <option value="PENDING">보류</option>
+            </select>
+            <select class="admin-select" id="adm-deleted-filter">
+                <option value="">삭제 포함</option>
+                <option value="false">정상만</option>
+                <option value="true">삭제만</option>
+            </select>
+            <button class="admin-btn" onclick="loadAdminLive()">조회</button>
+        </div>
+
+        <!-- 과거 스냅샷 조회 -->
+        <div class="admin-history-row">
+            <input type="date" class="admin-date-input" id="adm-history-date"
+                   max="" placeholder="날짜 선택">
+            <button class="admin-btn admin-btn--outline" onclick="loadAdminHistory()">과거 통계 조회</button>
+            <button class="admin-btn admin-btn--outline" onclick="loadAdminLive()">실시간으로 돌아가기</button>
+        </div>
+
+        <hr class="admin-divider">
+    </div>
+
+    <!-- 통계 카드 -->
+    <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card__label">총 조회수</div>
+            <div class="stat-card__value" id="stat-views">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__label">팔로워</div>
+            <div class="stat-card__value" id="stat-followers">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__label">총 찜 수</div>
+            <div class="stat-card__value" id="stat-bookmarks">-</div>
+        </div>
+    </div>
+
+    <!-- 내 소설 목록 -->
+    <div class="section">
+        <div class="section__head">
+            <div class="section__title">내 소설</div>
+            <div class="filter-tabs" id="filter-tabs">
+                <button class="filter-tab active" data-status="ONGOING" onclick="setFilter('ONGOING')">연재중</button>
+                <button class="filter-tab" data-status="COMPLETED" onclick="setFilter('COMPLETED')">완결</button>
+                <button class="filter-tab" data-status="ALL" onclick="setFilter('ALL')">전체</button>
+            </div>
+        </div>
+        <div id="novel-list-wrap">
+            <div class="loading-box"><div class="nc-spinner"></div></div>
+        </div>
+        <button class="btn-new-novel" style="margin-top:12px" onclick="goNewNovel()">＋ 새 소설 등록</button>
+    </div>
+
+    <!-- 연재 현황 -->
+    <div class="section" id="serial-section" style="display:none" >
+        <div class="section__head">
+            <div class="section__title">연재 현황</div>
+            <select class="serial-select" id="serial-select" onchange="onSerialChange()"></select>
+        </div>
+        <div class="serial-card">
+            <div class="serial-card__head">
+                <div class="serial-card__novel-title" id="serial-title"></div>
+                <button class="btn-action btn-action--new" onclick="goNewEpisode()">＋ 새 회차 쓰기</button>
+            </div>
+            <div class="serial-stats">
+                <div class="serial-stat">
+                    <div class="serial-stat__label">최신화</div>
+                    <div class="serial-stat__value" id="serial-latest">-</div>
+                </div>
+                <div class="serial-stat">
+                    <div class="serial-stat__label">총 회차</div>
+                    <div class="serial-stat__value" id="serial-ep-count">-</div>
+                </div>
+                <div class="serial-stat">
+                    <div class="serial-stat__label">총 조회수</div>
+                    <div class="serial-stat__value" id="serial-views">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── 소설 등록/수정 모달 ── -->
+<div class="nm-backdrop" id="nm-backdrop" onclick="if(event.target===this)closeNovelModal()">
+    <div class="nm-box" id="nm-box">
+        <div class="nm-hd">
+            <div class="nm-hd__title" id="nm-hd-title">새 소설 등록</div>
+            <button class="nm-hd__close" onclick="closeNovelModal()">✕</button>
+        </div>
+        <div class="nm-body">
+            <div class="nm-field">
+                <label>소설 제목</label>
+                <input class="nm-input" id="nm-title" placeholder="소설 제목 (최대 20자)" maxlength="20" oninput="document.getElementById('nm-title-hint').textContent=this.value.length+' / 20'">
+                <div class="nm-input-hint" id="nm-title-hint">0 / 20</div>
+            </div>
+            <div class="nm-field">
+                <label>소설 소개</label>
+                <textarea class="nm-textarea" id="nm-desc" placeholder="독자에게 보여줄 소설 소개를 입력하세요."></textarea>
+            </div>
+            <div class="nm-field">
+                <label>메인 장르</label>
+                <select class="nm-select" id="nm-genre">
+                    <option value="">장르 선택</option>
+                    <option value="FANTASY">판타지</option>
+                    <option value="ROMANCE_FANTASY">로판</option>
+                    <option value="MODERN">현대</option>
+                    <option value="CHIVALROUS">무협</option>
+                    <option value="BL">BL</option>
+                    <option value="SF">SF</option>
+                    <option value="HORROR">공포</option>
+                    <option value="CLASSIC">고전</option>
+                    <option value="DAILY_LIFE">일상물</option>
+                </select>
+            </div>
+            <div class="nm-field">
+                <label>태그 <span style="font-weight:400;text-transform:none">(최소 1개 선택)</span></label>
+                <div class="nm-tags-grid" id="nm-tags-grid">
+                    <div class="nm-tag-chip" data-tag="ISEKAI" onclick="toggleTag(this)">이세계</div>
+                    <div class="nm-tag-chip" data-tag="REGRESSION" onclick="toggleTag(this)">회귀</div>
+                    <div class="nm-tag-chip" data-tag="HEALING" onclick="toggleTag(this)">힐링</div>
+                    <div class="nm-tag-chip" data-tag="ACTION" onclick="toggleTag(this)">액션</div>
+                    <div class="nm-tag-chip" data-tag="ROMANCE" onclick="toggleTag(this)">로맨스</div>
+                    <div class="nm-tag-chip" data-tag="COMEDY" onclick="toggleTag(this)">개그</div>
+                    <div class="nm-tag-chip" data-tag="MYSTERY" onclick="toggleTag(this)">미스터리</div>
+                    <div class="nm-tag-chip" data-tag="MARTIAL_ARTS" onclick="toggleTag(this)">무공</div>
+                    <div class="nm-tag-chip" data-tag="VILLAIN" onclick="toggleTag(this)">빌런</div>
+                    <div class="nm-tag-chip" data-tag="MUNCHKIN" onclick="toggleTag(this)">먼치킨</div>
+                    <div class="nm-tag-chip" data-tag="ACADEMY" onclick="toggleTag(this)">아카데미</div>
+                    <div class="nm-tag-chip" data-tag="CONTRACT" onclick="toggleTag(this)">계약</div>
+                    <div class="nm-tag-chip" data-tag="POSSESSION" onclick="toggleTag(this)">빙의</div>
+                    <div class="nm-tag-chip" data-tag="REINCARNATION" onclick="toggleTag(this)">환생</div>
+                    <div class="nm-tag-chip" data-tag="HAREM" onclick="toggleTag(this)">하렘</div>
+                    <div class="nm-tag-chip" data-tag="REVENGE" onclick="toggleTag(this)">복수</div>
+                    <div class="nm-tag-chip" data-tag="GROWTH" onclick="toggleTag(this)">성장</div>
+                    <div class="nm-tag-chip" data-tag="DUNGEON" onclick="toggleTag(this)">던전</div>
+                    <div class="nm-tag-chip" data-tag="ADULT" onclick="toggleTag(this)">성인</div>
+                </div>
+                <div class="nm-tag-hint" id="nm-tag-hint">선택된 태그: 없음</div>
+            </div>
+        </div>
+        <div class="nm-foot">
+            <button class="nm-btn nm-btn--cancel" onclick="closeNovelModal()">취소</button>
+            <button class="nm-btn nm-btn--submit" id="nm-submit-btn" onclick="submitNovelForm()">등록하기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const STATUS_LABEL = {
+        ONGOING: '연재중', COMPLETED: '완결', HIATUS: '중단', PENDING: '보류', PUBLISHED: '공개'
+    };
+    const STATUS_BADGE = {
+        ONGOING: 'badge--ongoing', COMPLETED: 'badge--completed',
+        HIATUS: 'badge--hiatus', PENDING: 'badge--pending', PUBLISHED: 'badge--ongoing'
+    };
+    const GENRE_MAP = {
+        FANTASY: '판타지', ROMANCE_FANTASY: '로판', MODERN: '현대',
+        CHIVALROUS: '무협', BL: 'BL', SF: 'SF', HORROR: '공포',
+        CLASSIC: '고전', DAILY_LIFE: '일상물',
+    };
+
+    let allNovels = [];
+    let currentFilter = 'ONGOING';
+    let serialNovels = []; // 연재 현황에 보여줄 소설 목록
+
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function fmtNum(n) {
+        if (!n && n !== 0) return '0';
+        if (n >= 100000000) return (n / 100000000).toFixed(1) + '억';
+        if (n >= 10000) return (n / 10000).toFixed(1) + '만';
+        return Number(n).toLocaleString();
+    }
+    function authHeaders() {
+        const token = localStorage.getItem('accessToken');
+        const h = { 'Content-Type': 'application/json' };
+        if (token) h['Authorization'] = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
+        return h;
+    }
+
+    // ── 통계 로드 ──
+    async function loadStats() {
+        try {
+            const res = await fetch('/api/authors/me/follower-count', { headers: authHeaders() });
+            if (res.ok) {
+                const json = await res.json();
+                document.getElementById('stat-followers').textContent = fmtNum(json.data ?? 0);
+            }
+        } catch (_) {}
+    }
+
+    // ── 관리자 대시보드 ──
+    function renderAdminStats(d) {
+        const u = d.userStatus  || {};
+        const n = d.novelStatus || {};
+        const m = d.mentorStatus || {};
+
+        document.getElementById('adm-total-users').textContent   = fmtNum(u.totalUsers ?? '-');
+        document.getElementById('adm-new-users-today').textContent = u.newUsersToday != null ? `오늘 +${fmtNum(u.newUsersToday)}` : '';
+        document.getElementById('adm-filter-users').textContent  = fmtNum(u.filterUserRole ?? '-');
+        document.getElementById('adm-total-novels').textContent  = fmtNum(n.totalNovels ?? '-');
+        document.getElementById('adm-new-novels-today').textContent = n.newNovelsToday != null ? `오늘 +${fmtNum(n.newNovelsToday)}` : '';
+        document.getElementById('adm-filter-novels').textContent = fmtNum(n.novelsByFilter ?? '-');
+        document.getElementById('adm-total-mentors').textContent = fmtNum(m.totalMentor ?? '-');
+        document.getElementById('adm-new-mentors-today').textContent = m.newMentorsToday != null ? `오늘 +${fmtNum(m.newMentorsToday)}` : '';
+    }
+
+    async function loadAdminLive() {
+        const role        = document.getElementById('adm-role-filter').value;
+        const novelStatus = document.getElementById('adm-novel-status-filter').value;
+        const deleted     = document.getElementById('adm-deleted-filter').value;
+
+        const qs = new URLSearchParams();
+        if (role)        qs.set('role', role);
+        if (novelStatus && novelStatus !== 'ALL') {
+            qs.set('novelTotalStatus', novelStatus);
+            qs.set('novelStatus', novelStatus);
+        } else {
+            qs.set('novelTotalStatus', 'ALL');
+        }
+        if (deleted !== '') qs.set('isDeleted', deleted);
+
+        try {
+            const res = await fetch(`/api/admin/dashboard/live?${qs}`, { headers: authHeaders() });
+            if (!res.ok) { Toast.error('관리자 권한이 필요합니다.'); return; }
+            const json = await res.json();
+            renderAdminStats(json.data || {});
+        } catch (e) {
+            Toast.error('통계 조회 실패');
+        }
+    }
+
+    async function loadAdminHistory() {
+        const date = document.getElementById('adm-history-date').value;
+        if (!date) { Toast.error('날짜를 선택해 주세요.'); return; }
+        try {
+            const res = await fetch(`/api/admin/dashboard/history?targetDate=${date}`, { headers: authHeaders() });
+            if (!res.ok) { Toast.error('관리자 권한이 필요합니다.'); return; }
+            const json = await res.json();
+            renderAdminStats(json.data || {});
+            Toast.info(`${date} 스냅샷 통계입니다.`);
+        } catch (e) {
+            Toast.error('과거 통계 조회 실패');
+        }
+    }
+
+    function updateStatsFromNovels(novels) {
+        const totalViews = novels.reduce((s, n) => s + (n.viewCount || 0), 0);
+        const totalBookmarks = novels.reduce((s, n) => s + (n.bookmarkCount || 0), 0);
+        document.getElementById('stat-views').textContent = fmtNum(totalViews);
+        document.getElementById('stat-bookmarks').textContent = fmtNum(totalBookmarks);
+    }
+
+    // ── 소설 목록 로드 ──
+    async function loadNovels() {
+        const wrap = document.getElementById('novel-list-wrap');
+        wrap.innerHTML = '<div class="loading-box"><div class="nc-spinner"></div></div>';
+        try {
+            // 전체 로드 (최대 200개)
+            const res = await fetch('/api/author/novels?page=0&size=200', { headers: authHeaders() });
+            if (res.status === 401) { window.location.href = '/login.html'; return; }
+            const json = await res.json();
+            allNovels = json.data?.content || [];
+
+            updateStatsFromNovels(allNovels);
+            renderNovels();
+            buildSerialSection();
+        } catch (err) {
+            wrap.innerHTML = '<div class="empty-box">소설 목록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderNovels() {
+        const wrap = document.getElementById('novel-list-wrap');
+        const filtered = currentFilter === 'ALL'
+            ? allNovels
+            : allNovels.filter(n => n.status === currentFilter);
+
+        if (!filtered.length) {
+            wrap.innerHTML = '<div class="empty-box">해당하는 소설이 없습니다.</div>';
+            return;
+        }
+
+        wrap.innerHTML = '<div class="novel-list">' + filtered.map(n => {
+            const genreLabel = GENRE_MAP[n.genre] || n.genre || '';
+            const badgeClass = STATUS_BADGE[n.status] || 'badge--pending';
+            const statusLabel = STATUS_LABEL[n.status] || n.status;
+            const coverHtml = n.coverImageUrl
+                ? `<img src="${esc(n.coverImageUrl)}" alt="" onerror="this.src='/images/default-cover.svg'">`
+                : `<img src="/images/default-cover.svg" alt="표지 없음">`;
+            return `
+            <div class="novel-card">
+                <div class="novel-card__cover">${coverHtml}</div>
+                <div class="novel-card__info">
+                    <div class="novel-card__title">${esc(n.title)}</div>
+                    <div class="novel-card__meta">${n.episodeCount}화 · 조회 ${fmtNum(n.viewCount)} · 찜 ${fmtNum(n.bookmarkCount)}${genreLabel ? ' · ' + genreLabel : ''}</div>
+                    <span class="badge ${badgeClass}">${statusLabel}</span>
+                </div>
+                <div class="novel-card__actions">
+                    <button class="btn-action btn-action--stats" onclick="goStats(${n.id})">회차통계</button>
+                    <button class="btn-action btn-action--edit" onclick="editNovel(${n.id})">에디터</button>
+                    <button class="btn-action btn-action--modify" onclick="openNovelModal('edit',${n.id})">수정</button>
+                    <button class="btn-action btn-action--danger" onclick="deleteNovel(${n.id}, '${esc(n.title).replace(/'/g,"\\'")}')">삭제</button>
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    }
+
+    // ── 필터 ──
+    function setFilter(status) {
+        currentFilter = status;
+        document.querySelectorAll('.filter-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.status === status);
+        });
+        renderNovels();
+    }
+
+    // ── 연재 현황 ──
+    function buildSerialSection() {
+        // 연재중인 소설만
+        serialNovels = allNovels.filter(n => n.status === 'ONGOING' || n.status === 'PUBLISHED');
+        if (!serialNovels.length) {
+            document.getElementById('serial-section').style.display = 'none';
+            return;
+        }
+        document.getElementById('serial-section').style.display = '';
+        const sel = document.getElementById('serial-select');
+        sel.innerHTML = serialNovels.map(n =>
+            `<option value="${n.id}">${esc(n.title)}</option>`
+        ).join('');
+        renderSerialCard(serialNovels[0]);
+    }
+
+    function onSerialChange() {
+        const id = document.getElementById('serial-select').value;
+        const novel = serialNovels.find(n => String(n.id) === String(id));
+        if (novel) renderSerialCard(novel);
+    }
+
+    function renderSerialCard(n) {
+        document.getElementById('serial-title').textContent = n.title;
+        document.getElementById('serial-ep-count').textContent = n.episodeCount + '화';
+        document.getElementById('serial-views').textContent = fmtNum(n.viewCount);
+        // 최신화: updatedAt 기준으로 간단 표시 (회차 API 호출 없이)
+        document.getElementById('serial-latest').textContent =
+            n.episodeCount > 0 ? n.episodeCount + '화' : '없음';
+    }
+
+    // ── 소설 등록/수정 모달 ──
+    let nmMode    = 'create'; // 'create' | 'edit'
+    let nmNovelId = null;
+
+    function openNovelModal(mode, novelId) {
+        nmMode    = mode;
+        nmNovelId = novelId || null;
+
+        // 폼 초기화
+        document.getElementById('nm-title').value = '';
+        document.getElementById('nm-title-hint').textContent = '0 / 20';
+        document.getElementById('nm-desc').value = '';
+        document.getElementById('nm-genre').value = '';
+        document.querySelectorAll('.nm-tag-chip').forEach(c => c.classList.remove('selected'));
+        document.getElementById('nm-tag-hint').textContent = '선택된 태그: 없음';
+
+        if (mode === 'create') {
+            document.getElementById('nm-hd-title').textContent = '새 소설 등록';
+            document.getElementById('nm-submit-btn').textContent = '등록하기';
+        } else {
+            document.getElementById('nm-hd-title').textContent = '소설 정보 수정';
+            document.getElementById('nm-submit-btn').textContent = '수정하기';
+            document.getElementById('nm-submit-btn').disabled = true;
+            // 기존 정보 로드
+            api.get('/novels/' + novelId, false).then(d => {
+                document.getElementById('nm-title').value = d?.title || '';
+                document.getElementById('nm-title-hint').textContent = (d?.title || '').length + ' / 20';
+                document.getElementById('nm-desc').value = d?.description || '';
+                if (d?.genre) document.getElementById('nm-genre').value = d.genre;
+                // tags는 "ISEKAI,MUNCHKIN" 형태
+                if (d?.tags) {
+                    d.tags.split(',').forEach(t => {
+                        const chip = document.querySelector(`.nm-tag-chip[data-tag="${t.trim()}"]`);
+                        if (chip) chip.classList.add('selected');
+                    });
+                    updateTagHint();
+                }
+                document.getElementById('nm-submit-btn').disabled = false;
+            }).catch(() => {
+                Toast.error('소설 정보를 불러오지 못했습니다.');
+                document.getElementById('nm-submit-btn').disabled = false;
+            });
+        }
+
+        document.getElementById('nm-backdrop').classList.add('show');
+    }
+
+    function closeNovelModal() {
+        document.getElementById('nm-backdrop').classList.remove('show');
+    }
+
+    function toggleTag(chip) {
+        chip.classList.toggle('selected');
+        updateTagHint();
+    }
+
+    function updateTagHint() {
+        const TAG_LABEL = {
+            ISEKAI:'이세계', REGRESSION:'회귀', HEALING:'힐링', ACTION:'액션',
+            ROMANCE:'로맨스', COMEDY:'개그', MYSTERY:'미스터리', MARTIAL_ARTS:'무공',
+            VILLAIN:'빌런', MUNCHKIN:'먼치킨', ACADEMY:'아카데미', CONTRACT:'계약',
+            POSSESSION:'빙의', REINCARNATION:'환생', HAREM:'하렘', REVENGE:'복수',
+            GROWTH:'성장', DUNGEON:'던전', ADULT:'성인'
+        };
+        const selected = [...document.querySelectorAll('.nm-tag-chip.selected')]
+            .map(c => TAG_LABEL[c.dataset.tag] || c.dataset.tag);
+        document.getElementById('nm-tag-hint').textContent =
+            selected.length ? '선택됨: ' + selected.join(', ') : '선택된 태그: 없음';
+    }
+
+    async function submitNovelForm() {
+        const title = document.getElementById('nm-title').value.trim();
+        const desc  = document.getElementById('nm-desc').value.trim();
+        const genre = document.getElementById('nm-genre').value;
+        const tags  = [...document.querySelectorAll('.nm-tag-chip.selected')].map(c => c.dataset.tag);
+
+        if (!title)         { Toast.error('소설 제목을 입력해 주세요.'); return; }
+        if (!desc)          { Toast.error('소설 소개를 입력해 주세요.'); return; }
+        if (!genre)         { Toast.error('장르를 선택해 주세요.'); return; }
+        if (!tags.length)   { Toast.error('태그를 최소 1개 선택해 주세요.'); return; }
+
+        const btn = document.getElementById('nm-submit-btn');
+        btn.disabled = true;
+        btn.textContent = '처리 중...';
+
+        const body = { title, description: desc, genre, tags };
+
+        try {
+            if (nmMode === 'create') {
+                await api.post('/novels', body, true);
+                Toast.success('소설이 등록됐습니다!');
+            } else {
+                await api.patch('/novels/' + nmNovelId, body, true);
+                Toast.success('수정됐습니다!');
+            }
+            closeNovelModal();
+            loadNovels();
+        } catch (e) {
+            Toast.error(e.message || (nmMode === 'create' ? '등록 실패' : '수정 실패'));
+        } finally {
+            btn.disabled = false;
+            btn.textContent = nmMode === 'create' ? '등록하기' : '수정하기';
+        }
+    }
+
+    // ── 액션 ──
+    function goNewNovel() {
+        openNovelModal('create');
+    }
+
+    function editNovel(novelId) {
+        window.location.href = '/episode-editor.html?novelId=' + novelId;
+    }
+
+    function goStats(novelId) {
+        window.location.href = '/episode-stats.html?novelId=' + novelId;
+    }
+
+    function goNewEpisode() {
+        const sel = document.getElementById('serial-select');
+        if (sel?.value) window.location.href = '/episode-editor.html?novelId=' + sel.value;
+    }
+
+    async function deleteNovel(novelId, title) {
+        if (!confirm(`"${title}" 소설을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+        try {
+            await api.delete('/novels/' + novelId, true);
+            Toast.success('삭제됐습니다.');
+            loadNovels();
+        } catch (e) {
+            Toast.error(e.message || '삭제 실패');
+        }
+    }
+
+    // ── 초기화 ──
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+
+        const role = Auth.getUser()?.role;
+
+        // 관리자면 admin 섹션 표시 후 실시간 통계 로드
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+            document.getElementById('admin-section').style.display = '';
+            // history date picker max = 오늘
+            const today = new Date().toISOString().slice(0, 10);
+            document.getElementById('adm-history-date').max = today;
+            loadAdminLive();
+        }
+
+        loadNovels();
+        loadStats();
+    });
+
+    window.loadAdminLive    = loadAdminLive;
+    window.loadAdminHistory = loadAdminHistory;
+    window.setFilter        = setFilter;
+    window.goNewNovel       = goNewNovel;
+    window.editNovel       = editNovel;
+    window.goStats         = goStats;
+    window.goNewEpisode    = goNewEpisode;
+    window.deleteNovel     = deleteNovel;
+    window.onSerialChange  = onSerialChange;
+    window.openNovelModal  = openNovelModal;
+    window.closeNovelModal = closeNovelModal;
+    window.toggleTag       = toggleTag;
+    window.submitNovelForm = submitNovelForm;
+
+})();
+</script>
+</body>
+</html>

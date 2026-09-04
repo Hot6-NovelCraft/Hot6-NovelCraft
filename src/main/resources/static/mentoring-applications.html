@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>신청 관리 - NovelCraft</title>
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+  <script src="/common.js"></script>
+  <style>
+    /* ── 네비게이션 커스텀 ── */
+    .nc-point-btn {
+      padding: 5px 14px; border-radius: 20px;
+      background: linear-gradient(135deg, rgba(240,200,66,0.18), rgba(240,200,66,0.08));
+      border: 1px solid rgba(240,200,66,0.4); color: var(--accent);
+      font-size: 0.82rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap; font-family: inherit;
+    }
+    .nc-point-btn:hover { background: rgba(240,200,66,0.25); border-color: var(--accent); }
+    .nc-alarm-btn {
+      position: relative; padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 1rem; cursor: pointer; transition: all 0.2s;
+    }
+    .nc-alarm-btn:hover { background: var(--surface); }
+    .nc-alarm-dot {
+      position: absolute; top: 4px; right: 4px;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--error);
+      border: 2px solid var(--bg);
+    }
+    .nc-user-menu { position: relative; }
+    .nc-user-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 6px; min-width: 140px; z-index: 200;
+      display: none; flex-direction: column; gap: 2px;
+    }
+    .nc-user-dropdown.open { display: flex; }
+    .nc-user-dropdown button {
+      background: none; border: none; color: var(--text2); font-size: 0.85rem;
+      padding: 8px 12px; text-align: left; border-radius: 6px; cursor: pointer; font-family: inherit;
+    }
+    .nc-user-dropdown button:hover { background: var(--surface); color: var(--text1); }
+
+    /* ── 포인트 충전 모달 ── */
+    .point-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .point-opt {
+      padding: 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: transparent; cursor: pointer; transition: all 0.2s;
+      text-align: center; font-family: inherit; color: var(--text2);
+    }
+    .point-opt:hover { border-color: var(--primary); }
+    .point-opt.selected { border-color: var(--primary); background: rgba(124,90,240,0.1); color: var(--primary-light); }
+    .point-opt__amount { font-size: 1rem; font-weight: 700; }
+    .point-opt__price { font-size: 0.78rem; color: var(--text3); margin-top: 3px; }
+    .point-opt.selected .point-opt__price { color: var(--primary-light); opacity: 0.8; }
+
+    /* ── 레이아웃 ── */
+    body { background: var(--bg); color: var(--text1); font-family: var(--font-sans); }
+    .page-container {
+      max-width: 1100px; margin: 0 auto;
+      padding: 88px 24px 60px;
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    /* ── 페이지 헤더 ── */
+    .page-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 24px;
+    }
+    .page-header__title {
+      font-family: 'Noto Serif KR', serif;
+      font-size: 1.5rem; font-weight: 700;
+    }
+    .pending-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 3px 10px; border-radius: 20px;
+      background: rgba(124,90,240,0.18); color: var(--primary-light);
+      font-size: 0.78rem; font-weight: 700; border: 1px solid rgba(124,90,240,0.3);
+    }
+
+    /* ── 상태 탭 ── */
+    .filter-tabs {
+      display: flex; gap: 6px; margin-bottom: 18px;
+    }
+    .filter-tab {
+      padding: 6px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 500;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text3); cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .filter-tab.active {
+      background: var(--primary); border-color: var(--primary);
+      color: white;
+    }
+    .filter-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary-light); }
+
+    /* ── 신청 카드 ── */
+    .app-list { display: flex; flex-direction: column; gap: 16px; }
+
+    .app-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; transition: border-color 0.2s;
+    }
+    .app-card:hover { border-color: rgba(124,90,240,0.3); }
+
+    /* 카드 상단 */
+    .app-card__top {
+      display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px;
+    }
+    .app-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+    .app-info { flex: 1; min-width: 0; }
+    .app-name-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;
+    }
+    .app-name { font-size: 0.95rem; font-weight: 700; color: var(--text1); }
+    .app-meta { font-size: 0.78rem; color: var(--text3); }
+    .app-novel {
+      font-size: 0.82rem; color: var(--text2);
+    }
+    .app-novel span { color: var(--text3); }
+    .app-date {
+      font-size: 0.75rem; color: var(--text3);
+      white-space: nowrap; align-self: flex-start; padding-top: 2px;
+    }
+
+    /* 상태 뱃지 */
+    .badge-pending  { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+    .badge-accepted { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+    .badge-rejected { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+    .badge-completed{ background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); }
+    .status-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 600;
+    }
+
+    /* 신청 동기 박스 */
+    .motivation-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 14px;
+      font-size: 0.84rem; color: var(--text2); line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    .motivation-box__label {
+      font-size: 0.72rem; font-weight: 600; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
+    }
+    .motivation-text { color: var(--text2); }
+    .motivation-none { color: var(--text3); font-style: italic; }
+
+    /* 희망 분야 태그 */
+    .app-card__tags {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .app-card__tags-label { font-size: 0.75rem; color: var(--text3); }
+    .field-tag {
+      padding: 3px 10px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border);
+      font-size: 0.75rem; color: var(--text2);
+    }
+
+    /* 원고 행 */
+    .manuscript-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px; font-size: 0.78rem; color: var(--text3);
+    }
+    .manuscript-link {
+      color: var(--primary-light); text-decoration: none; font-weight: 500;
+    }
+    .manuscript-link:hover { text-decoration: underline; }
+
+    /* 버튼 행 */
+    .app-card__actions {
+      display: flex; gap: 10px;
+    }
+    .btn-accept {
+      flex: 1; padding: 10px;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text1); border-radius: 8px; font-size: 0.88rem;
+      font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .btn-accept:hover { background: rgba(52,211,153,0.1); border-color: #34d399; color: #34d399; }
+    .btn-reject {
+      flex: 1; padding: 10px;
+      background: transparent; border: 1px solid rgba(239,68,68,0.35);
+      color: #f87171; border-radius: 8px; font-size: 0.88rem;
+      font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
+    }
+    .btn-reject:hover { background: rgba(239,68,68,0.1); border-color: #f87171; }
+    .btn-disabled {
+      flex: 1; padding: 10px; text-align: center;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text3); border-radius: 8px; font-size: 0.82rem; font-family: inherit;
+    }
+
+    /* ── 사이드바 ── */
+    .sidebar { display: flex; flex-direction: column; gap: 16px; }
+    .side-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px;
+    }
+    .side-card__title {
+      font-size: 0.82rem; font-weight: 700; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px;
+    }
+
+    /* 통계 행 */
+    .stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .stat-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .stat-row__label { font-size: 0.85rem; color: var(--text2); }
+    .stat-row__val {
+      font-size: 0.85rem; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 28px; height: 22px; border-radius: 11px; padding: 0 8px;
+    }
+    .stat-row__val--pending  { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .stat-row__val--accept   { background: rgba(52,211,153,0.15);  color: #34d399; }
+    .stat-row__val--reject   { color: var(--text2); }
+
+    /* 안내 박스 */
+    .info-list { display: flex; flex-direction: column; gap: 8px; }
+    .info-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 0.82rem; color: var(--text2); line-height: 1.4;
+    }
+    .info-item::before {
+      content: '·'; color: var(--primary-light);
+      font-size: 1.1rem; line-height: 1; flex-shrink: 0;
+    }
+
+    /* ── 빈 상태 ── */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--text3);
+    }
+    .empty-state__icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-state__msg  { font-size: 0.9rem; }
+
+    /* ── 로딩 ── */
+    .loading-wrap {
+      display: flex; align-items: center; justify-content: center;
+      padding: 60px; gap: 10px; color: var(--text3); font-size: 0.875rem;
+    }
+    .loading-wrap::before {
+      content: ''; width: 20px; height: 20px;
+      border: 2px solid var(--border); border-top-color: var(--primary);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 페이지네이션 ── */
+    .pagination {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; margin-top: 28px;
+    }
+    .page-btn {
+      min-width: 36px; height: 36px; padding: 0 8px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: transparent; color: var(--text2); font-size: 0.85rem;
+      cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-light); }
+    .page-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── 반응형 ── */
+    @media (max-width: 768px) {
+      .page-container { grid-template-columns: 1fr; }
+      .sidebar { order: -1; }
+    }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="page-container">
+  <!-- ── 왼쪽 메인 ── -->
+  <div>
+    <div class="page-header">
+      <h1 class="page-header__title">신청 관리</h1>
+      <span class="pending-badge" id="pending-badge">0건 대기</span>
+    </div>
+
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-status="PENDING"  onclick="setFilter('PENDING',this)">대기 중</button>
+      <button class="filter-tab"        data-status="ACCEPTED" onclick="setFilter('ACCEPTED',this)">수락됨</button>
+      <button class="filter-tab"        data-status="REJECTED" onclick="setFilter('REJECTED',this)">거절됨</button>
+      <button class="filter-tab"        data-status="ALL"      onclick="setFilter('ALL',this)">전체</button>
+    </div>
+
+    <div id="app-list">
+      <div class="loading-wrap">불러오는 중</div>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <!-- ── 오른쪽 사이드바 ── -->
+  <aside class="sidebar">
+    <div class="side-card">
+      <div class="side-card__title">신청 현황</div>
+      <div>
+        <div class="stat-row">
+          <span class="stat-row__label">대기 중</span>
+          <span class="stat-row__val stat-row__val--pending" id="s-pending">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">이번 달 수락</span>
+          <span class="stat-row__val stat-row__val--accept" id="s-accept">-</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row__label">이번 달 거절</span>
+          <span class="stat-row__val stat-row__val--reject" id="s-reject">-</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-card">
+      <div class="side-card__title">수락 시 안내</div>
+      <div class="info-list">
+        <div class="info-item">1:1 채팅방 자동 생성</div>
+        <div class="info-item">멘티에게 알림 발송</div>
+        <div class="info-item">슬롯 1개 차감</div>
+      </div>
+    </div>
+
+    <button class="nc-btn nc-btn--outline nc-btn--full"
+            style="font-size:0.85rem;"
+            onclick="window.location.href='/mentor-dashboard.html'">
+      ← 멘토 대시보드로
+    </button>
+  </aside>
+</div>
+
+<!-- 거절 사유 모달 -->
+<div class="nc-modal" id="modal-reject">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-reject')"></div>
+  <div class="nc-modal__box" style="max-width:440px">
+    <button class="nc-modal__close" onclick="Modal.close('modal-reject')">✕</button>
+    <div class="nc-modal__title">멘티 거절</div>
+    <p style="font-size:0.85rem;color:var(--text3);margin-bottom:16px">
+      정말로 이 멘티를 거절하시겠습니까?<br>거절 후에는 되돌릴 수 없습니다.
+    </p>
+    <div style="display:flex;gap:10px">
+      <button class="nc-btn nc-btn--outline nc-btn--full" onclick="Modal.close('modal-reject')">취소</button>
+      <button class="nc-btn nc-btn--full" id="confirm-reject-btn"
+              style="background:#ef4444;border-color:#ef4444"
+              onclick="confirmReject()">거절하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 포인트 충전 모달 -->
+<div class="nc-modal" id="modal-point">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-point')"></div>
+  <div class="nc-modal__box">
+    <button class="nc-modal__close" onclick="Modal.close('modal-point')">✕</button>
+    <div class="nc-modal__title">💎 포인트 충전</div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:0.82rem;color:var(--text3);margin-bottom:12px">충전할 포인트를 선택하세요</div>
+      <div class="point-options" id="point-options">
+        <button class="point-opt selected" data-amount="1000">
+          <div class="point-opt__amount">1,000P</div>
+          <div class="point-opt__price">₩1,000</div>
+        </button>
+        <button class="point-opt" data-amount="5000">
+          <div class="point-opt__amount">5,000P</div>
+          <div class="point-opt__price">₩5,000</div>
+        </button>
+        <button class="point-opt" data-amount="10000">
+          <div class="point-opt__amount">10,000P</div>
+          <div class="point-opt__price">₩10,000</div>
+        </button>
+        <button class="point-opt" data-amount="30000">
+          <div class="point-opt__amount">30,000P</div>
+          <div class="point-opt__price">₩30,000</div>
+        </button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 14px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+      <span style="font-size:0.85rem;color:var(--text3)">현재 잔여 포인트</span>
+      <span style="font-weight:700;color:var(--accent)" id="modal-current-point">-</span>
+    </div>
+    <button class="nc-btn nc-btn--primary nc-btn--full" onclick="chargePoint()">충전하기</button>
+  </div>
+</div>
+
+<script>
+  /* ─── 상태 ─── */
+  let currentFilter = 'PENDING';
+  let currentPage   = 0;
+  let totalPages    = 1;
+  let rejectTarget  = null;   // { mentoringId, menteeId }
+
+  const STATUS_BADGE = {
+    PENDING:   '<span class="status-badge badge-pending">대기 중</span>',
+    ACCEPTED:  '<span class="status-badge badge-accepted">수락됨</span>',
+    REJECTED:  '<span class="status-badge badge-rejected">거절됨</span>',
+    COMPLETED: '<span class="status-badge badge-completed">완료</span>',
+  };
+
+  /* ─── 초기화 ─── */
+  function init() {
+    if (!Auth.isLoggedIn()) {
+      window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+      return;
+    }
+    initNav();
+    loadStats();
+    loadApplications();
+  }
+
+  /* ─── 네비 렌더 ─── */
+  function initNav() {
+    const nav = document.getElementById('nc-nav');
+    const user = Auth.getUser();
+    const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
+    if (!nav) return;
+    nav.innerHTML = `
+      <div class="nc-nav__inner">
+        <a href="/index.html" class="nc-nav__logo"><span class="logo-icon">✦</span>NovelCraft</a>
+        <div class="nc-nav__right">
+          ${user ? `
+            <button class="nc-point-btn" id="nav-point" onclick="openPointModal()">···P</button>
+            <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+            ${isAuthorOrMentor ? `
+            <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
+            <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+            ` : ''}
+            <div class="nc-user-menu">
+              <button class="nc-nav__btn" onclick="toggleUserMenu()" style="font-weight:600;user-select:none">
+                ${escapeHtml(user.nickname || '내 계정')} ▾
+              </button>
+              <div class="nc-user-dropdown" id="user-dropdown">
+                <button onclick="window.location.href='/mypage.html'">마이페이지</button>
+                <button onclick="doLogout()">로그아웃</button>
+              </div>
+            </div>
+          ` : `
+            <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
+            <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
+          `}
+        </div>
+      </div>`;
+    loadPoint();
+  }
+
+  function toggleUserMenu() {
+    document.getElementById('user-dropdown')?.classList.toggle('open');
+  }
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('user-dropdown');
+    if (menu?.classList.contains('open') && !e.target.closest('.nc-user-menu')) {
+      menu.classList.remove('open');
+    }
+  });
+
+  async function doLogout() {
+    try { await api.post('/auth/logout', {}, true); } catch {}
+    Auth.logout();
+    window.location.href = '/index.html';
+  }
+
+  async function loadPoint() {
+    try {
+      const d = await api.get('/points/balance', true);
+      const el = document.getElementById('nav-point');
+      if (el) el.textContent = `${(d?.data?.balance ?? d?.balance ?? 0).toLocaleString()}P`;
+    } catch {}
+  }
+
+  /* ─── 통계 로드 ─── */
+  async function loadStats() {
+    try {
+      const res = await api.get('/mentors/me/statistics', true);
+      const s = res?.data || res;
+      document.getElementById('s-pending').textContent = `${s?.pendingCount ?? 0}건`;
+      document.getElementById('s-accept').textContent  = `${s?.thisMonthAcceptedCount ?? 0}건`;
+      document.getElementById('s-reject').textContent  = `${s?.thisMonthRejectedCount ?? 0}건`;
+      const p = s?.pendingCount ?? 0;
+      document.getElementById('pending-badge').textContent = `${p}건 대기`;
+    } catch {}
+  }
+
+  /* ─── 신청 목록 로드 ─── */
+  async function loadApplications(page = 0) {
+    const list = document.getElementById('app-list');
+    list.innerHTML = '<div class="loading-wrap">불러오는 중</div>';
+    document.getElementById('pagination').innerHTML = '';
+    try {
+      const res = await api.get(`/v2/mentorings/received?page=${page}&size=10`, true);
+      const data = res?.data || res;
+      const items = data?.content || [];
+      totalPages  = data?.totalPages ?? 1;
+      currentPage = page;
+
+      // 필터 적용 (PENDING 등)
+      const filtered = currentFilter === 'ALL'
+        ? items
+        : items.filter(i => i.status === currentFilter);
+
+      if (!filtered.length) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state__icon">📭</div>
+            <div class="empty-state__msg">${filterEmptyMsg(currentFilter)}</div>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(item => renderCard(item)).join('');
+      renderPagination();
+
+      // 각 카드 motivation 비동기 로드
+      filtered.forEach(item => loadMotivation(item.mentoringId));
+
+    } catch (e) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state__icon">⚠️</div>
+          <div class="empty-state__msg">목록을 불러올 수 없습니다<br>
+            <button onclick="loadApplications()" style="margin-top:10px;padding:6px 16px;background:var(--primary);color:white;border:none;border-radius:6px;cursor:pointer;font-family:inherit">다시 시도</button>
+          </div>
+        </div>`;
+    }
+  }
+
+  function filterEmptyMsg(f) {
+    if (f === 'PENDING')  return '대기 중인 신청이 없습니다';
+    if (f === 'ACCEPTED') return '수락된 신청이 없습니다';
+    if (f === 'REJECTED') return '거절된 신청이 없습니다';
+    return '신청 내역이 없습니다';
+  }
+
+  /* ─── 카드 렌더 ─── */
+  function renderCard(item) {
+    const initial   = (item.menteeName || '?').charAt(0).toUpperCase();
+    const badge     = STATUS_BADGE[item.status] || '';
+    const dateStr   = fmtDate(item.appliedAt);
+    const isPending = item.status === 'PENDING';
+    const hasManuscript = false; // 목록 API에는 없음, 상세 로드 후 표시
+
+    return `
+      <div class="app-card" id="card-${item.mentoringId}">
+        <div class="app-card__top">
+          <div class="app-avatar">${escapeHtml(initial)}</div>
+          <div class="app-info">
+            <div class="app-name-row">
+              <span class="app-name">${escapeHtml(item.menteeName || '이름 없음')}</span>
+              ${badge}
+            </div>
+            <div class="app-novel">
+              <span>작업 소설: </span>${escapeHtml(item.title || '소설 정보 없음')}
+            </div>
+          </div>
+          <div class="app-date">${dateStr}</div>
+        </div>
+
+        <!-- 신청 동기 (비동기 로드) -->
+        <div class="motivation-box" id="motivation-${item.mentoringId}">
+          <div class="motivation-box__label">신청 동기</div>
+          <div class="motivation-text" style="color:var(--text3);font-size:0.8rem">불러오는 중...</div>
+        </div>
+
+        <!-- 하단 액션 -->
+        <div class="app-card__actions" id="actions-${item.mentoringId}">
+          ${isPending ? `
+            <button class="btn-accept" onclick="acceptMentee(${item.mentoringId}, ${item.menteeId})">수락하기</button>
+            <button class="btn-reject" onclick="openRejectModal(${item.mentoringId}, ${item.menteeId})">거절하기</button>
+          ` : `
+            <div class="btn-disabled">${item.status === 'ACCEPTED' ? '이미 수락된 신청입니다' : '처리 완료된 신청입니다'}</div>
+          `}
+        </div>
+      </div>`;
+  }
+
+  /* ─── 신청 동기 비동기 로드 ─── */
+  async function loadMotivation(mentoringId) {
+    const box = document.getElementById(`motivation-${mentoringId}`);
+    if (!box) return;
+    try {
+      const res = await api.get(`/v2/mentorings/${mentoringId}`, true);
+      const d = res?.data || res;
+      // MentoringDetailResponse에는 motivation 없음 → Mentorship entity에 있으나 DTO 미포함
+      // 이용 가능한 상세 정보: novelTitle, menteeName, status, totalSessions, feedbacks
+      // motivation 필드는 현재 API 응답에 없으므로 gracefully 처리
+      const motivation = d?.motivation || null;
+      box.innerHTML = `
+        <div class="motivation-box__label">신청 동기</div>
+        ${motivation
+          ? `<div class="motivation-text">${escapeHtml(motivation)}</div>`
+          : `<div class="motivation-none">신청 동기 미입력</div>`
+        }`;
+    } catch {
+      box.innerHTML = `
+        <div class="motivation-box__label">신청 동기</div>
+        <div class="motivation-none">불러올 수 없습니다</div>`;
+    }
+  }
+
+  /* ─── 수락 ─── */
+  async function acceptMentee(mentoringId, menteeId) {
+    const actions = document.getElementById(`actions-${mentoringId}`);
+    const origHtml = actions?.innerHTML;
+    if (actions) actions.innerHTML = '<div class="btn-disabled">처리 중...</div>';
+    try {
+      await api.patch(`/v2/mentorings/${mentoringId}/mentees/${menteeId}/accept`, {}, true);
+      Toast.success('멘티를 수락했습니다. 채팅방이 생성됩니다.');
+      const card = document.getElementById(`card-${mentoringId}`);
+      if (card) {
+        card.style.opacity = '0.5';
+        card.style.transition = 'opacity 0.4s';
+        setTimeout(() => loadApplications(currentPage), 600);
+      }
+      loadStats();
+    } catch (e) {
+      Toast.error(e?.message || '수락 처리 중 오류가 발생했습니다');
+      if (actions && origHtml) actions.innerHTML = origHtml;
+    }
+  }
+
+  /* ─── 거절 ─── */
+  function openRejectModal(mentoringId, menteeId) {
+    rejectTarget = { mentoringId, menteeId };
+    Modal.open('modal-reject');
+  }
+
+  async function confirmReject() {
+    if (!rejectTarget) return;
+    const { mentoringId, menteeId } = rejectTarget;
+    const btn = document.getElementById('confirm-reject-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '처리 중...'; }
+    try {
+      await api.patch(`/v2/mentorings/${mentoringId}/mentees/${menteeId}/reject`, {}, true);
+      Modal.close('modal-reject');
+      Toast.success('거절 처리가 완료되었습니다');
+      rejectTarget = null;
+      const card = document.getElementById(`card-${mentoringId}`);
+      if (card) {
+        card.style.opacity = '0.5';
+        card.style.transition = 'opacity 0.4s';
+        setTimeout(() => loadApplications(currentPage), 600);
+      }
+      loadStats();
+    } catch (e) {
+      Toast.error(e?.message || '거절 처리 중 오류가 발생했습니다');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '거절하기'; }
+    }
+  }
+
+  /* ─── 필터 ─── */
+  function setFilter(status, btn) {
+    currentFilter = status;
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadApplications(0);
+  }
+
+  /* ─── 페이지네이션 ─── */
+  function renderPagination() {
+    const pg = document.getElementById('pagination');
+    if (totalPages <= 1) { pg.innerHTML = ''; return; }
+    let html = `<button class="page-btn" onclick="loadApplications(${currentPage-1})" ${currentPage===0?'disabled':''}>‹</button>`;
+    const start = Math.max(0, currentPage - 2);
+    const end   = Math.min(totalPages - 1, currentPage + 2);
+    for (let i = start; i <= end; i++) {
+      html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="loadApplications(${i})">${i+1}</button>`;
+    }
+    html += `<button class="page-btn" onclick="loadApplications(${currentPage+1})" ${currentPage===totalPages-1?'disabled':''}>›</button>`;
+    pg.innerHTML = html;
+  }
+
+  /* ─── 유틸 ─── */
+  function fmtDate(dt) {
+    if (!dt) return '-';
+    const d = new Date(dt);
+    return `${d.getMonth()+1}/${d.getDate()}`;
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ─── 포인트 충전 ─── */
+  const PORTONE_STORE_ID    = 'store-6dd586c4-bbae-4fc5-a1b1-920f1850b300';
+  const PORTONE_CHANNEL_KEY = 'channel-key-70f0f4c2-74c5-4c38-b275-c2c01e2c3660';
+  let selectedPointAmt = 1000;
+
+  function initPointOptions() {
+    document.querySelectorAll('.point-opt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.point-opt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedPointAmt = parseInt(btn.dataset.amount);
+      });
+    });
+  }
+
+  function openPointModal() {
+    api.get('/points/balance', true).then(d => {
+      const el = document.getElementById('modal-current-point');
+      if (el) el.textContent = `${(d?.data?.balance ?? d?.balance ?? 0).toLocaleString()}P`;
+    }).catch(() => {});
+    initPointOptions();
+    Modal.open('modal-point');
+  }
+
+  async function chargePoint() {
+    if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+    try {
+      const [prepare, meInfo] = await Promise.all([
+        api.post('/payments/prepare', { amount: selectedPointAmt }, true),
+        api.get('/auth/users/me', true),
+      ]);
+      const paymentKey = prepare?.data?.paymentKey ?? prepare?.paymentKey;
+      const phoneNo = (meInfo?.data?.phoneNo ?? meInfo?.phoneNo ?? '').replace(/-/g, '');
+      Modal.close('modal-point');
+      Toast.info('결제창을 불러오는 중...');
+      const me = Auth.getUser();
+      const portoneRes = await PortOne.requestPayment({
+        storeId: PORTONE_STORE_ID, channelKey: PORTONE_CHANNEL_KEY,
+        paymentId: paymentKey,
+        orderName: `NovelCraft ${selectedPointAmt.toLocaleString()}P 포인트 충전`,
+        totalAmount: selectedPointAmt, currency: 'CURRENCY_KRW', payMethod: 'CARD',
+        customer: {
+          fullName: me?.nickname || '구매자', phoneNumber: phoneNo,
+          ...(me?.email ? { email: me.email } : {}),
+        },
+      });
+      if (portoneRes.code) { Toast.error(`결제 실패: ${portoneRes.message}`); return; }
+      await api.post('/payments/confirm', { paymentId: portoneRes.paymentId, amount: selectedPointAmt }, true);
+      Toast.success(`${selectedPointAmt.toLocaleString()}P가 충전되었습니다!`);
+      loadPoint();
+    } catch (e) {
+      Toast.error(e?.message || '충전 중 오류가 발생했습니다.');
+    }
+  }
+
+  /* ─── 시작 ─── */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
+</body>
+</html>

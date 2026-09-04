@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovelCraft - 독서 캘린더</title>
+  <script src="/common.js"></script>
+  <style>
+    /* ── 네비게이션 커스텀 ── */
+    .nc-point-btn {
+      padding: 5px 14px; border-radius: 20px;
+      background: linear-gradient(135deg, rgba(240,200,66,0.18), rgba(240,200,66,0.08));
+      border: 1px solid rgba(240,200,66,0.4); color: var(--accent);
+      font-size: 0.82rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap; font-family: inherit;
+    }
+    .nc-point-btn:hover { background: rgba(240,200,66,0.25); }
+    .nc-alarm-btn {
+      position: relative; padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 1rem; cursor: pointer; transition: all 0.2s;
+    }
+    .nc-alarm-btn:hover { background: var(--surface); }
+    .nc-alarm-dot {
+      position: absolute; top: 4px; right: 4px;
+      width: 8px; height: 8px; border-radius: 50%; background: var(--error);
+      border: 2px solid var(--bg);
+    }
+    .nc-user-menu { position: relative; }
+    .nc-user-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); min-width: 148px;
+      box-shadow: var(--shadow-lg); z-index: 300;
+      display: none; overflow: hidden;
+    }
+    .nc-user-menu.open .nc-user-dropdown { display: block; }
+    .nc-user-dropdown__item {
+      display: block; width: 100%; padding: 11px 16px; text-align: left;
+      background: none; border: none; color: var(--text2); font-size: 0.875rem;
+      cursor: pointer; transition: background 0.15s; font-family: inherit;
+      text-decoration: none;
+    }
+    .nc-user-dropdown__item:hover { background: var(--surface); color: var(--text); }
+    .nc-user-dropdown__item--danger { color: #f87171; }
+    .nc-user-dropdown__item--danger:hover { background: rgba(239,68,68,0.08); }
+
+    /* ── 알림 드로어 ── */
+    .notif-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 900; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .notif-backdrop.open { opacity: 1; pointer-events: all; }
+    .notif-drawer {
+      position: fixed; top: 0; right: -440px; width: 420px; height: 100vh;
+      background: var(--surface2); border-left: 1px solid var(--border);
+      z-index: 950; transition: right 0.3s ease; display: flex; flex-direction: column;
+    }
+    .notif-drawer.open { right: 0; }
+    .notif-drawer__header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .notif-drawer__title { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 1.1rem; }
+    .notif-drawer__actions { display: flex; gap: 8px; align-items: center; }
+    .notif-drawer__close {
+      background: none; border: none; color: var(--text3); font-size: 1.25rem;
+      cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;
+    }
+    .notif-drawer__close:hover { background: var(--surface); }
+    .notif-drawer__read-all {
+      font-size: 0.75rem; color: var(--primary-light); background: none;
+      border: 1px solid var(--primary); border-radius: 6px; padding: 4px 10px;
+      cursor: pointer; font-family: inherit; transition: all 0.2s;
+    }
+    .notif-drawer__read-all:hover { background: var(--primary); color: white; }
+    .notif-drawer__body { flex: 1; overflow-y: auto; padding: 12px 0; }
+    .notif-item { padding: 14px 24px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .notif-item:hover { background: rgba(255,255,255,0.03); }
+    .notif-item.unread { background: rgba(124,90,240,0.05); }
+    .notif-item__row { display: flex; gap: 10px; align-items: flex-start; }
+    .notif-item__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); flex-shrink: 0; margin-top: 6px; }
+    .notif-item__dot.read { background: transparent; }
+    .notif-item__content { flex: 1; font-size: 0.875rem; line-height: 1.5; color: var(--text); }
+    .notif-item.unread .notif-item__content { font-weight: 500; }
+    .notif-item__time { font-size: 0.72rem; color: var(--text3); margin-top: 4px; }
+    .notif-empty { padding: 60px 24px; text-align: center; color: var(--text3); }
+    .notif-empty__icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+    /* ── 페이지 레이아웃 ── */
+    .page-wrap {
+      max-width: 1100px; margin: 0 auto; padding: 28px 20px;
+      display: grid; grid-template-columns: 1fr 260px; gap: 24px;
+    }
+    .page-left { min-width: 0; }
+    .page-right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+    /* 검색 영역 — 그리드 밖 전체 너비 */
+    .lib-search-section {
+      max-width: 1100px; margin: 0 auto; padding: 0 20px 32px;
+    }
+
+    /* ── 캘린더 카드 ── */
+    .cal-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px 20px 16px; margin-bottom: 20px;
+    }
+    .cal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .cal-nav-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; width: 34px; height: 34px; cursor: pointer;
+      color: var(--text2); font-size: 1rem; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .cal-nav-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+    .cal-month-title {
+      font-family: 'Noto Serif KR', serif; font-size: 1.1rem; font-weight: 700;
+    }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+    }
+    .cal-day-label {
+      text-align: center; font-size: 0.72rem; color: var(--text3);
+      padding: 4px 0 8px; font-weight: 500;
+    }
+    .cal-day-label:first-child { color: #f87171; }
+    .cal-day-label:last-child { color: #60a5fa; }
+    .cal-cell {
+      aspect-ratio: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; border-radius: 10px; cursor: pointer;
+      transition: background 0.15s; position: relative; min-height: 42px;
+    }
+    .cal-cell:hover { background: var(--surface2); }
+    .cal-cell.today {
+      border: 1.5px solid var(--primary); color: var(--primary-light); font-weight: 700;
+    }
+    .cal-cell.selected { background: var(--primary); color: white; }
+    .cal-cell.selected:hover { background: var(--primary); }
+    .cal-cell.has-record::after {
+      content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+      width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+    }
+    .cal-cell.selected.has-record::after { background: rgba(255,255,255,0.8); }
+    .cal-cell.empty { cursor: default; }
+    .cal-cell.empty:hover { background: transparent; }
+    .cal-cell__num { font-size: 0.88rem; line-height: 1; }
+    .cal-cell:first-child .cal-cell__num, .cal-cell.sun .cal-cell__num { color: #f87171; }
+    .cal-cell.selected .cal-cell__num { color: white; }
+    .cal-cell.sat .cal-cell__num { color: #60a5fa; }
+    .cal-cell.selected.sat .cal-cell__num, .cal-cell.selected.sun .cal-cell__num { color: white; }
+
+    /* ── 독서 기록 섹션 ── */
+    .records-section { margin-bottom: 20px; }
+    .records-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .records-title { font-family: 'Noto Serif KR', serif; font-size: 1rem; font-weight: 700; }
+    .record-item {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px;
+      transition: border-color 0.2s;
+    }
+    .record-item:hover { border-color: var(--primary); }
+    .record-cover {
+      width: 44px; height: 58px; border-radius: 6px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--surface2), var(--border));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; overflow: hidden; border: 1px solid var(--border);
+    }
+    .record-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .record-info { flex: 1; min-width: 0; }
+    .record-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-meta { font-size: 0.78rem; color: var(--text3); margin-bottom: 5px; }
+    .record-note { font-size: 0.78rem; color: var(--text2); margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .record-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+    .badge-sm {
+      display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem;
+      font-weight: 500; border: 1px solid;
+    }
+    .badge-platform { background: rgba(124,90,240,0.15); color: var(--primary-light); border-color: rgba(124,90,240,0.3); }
+    .badge-external { background: rgba(16,185,129,0.12); color: #10b981; border-color: rgba(16,185,129,0.3); }
+    .badge-reading { background: rgba(59,130,246,0.12); color: #60a5fa; border-color: rgba(59,130,246,0.3); }
+    .badge-completed { background: rgba(99,102,241,0.12); color: #a78bfa; border-color: rgba(99,102,241,0.3); }
+    .record-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .record-delete-btn {
+      width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border);
+      background: transparent; color: var(--text3); cursor: pointer; font-size: 0.8rem;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .record-delete-btn:hover { background: rgba(239,68,68,0.1); border-color: #f87171; color: #f87171; }
+    .records-empty {
+      text-align: center; padding: 32px 20px; color: var(--text3); font-size: 0.875rem;
+      background: var(--surface); border: 1px dashed var(--border); border-radius: 12px;
+    }
+
+    /* ── 국립도서관 검색 ── */
+    .lib-search-wrap {
+      display: flex; gap: 8px; margin-bottom: 12px;
+    }
+    .lib-search-input {
+      flex: 1; padding: 10px 14px; border-radius: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-size: 16px; font-family: inherit;
+      transition: border-color 0.2s; outline: none;
+    }
+    .lib-search-input:focus { border-color: var(--primary); }
+    .lib-search-btn {
+      padding: 10px 18px; border-radius: 8px; background: var(--primary);
+      border: none; color: white; font-size: 0.875rem; cursor: pointer;
+      font-family: inherit; font-weight: 600; transition: background 0.2s; white-space: nowrap;
+    }
+    .lib-search-btn:hover { background: var(--primary-light); }
+    .lib-results { display: none; }
+    .lib-results.visible { display: block; }
+    .lib-result-item {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 12px;
+    }
+    .lib-result-info { flex: 1; min-width: 0; }
+    .lib-result-title { font-size: 0.875rem; font-weight: 600; color: var(--text); margin-bottom: 3px;
+      word-break: break-word; }
+    .lib-result-meta { font-size: 0.75rem; color: var(--text3); }
+    .lib-add-btn {
+      padding: 5px 12px; border-radius: 6px; border: 1px solid var(--primary);
+      background: transparent; color: var(--primary-light); font-size: 0.78rem;
+      cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .lib-add-btn:hover { background: var(--primary); color: white; }
+    .lib-add-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── 사이드바 카드 ── */
+    .side-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px;
+    }
+    .side-card__title {
+      font-family: 'Noto Serif KR', serif; font-size: 0.95rem; font-weight: 700;
+      margin-bottom: 14px; color: var(--text);
+    }
+    .stat-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.83rem;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row__label { color: var(--text3); }
+    .stat-row__value { color: var(--text); font-weight: 600; }
+    .stat-row__value.highlight { color: var(--accent); }
+    .rec-novel-item {
+      padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.83rem; cursor: pointer; transition: color 0.15s;
+    }
+    .rec-novel-item:first-child { padding-top: 0; }
+    .rec-novel-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .rec-novel-item:hover { color: var(--primary-light); }
+    .rec-novel-item__title { color: var(--text); font-weight: 500; }
+    .rec-novel-item__author { color: var(--text3); font-size: 0.75rem; margin-top: 1px; }
+    .challenge-btn {
+      width: 100%; padding: 12px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), rgba(124,90,240,0.7));
+      border: none; color: white; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: opacity 0.2s;
+    }
+    .challenge-btn:hover { opacity: 0.88; }
+
+    /* ── 기록 추가 모달 ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 800; display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 18px; padding: 28px; width: 100%; max-width: 520px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-title {
+      font-family: 'Noto Serif KR', serif; font-size: 1.15rem; font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .modal-close {
+      float: right; background: none; border: none; color: var(--text3);
+      font-size: 1.2rem; cursor: pointer; padding: 0 4px; margin-top: -2px;
+    }
+    .source-toggle {
+      display: flex; gap: 0; border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden; margin-bottom: 18px;
+    }
+    .source-toggle-btn {
+      flex: 1; padding: 9px; background: transparent; border: none;
+      color: var(--text3); font-size: 0.85rem; cursor: pointer; font-family: inherit;
+      transition: all 0.2s;
+    }
+    .source-toggle-btn.active {
+      background: var(--primary); color: white; font-weight: 600;
+    }
+    .form-row { margin-bottom: 14px; }
+    .form-label { font-size: 0.78rem; color: var(--text3); margin-bottom: 5px; display: block; }
+    .form-input {
+      width: 100%; padding: 9px 12px; border-radius: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-size: 16px; font-family: inherit;
+      outline: none; box-sizing: border-box; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--primary); }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .status-toggle { display: flex; gap: 8px; }
+    .status-btn {
+      flex: 1; padding: 9px; border-radius: 8px; border: 1px solid var(--border);
+      background: transparent; color: var(--text3); font-size: 0.83rem; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .status-btn.active { border-color: var(--primary); background: rgba(124,90,240,0.12); color: var(--primary-light); font-weight: 600; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+
+    /* ── 로그인 가드 ── */
+    .login-guard {
+      text-align: center; padding: 80px 20px;
+    }
+
+    @media (max-width: 760px) {
+      .page-wrap { grid-template-columns: 1fr; }
+      .page-right { order: -1; }
+    }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<!-- 알림 드로어 -->
+<div class="notif-backdrop" id="notif-backdrop" onclick="closeNotifDrawer()"></div>
+<div class="notif-drawer" id="notif-drawer">
+  <div class="notif-drawer__header">
+    <span class="notif-drawer__title">알림</span>
+    <div class="notif-drawer__actions">
+      <button class="notif-drawer__read-all" onclick="markAllRead()">모두 읽음</button>
+      <button class="notif-drawer__close" onclick="closeNotifDrawer()">✕</button>
+    </div>
+  </div>
+  <div class="notif-drawer__body" id="notif-list"></div>
+</div>
+
+<!-- 독서 기록 추가 모달 -->
+<div class="modal-overlay" id="record-modal">
+  <div class="modal-box">
+    <div class="modal-title">
+      독서 기록 추가
+      <button class="modal-close" onclick="closeRecordModal()">✕</button>
+    </div>
+    <div class="source-toggle">
+      <button class="source-toggle-btn active" id="src-platform" onclick="setSource('PLATFORM')">서비스 소설</button>
+      <button class="source-toggle-btn" id="src-external" onclick="setSource('EXTERNAL')">외부 도서</button>
+    </div>
+
+    <!-- PLATFORM 전용 -->
+    <div id="platform-fields">
+      <div class="form-row">
+        <label class="form-label">소설 검색</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="m-novel-search" class="form-input" placeholder="소설 제목으로 검색...">
+          <button class="nc-btn nc-btn--primary nc-btn--sm" onclick="searchNovels()" style="white-space:nowrap">검색</button>
+        </div>
+        <div id="novel-search-results" style="margin-top:6px;display:none;max-height:160px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;"></div>
+        <input type="hidden" id="m-novel-id">
+        <input type="hidden" id="m-novel-title-hidden">
+        <div id="m-selected-novel" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(124,90,240,0.1);border-radius:7px;font-size:0.83rem;color:var(--primary-light)"></div>
+      </div>
+    </div>
+    <!-- EXTERNAL 전용 -->
+    <div id="external-fields" style="display:none">
+      <div class="form-row">
+        <label class="form-label">도서 제목 <span style="color:var(--error)">*</span></label>
+        <input type="text" id="m-ext-title" class="form-input" placeholder="외부 도서 제목">
+      </div>
+      <div class="form-row">
+        <label class="form-label">저자</label>
+        <input type="text" id="m-ext-author" class="form-input" placeholder="저자명">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">독서 날짜 <span style="color:var(--error)">*</span></label>
+      <input type="date" id="m-read-date" class="form-input">
+    </div>
+    <div class="form-row-2">
+      <div>
+        <label class="form-label">읽은 페이지</label>
+        <input type="number" id="m-read-page" class="form-input" placeholder="0" min="0">
+      </div>
+      <div>
+        <label class="form-label">전체 페이지</label>
+        <input type="number" id="m-total-page" class="form-input" placeholder="0" min="1">
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">독서 상태 <span style="color:var(--error)">*</span></label>
+      <div class="status-toggle">
+        <button class="status-btn active" id="st-reading" onclick="setStatus('READING')">읽는 중</button>
+        <button class="status-btn" id="st-completed" onclick="setStatus('COMPLETED')">완독</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">메모</label>
+      <textarea id="m-note" class="form-input" rows="3" placeholder="독서 메모를 남겨보세요..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="nc-btn nc-btn--secondary nc-btn--full" onclick="closeRecordModal()">취소</button>
+      <button class="nc-btn nc-btn--primary nc-btn--full" onclick="submitRecord()">기록 저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="page-root">
+  <div class="page-wrap">
+    <!-- ── 왼쪽 메인 ── -->
+    <div class="page-left">
+      <!-- 캘린더 -->
+      <div class="cal-card">
+        <div class="cal-header">
+          <button class="cal-nav-btn" onclick="prevMonth()">◀</button>
+          <div class="cal-month-title" id="cal-month-label"></div>
+          <button class="cal-nav-btn" onclick="nextMonth()">▶</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <!-- 독서 기록 목록 -->
+      <div class="records-section">
+        <div class="records-header">
+          <div class="records-title" id="records-title">이번 달 독서 기록</div>
+          <button class="nc-btn nc-btn--primary nc-btn--sm" onclick="openRecordModal()">+ 기록 추가</button>
+        </div>
+        <div id="records-list"></div>
+      </div>
+
+    </div>
+
+    <!-- ── 오른쪽 사이드바 ── -->
+    <div class="page-right">
+      <!-- 월별 통계 -->
+      <div class="side-card">
+        <div class="side-card__title" id="stat-title">월 통계</div>
+        <div id="stat-list">
+          <div class="stat-row"><span class="stat-row__label">독서일</span><span class="stat-row__value" id="st-days">-</span></div>
+          <div class="stat-row"><span class="stat-row__label">완독 작품</span><span class="stat-row__value" id="st-completed">-</span></div>
+          <div class="stat-row"><span class="stat-row__label">총 읽은 페이지</span><span class="stat-row__value highlight" id="st-pages">-</span></div>
+          <div class="stat-row"><span class="stat-row__label">일평균 페이지</span><span class="stat-row__value" id="st-avg">-</span></div>
+          <div class="stat-row"><span class="stat-row__label">가장 많이 읽은 날</span><span class="stat-row__value" id="st-most">-</span></div>
+        </div>
+      </div>
+
+      <!-- 도서 기반 추천 -->
+      <div class="side-card">
+        <div class="side-card__title">도서 기반 추천</div>
+        <div id="rec-list">
+          <div style="font-size:0.8rem;color:var(--text3);text-align:center;padding:16px 0">불러오는 중...</div>
+        </div>
+      </div>
+
+      <!-- 챌린지 리스트 -->
+      <button class="challenge-btn" onclick="window.location.href='/challenge.html'">
+        챌린지 중 리스트
+      </button>
+    </div>
+  </div>
+
+  <!-- 국립도서관 검색 — 그리드 밖 전체 너비 영역 -->
+  <div class="lib-search-section">
+    <div class="lib-search-wrap">
+      <input type="text" id="lib-search-input" class="lib-search-input"
+             placeholder="도서 검색 (국립중앙도서관 연동)..."
+             onkeydown="if(event.key==='Enter')searchLibrary()">
+      <button class="lib-search-btn" onclick="searchLibrary()">검색</button>
+    </div>
+    <div id="lib-results" class="lib-results"></div>
+  </div>
+</div>
+
+<script>
+  /* ──────────────────────────────────
+     상태
+  ────────────────────────────────── */
+  let curYear = new Date().getFullYear();
+  let curMonth = new Date().getMonth() + 1;
+  let selectedDate = null;
+  let calendarData = {}; // { 'YYYY-MM-DD': { novelCount, episodeCount } }
+  let currentSource = 'PLATFORM';
+  let currentStatus = 'READING';
+
+  const MONTHS_KO = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const DAYS_KO = ['일','월','화','수','목','금','토'];
+
+  /* ──────────────────────────────────
+     네비게이션 (common.js initNav 오버라이드)
+  ────────────────────────────────── */
+  function initNav() {
+    const nav = document.getElementById('nc-nav');
+    if (!nav) return;
+    const user = Auth.getUser();
+    const isLoggedIn = Auth.isLoggedIn();
+    const isAuthorOrMentor = user?.role === 'AUTHOR' || user?.role === 'MENTOR';
+
+    nav.innerHTML = `
+      <div class="nc-nav__inner">
+        <a href="/index.html" class="nc-nav__logo">
+          <span class="logo-icon">✦</span>NovelCraft
+        </a>
+        <div class="nc-nav__search-wrap" id="nav-search-wrap">
+          <input type="text" class="nc-nav__search" id="nav-search" placeholder="소설, 작가, 태그 검색...">
+          <div class="nc-search-dropdown" id="search-dropdown"></div>
+        </div>
+        <div class="nc-nav__right">
+          ${isLoggedIn ? `
+            <button class="nc-point-btn" id="nav-point" onclick="openPointModal()">···P</button>
+            <button class="nc-alarm-btn" id="nav-alarm" onclick="openNotifDrawer()">
+              🔔<span class="nc-alarm-dot" id="alarm-dot" style="display:none"></span>
+            </button>
+            <button class="nc-nav__btn" onclick="window.location.href='/library.html'">내 서재</button>
+            ${isAuthorOrMentor ? `
+            <button class="nc-nav__btn nc-nav__btn--mentee" onclick="window.location.href='/mentor-list.html'">멘티</button>
+            <button class="nc-nav__btn nc-nav__btn--mentor" onclick="window.location.href='/mentor-dashboard.html'">멘토</button>
+            ` : ''}
+            <div class="nc-user-menu" id="user-menu">
+              <button class="nc-nav__btn" onclick="toggleUserMenu()"
+                      style="font-weight:600;user-select:none">
+                ${user?.nickname || '내 프로필'} ▾
+              </button>
+              <div class="nc-user-dropdown" id="user-dropdown">
+                ${isAuthorOrMentor ? '<a href="/author-dashboard.html" class="nc-user-dropdown__item">작가 대시보드</a>' : ''}
+                <a href="/mypage.html" class="nc-user-dropdown__item">마이페이지</a>
+                <a href="/calendar.html" class="nc-user-dropdown__item">독서 캘린더</a>
+                <button class="nc-user-dropdown__item nc-user-dropdown__item--danger" onclick="doLogout()">로그아웃</button>
+              </div>
+            </div>
+          ` : `
+            <button class="nc-nav__btn" onclick="window.location.href='/login.html'">로그인</button>
+            <button class="nc-nav__btn nc-nav__btn--primary" onclick="window.location.href='/signup.html'">회원가입</button>
+          `}
+        </div>
+      </div>
+    `;
+    initSearch();
+
+    if (isLoggedIn) {
+      api.get('/points/balance', true).then(d => {
+        const el = document.getElementById('nav-point');
+        if (el) el.textContent = `${(d?.balance || 0).toLocaleString()}P`;
+      }).catch(() => {});
+      loadUnreadCount();
+    }
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('user-menu');
+      if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+    });
+  }
+
+  function toggleUserMenu() { document.getElementById('user-menu')?.classList.toggle('open'); }
+  async function doLogout() { await Auth.logout(); }
+
+  function openPointModal() {
+    api.get('/points/balance', true).then(d => {
+      Toast.info(`잔여 포인트: ${(d?.balance || 0).toLocaleString()}P`);
+    }).catch(() => {});
+  }
+
+  /* ──────────────────────────────────
+     알림 드로어
+  ────────────────────────────────── */
+  function openNotifDrawer() {
+    document.getElementById('notif-drawer')?.classList.add('open');
+    document.getElementById('notif-backdrop')?.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    loadNotifications();
+  }
+  function closeNotifDrawer() {
+    document.getElementById('notif-drawer')?.classList.remove('open');
+    document.getElementById('notif-backdrop')?.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  async function loadUnreadCount() {
+    try {
+      const res = await api.get('/notifications/unread-count', true);
+      const dot = document.getElementById('alarm-dot');
+      if (dot) dot.style.display = (res?.count > 0) ? 'block' : 'none';
+    } catch {}
+  }
+
+  async function loadNotifications() {
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    list.innerHTML = '<div class="notif-empty"><div class="notif-empty__icon">🔔</div>불러오는 중...</div>';
+    try {
+      const res = await api.get('/notifications?page=0&size=30', true);
+      const items = res?.content || res?.data?.content || [];
+      if (!items.length) {
+        list.innerHTML = '<div class="notif-empty"><div class="notif-empty__icon">🔔</div><div>새 알림이 없습니다</div></div>';
+        return;
+      }
+      list.innerHTML = items.map(n => `
+        <div class="notif-item ${n.isRead ? '' : 'unread'}" onclick="markRead(${n.id}, this)">
+          <div class="notif-item__row">
+            <div class="notif-item__dot ${n.isRead ? 'read' : ''}"></div>
+            <div>
+              <div class="notif-item__content">${n.message || n.content || ''}</div>
+              <div class="notif-item__time">${formatRelTime(n.createdAt)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch {
+      list.innerHTML = '<div class="notif-empty"><div class="notif-empty__icon">⚠️</div><div>알림을 불러올 수 없습니다</div></div>';
+    }
+  }
+
+  async function markRead(id, el) {
+    try { await api.patch(`/notifications/${id}/read`, {}, true); } catch {}
+    el?.classList.remove('unread');
+    el?.querySelector('.notif-item__dot')?.classList.add('read');
+  }
+  async function markAllRead() {
+    try { await api.patch('/notifications/read-all', {}, true); Toast.success('모두 읽음 처리되었습니다'); loadNotifications(); } catch {}
+  }
+  function formatRelTime(dt) {
+    if (!dt) return '';
+    const diff = Date.now() - new Date(dt).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return '방금 전';
+    if (m < 60) return `${m}분 전`;
+    if (m < 1440) return `${Math.floor(m/60)}시간 전`;
+    return `${Math.floor(m/1440)}일 전`;
+  }
+
+  /* ──────────────────────────────────
+     캘린더
+  ────────────────────────────────── */
+  function prevMonth() {
+    if (curMonth === 1) { curMonth = 12; curYear--; } else curMonth--;
+    renderCalendar();
+  }
+  function nextMonth() {
+    if (curMonth === 12) { curMonth = 1; curYear++; } else curMonth++;
+    renderCalendar();
+  }
+
+  async function renderCalendar() {
+    document.getElementById('cal-month-label').textContent = `${curYear}년 ${MONTHS_KO[curMonth-1]}`;
+    document.getElementById('stat-title').textContent = `${MONTHS_KO[curMonth-1]} 통계`;
+    document.getElementById('records-title').textContent = `${MONTHS_KO[curMonth-1]} 독서 기록`;
+
+    const firstDay = new Date(curYear, curMonth - 1, 1).getDay();
+    const lastDate = new Date(curYear, curMonth, 0).getDate();
+
+    // 캘린더 데이터 로드
+    if (Auth.isLoggedIn()) {
+      const startDate = `${curYear}-${String(curMonth).padStart(2,'0')}-01`;
+      const endDate = `${curYear}-${String(curMonth).padStart(2,'0')}-${String(lastDate).padStart(2,'0')}`;
+      try {
+        const res = await api.get(`/calendars/me?startDate=${startDate}&endDate=${endDate}`, true);
+        const list = res?.data || res || [];
+        calendarData = {};
+        list.forEach(d => { calendarData[d.date] = d; });
+      } catch { calendarData = {}; }
+    }
+
+    buildCalendarGrid(firstDay, lastDate);
+    loadMonthStats();
+    loadMonthRecords();
+    loadRecommendations();
+  }
+
+  function buildCalendarGrid(firstDay, lastDate) {
+    const grid = document.getElementById('cal-grid');
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    let html = DAYS_KO.map(d => `<div class="cal-day-label">${d}</div>`).join('');
+
+    for (let i = 0; i < firstDay; i++) {
+      html += '<div class="cal-cell empty"></div>';
+    }
+    for (let d = 1; d <= lastDate; d++) {
+      const dateStr = `${curYear}-${String(curMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dayOfWeek = (firstDay + d - 1) % 7;
+      const isToday = dateStr === todayStr;
+      const isSelected = dateStr === selectedDate;
+      const hasRecord = !!calendarData[dateStr];
+      const dayCls = [
+        'cal-cell',
+        isToday ? 'today' : '',
+        isSelected ? 'selected' : '',
+        hasRecord ? 'has-record' : '',
+        dayOfWeek === 0 ? 'sun' : '',
+        dayOfWeek === 6 ? 'sat' : '',
+      ].filter(Boolean).join(' ');
+
+      html += `<div class="${dayCls}" onclick="selectDate('${dateStr}')">
+        <span class="cal-cell__num">${d}</span>
+      </div>`;
+    }
+    grid.innerHTML = html;
+  }
+
+  function selectDate(dateStr) {
+    selectedDate = dateStr;
+    const [y, m] = dateStr.split('-');
+    document.getElementById('records-title').textContent = `${parseInt(m)}월 ${parseInt(dateStr.split('-')[2])}일 독서 기록`;
+    buildCalendarGrid(new Date(curYear, curMonth-1, 1).getDay(), new Date(curYear, curMonth, 0).getDate());
+    loadDayRecords(dateStr);
+    // 기록 추가 모달 날짜 자동 설정
+    const dateInput = document.getElementById('m-read-date');
+    if (dateInput) dateInput.value = dateStr;
+  }
+
+  /* ──────────────────────────────────
+     통계
+  ────────────────────────────────── */
+  async function loadMonthStats() {
+    if (!Auth.isLoggedIn()) return;
+    try {
+      const res = await api.get(`/calendars/me/statistics?year=${curYear}&month=${curMonth}`, true);
+      const d = res?.data || res || {};
+      document.getElementById('st-days').textContent = `${d.readingDaysCount ?? 0}일`;
+      document.getElementById('st-completed').textContent = `${d.completedBooks ?? 0}권`;
+      document.getElementById('st-pages').textContent = `${d.totalReadPages ?? 0}p`;
+      document.getElementById('st-avg').textContent = `${(d.dailyAverage ?? 0).toFixed(1)}p`;
+      document.getElementById('st-most').textContent = d.mostReadDay
+        ? d.mostReadDay.split('-').slice(1).map(Number).join('/')
+        : '-';
+    } catch {}
+  }
+
+  /* ──────────────────────────────────
+     독서 기록 목록
+  ────────────────────────────────── */
+  async function loadMonthRecords() {
+    if (!Auth.isLoggedIn()) {
+      renderRecords([]);
+      return;
+    }
+    const dateStr = `${curYear}-${String(curMonth).padStart(2,'0')}-01`;
+    try {
+      const res = await api.get(`/calendars/me/records?date=${dateStr}&page=0&size=50`, true);
+      const items = res?.data?.content || res?.content || [];
+      renderRecords(items);
+    } catch { renderRecords([]); }
+  }
+
+  async function loadDayRecords(dateStr) {
+    if (!Auth.isLoggedIn()) { renderRecords([]); return; }
+    try {
+      const res = await api.get(`/calendars/me/records?date=${dateStr}&page=0&size=50`, true);
+      const items = res?.data?.content || res?.content || [];
+      renderRecords(items);
+    } catch { renderRecords([]); }
+  }
+
+  function renderRecords(items) {
+    const el = document.getElementById('records-list');
+    if (!items.length) {
+      el.innerHTML = '<div class="records-empty">이 날의 독서 기록이 없습니다.<br>독서 기록을 추가해보세요!</div>';
+      return;
+    }
+    el.innerHTML = items.map(r => `
+      <div class="record-item">
+        <div class="record-cover"><img src="/images/default-cover.svg" alt="표지 없음" style="width:100%;height:100%;object-fit:cover"></div>
+        <div class="record-info">
+          <div class="record-title">${r.title || '제목 없음'}</div>
+          <div class="record-meta">${r.authorName ? r.authorName + ' · ' : ''}${r.readDate || ''}</div>
+          ${r.note ? `<div class="record-note">${r.note}</div>` : ''}
+          <div class="record-badges" style="margin-top:5px">
+            <span class="badge-sm ${r.source === 'PLATFORM' ? 'badge-platform' : 'badge-external'}">
+              ${r.source === 'PLATFORM' ? '플랫폼' : '외부'}
+            </span>
+          </div>
+        </div>
+        <div class="record-actions">
+          <button class="record-delete-btn" onclick="deleteRecord(${r.id})" title="삭제">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function deleteRecord(id) {
+    if (!confirm('이 독서 기록을 삭제하시겠습니까?')) return;
+    try {
+      await api.delete(`/calendars/me/records/${id}`, true);
+      Toast.success('기록이 삭제되었습니다');
+      if (selectedDate) loadDayRecords(selectedDate);
+      else loadMonthRecords();
+      renderCalendar();
+    } catch (e) {
+      Toast.error(e.message || '삭제 실패');
+    }
+  }
+
+  /* ──────────────────────────────────
+     AI 추천 (읽은 소설 기반)
+  ────────────────────────────────── */
+  async function loadRecommendations() {
+    try {
+      const res = await api.get('/ai/recommendation', Auth.isLoggedIn());
+      const items = res?.data || res || [];
+      const el = document.getElementById('rec-list');
+      if (!items.length) {
+        el.innerHTML = '<div style="font-size:0.8rem;color:var(--text3);text-align:center;padding:12px 0">추천 데이터 없음</div>';
+        return;
+      }
+      el.innerHTML = items.slice(0, 4).map(n => `
+        <div class="rec-novel-item" onclick="window.location.href='/novel.html?id=${n.novelId || n.id}'">
+          <div class="rec-novel-item__title">${n.title || '제목 없음'}</div>
+          <div class="rec-novel-item__author">${n.authorNickname || n.author || ''}</div>
+        </div>
+      `).join('');
+    } catch {
+      document.getElementById('rec-list').innerHTML = '<div style="font-size:0.8rem;color:var(--text3);text-align:center;padding:12px 0">추천을 불러올 수 없습니다</div>';
+    }
+  }
+
+  /* ──────────────────────────────────
+     독서 기록 모달
+  ────────────────────────────────── */
+  function openRecordModal() {
+    if (!Auth.isLoggedIn()) {
+      window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('m-read-date').value = selectedDate || today;
+    document.getElementById('m-read-date').max = today;
+    document.getElementById('record-modal').classList.add('open');
+  }
+  function closeRecordModal() {
+    document.getElementById('record-modal').classList.remove('open');
+    resetModal();
+  }
+  function resetModal() {
+    document.getElementById('m-novel-search').value = '';
+    document.getElementById('m-novel-id').value = '';
+    document.getElementById('m-novel-title-hidden').value = '';
+    document.getElementById('m-selected-novel').style.display = 'none';
+    document.getElementById('novel-search-results').style.display = 'none';
+    document.getElementById('m-ext-title').value = '';
+    document.getElementById('m-ext-author').value = '';
+    document.getElementById('m-note').value = '';
+    document.getElementById('m-read-page').value = '';
+    document.getElementById('m-total-page').value = '';
+    setSource('PLATFORM');
+    setStatus('READING');
+  }
+
+  function setSource(src) {
+    currentSource = src;
+    document.getElementById('src-platform').classList.toggle('active', src === 'PLATFORM');
+    document.getElementById('src-external').classList.toggle('active', src === 'EXTERNAL');
+    document.getElementById('platform-fields').style.display = src === 'PLATFORM' ? '' : 'none';
+    document.getElementById('external-fields').style.display = src === 'EXTERNAL' ? '' : 'none';
+  }
+
+  function setStatus(st) {
+    currentStatus = st;
+    document.getElementById('st-reading').classList.toggle('active', st === 'READING');
+    document.getElementById('st-completed').classList.toggle('active', st === 'COMPLETED');
+  }
+
+  async function searchNovels() {
+    const q = document.getElementById('m-novel-search').value.trim();
+    if (!q) return;
+    const resultsEl = document.getElementById('novel-search-results');
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = '<div style="padding:10px 12px;font-size:0.8rem;color:var(--text3)">검색 중...</div>';
+    try {
+      const res = await api.get(`/v2/novels?title=${encodeURIComponent(q)}&page=0&size=8`);
+      const items = res?.data?.content || res?.content || [];
+      if (!items.length) {
+        resultsEl.innerHTML = '<div style="padding:10px 12px;font-size:0.8rem;color:var(--text3)">결과 없음</div>';
+        return;
+      }
+      resultsEl.innerHTML = items.map(n => `
+        <div style="padding:9px 12px;cursor:pointer;font-size:0.83rem;border-bottom:1px solid var(--border);transition:background 0.15s"
+             onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"
+             onclick="selectNovel(${n.novelId||n.id},'${(n.title||'').replace(/'/g,"\\'")}')">
+          <span style="color:var(--text)">${n.title}</span>
+          <span style="color:var(--text3);margin-left:6px;font-size:0.75rem">${n.authorNickname||''}</span>
+        </div>
+      `).join('');
+    } catch {
+      resultsEl.innerHTML = '<div style="padding:10px 12px;font-size:0.8rem;color:var(--text3)">검색 실패</div>';
+    }
+  }
+
+  function selectNovel(id, title) {
+    document.getElementById('m-novel-id').value = id;
+    document.getElementById('m-novel-title-hidden').value = title;
+    document.getElementById('m-novel-search').value = title;
+    document.getElementById('novel-search-results').style.display = 'none';
+    const sel = document.getElementById('m-selected-novel');
+    sel.style.display = 'block';
+    sel.textContent = `선택됨: ${title}`;
+  }
+
+  async function submitRecord() {
+    const readDate = document.getElementById('m-read-date').value;
+    const note = document.getElementById('m-note').value.trim();
+    const readPage = parseInt(document.getElementById('m-read-page').value) || null;
+    const totalPage = parseInt(document.getElementById('m-total-page').value) || null;
+
+    if (!readDate) { Toast.error('독서 날짜를 입력하세요'); return; }
+
+    const body = {
+      source: currentSource,
+      readDate,
+      note: note || null,
+      readPage,
+      totalPage,
+      readingStatus: currentStatus,
+    };
+
+    if (currentSource === 'PLATFORM') {
+      const novelId = document.getElementById('m-novel-id').value;
+      if (!novelId) { Toast.error('소설을 선택하세요'); return; }
+      body.novelId = parseInt(novelId);
+    } else {
+      const title = document.getElementById('m-ext-title').value.trim();
+      const author = document.getElementById('m-ext-author').value.trim();
+      if (!title) { Toast.error('도서 제목을 입력하세요'); return; }
+      body.title = title;
+      body.authorName = author || null;
+    }
+
+    try {
+      await api.post('/calendars/me/records', body, true);
+      Toast.success('독서 기록이 저장되었습니다');
+      closeRecordModal();
+      renderCalendar();
+    } catch (e) {
+      Toast.error(e.message || '저장 실패');
+    }
+  }
+
+  /* ──────────────────────────────────
+     국립도서관 검색
+  ────────────────────────────────── */
+  let libSearchResults = [];
+
+  async function searchLibrary() {
+    const q = document.getElementById('lib-search-input').value.trim();
+    if (!q) { Toast.error('검색어를 입력하세요'); return; }
+
+    const resultsEl = document.getElementById('lib-results');
+    resultsEl.classList.add('visible');
+    resultsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">검색 중...</div>';
+
+    try {
+      const res = await api.get(`/v1/national-library/books/search?query=${encodeURIComponent(q)}&page=1&size=10`);
+      libSearchResults = res?.data?.content || res?.content || [];
+      if (!libSearchResults.length) {
+        resultsEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3)">검색 결과가 없습니다</div>';
+        return;
+      }
+      resultsEl.innerHTML = libSearchResults.map((b, i) => `
+        <div class="lib-result-item">
+          <div class="lib-result-info">
+            <div class="lib-result-title">${b.title || ''}</div>
+            <div class="lib-result-meta">${[b.author, b.publisher, b.publishYear].filter(Boolean).join(' · ')}</div>
+          </div>
+          ${Auth.isLoggedIn() ? `
+            <button class="lib-add-btn" data-idx="${i}" onclick="addToShelf(this)">
+              서재에 추가
+            </button>
+          ` : ''}
+        </div>
+      `).join('');
+    } catch (e) {
+      resultsEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3)">${e.message || '검색 실패'}</div>`;
+    }
+  }
+
+  async function addToShelf(btn) {
+    if (!Auth.isLoggedIn()) {
+      window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+      return;
+    }
+    const idx = parseInt(btn.dataset.idx);
+    const b = libSearchResults[idx];
+    if (!b) return;
+
+    // isbn 없는 책은 title+author 기반 고유 pseudo-isbn 생성
+    const title = b.title?.trim() || '제목 없음';
+    const author = b.author?.trim() || '미상';
+    const publisher = b.publisher?.trim() || '미상';
+    const publishYear = b.publishYear?.trim() || '미상';
+    // 국립도서관 isbn은 "9788901234567 9788901234560" 또는 "9788901234567(세트)" 등 20자 초과 가능
+    // 첫 번째 10~13자리 숫자열만 추출 (컬럼 length=20)
+    const rawIsbn = b.isbn?.trim() || '';
+    const cleanIsbn = (rawIsbn.match(/\d{10,13}/) || [''])[0];
+    const isbn = cleanIsbn || 'NC-' + btoa(encodeURIComponent(title + '|' + author)).replace(/[^a-zA-Z0-9]/g, '').slice(0, 17);
+
+    btn.disabled = true;
+    btn.textContent = '추가 중...';
+    try {
+      await api.post('/v1/national-library/books/shelf', {
+        isbn, title, author, publisher, publishYear, coverImageUrl: null,
+      }, true);
+      Toast.success(`"${title}"을(를) 서재에 추가했습니다`);
+      btn.textContent = '추가됨';
+    } catch (e) {
+      Toast.error(e.message || '추가 실패');
+      btn.disabled = false;
+      btn.textContent = '서재에 추가';
+    }
+  }
+
+  /* ──────────────────────────────────
+     초기화
+  ────────────────────────────────── */
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!Auth.isLoggedIn()) {
+      window.location.href = `/login.html?redirect=${encodeURIComponent(location.pathname)}`;
+      return;
+    }
+    renderCalendar();
+  });
+</script>
+</body>
+</html>

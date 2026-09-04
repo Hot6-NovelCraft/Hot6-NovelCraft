@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>멘토 신청 관리 - NovelCraft Admin</title>
+  <script src="/common.js"></script>
+  <style>
+    .admin-layout { display: flex; min-height: calc(100vh - 60px); }
+
+    /* ── 사이드바 ── */
+    .admin-sidebar {
+      width: 220px; background: var(--bg2);
+      border-right: 1px solid var(--border); flex-shrink: 0;
+      padding: 24px 0; position: sticky; top: 60px;
+      height: calc(100vh - 60px); overflow-y: auto;
+    }
+    .admin-sidebar__logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    .admin-sidebar__logo-text { font-weight: 700; font-size: 0.9rem; color: var(--warning); }
+    .admin-sidebar__role { font-size: 0.7rem; color: var(--text3); margin-top: 2px; }
+    .admin-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; color: var(--text2); text-decoration: none;
+      font-size: 0.875rem; transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+    .admin-nav-item:hover { background: var(--surface); color: var(--text); }
+    .admin-nav-item.active {
+      background: rgba(124,90,240,0.1); color: var(--primary-light);
+      border-left-color: var(--primary); font-weight: 600;
+    }
+    .admin-nav-item__icon { font-size: 1rem; width: 20px; text-align: center; }
+    .admin-sidebar__divider { height: 1px; background: var(--border); margin: 10px 20px; }
+    .admin-sidebar__section {
+      padding: 8px 20px 4px; font-size: 0.68rem; font-weight: 700;
+      color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    /* ── 메인 ── */
+    .admin-main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
+    .admin-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+    .admin-title { font-family: 'Noto Serif KR', serif; font-size: 1.5rem; font-weight: 700; }
+    .admin-subtitle { color: var(--text3); font-size: 0.85rem; margin-top: 4px; }
+
+    /* ── 통계 카드 ── */
+    .stat-cards {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 14px; margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 20px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .stat-card__icon { font-size: 1.6rem; }
+    .stat-card__label { font-size: 0.75rem; color: var(--text3); font-weight: 600; margin-bottom: 4px; }
+    .stat-card__value { font-size: 1.5rem; font-weight: 700; font-family: 'Noto Serif KR', serif; }
+    .stat-card--pending .stat-card__value  { color: #f59e0b; }
+    .stat-card--approved .stat-card__value { color: #10b981; }
+    .stat-card--rejected .stat-card__value { color: #ef4444; }
+
+    /* ── 상태 탭 ── */
+    .status-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+    .status-tab {
+      padding: 7px 18px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text3); font-size: 0.82rem; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .status-tab:hover { border-color: var(--primary); color: var(--primary-light); }
+    .status-tab.active { background: var(--primary); border-color: var(--primary); color: white; font-weight: 600; }
+
+    /* ── 테이블 ── */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .table-header {
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-header-title { font-size: 0.9rem; font-weight: 700; }
+    .table-count {
+      font-size: 0.78rem; color: var(--text3); padding: 3px 10px;
+      background: var(--bg2); border-radius: 20px; border: 1px solid var(--border);
+    }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      padding: 10px 16px; font-size: 0.72rem; font-weight: 700; color: var(--text3);
+      text-align: left; background: var(--bg2);
+      text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+    }
+    .data-table td {
+      padding: 13px 16px; font-size: 0.85rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.025); }
+
+    /* ── 상태 뱃지 ── */
+    .st-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    .st-pending  { background: rgba(245,158,11,0.15);  color: #f59e0b;  border: 1px solid rgba(245,158,11,0.3); }
+    .st-resolved { background: rgba(16,185,129,0.15);  color: #10b981;  border: 1px solid rgba(16,185,129,0.3); }
+    .st-rejected { background: rgba(239,68,68,0.15);   color: #ef4444;  border: 1px solid rgba(239,68,68,0.3); }
+    .st-approved { background: rgba(99,102,241,0.15);  color: #818cf8;  border: 1px solid rgba(99,102,241,0.3); }
+    .st-closed   { background: rgba(107,114,128,0.15); color: #9ca3af;  border: 1px solid rgba(107,114,128,0.3); }
+
+    /* ── 경력 뱃지 ── */
+    .career-badge {
+      display: inline-block; padding: 2px 9px; border-radius: 12px;
+      font-size: 0.72rem; font-weight: 600;
+      background: rgba(124,90,240,0.12); color: var(--primary-light);
+      border: 1px solid rgba(124,90,240,0.3);
+    }
+
+    /* ── 액션 버튼 ── */
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .act-btn {
+      padding: 5px 12px; border-radius: 6px; font-size: 0.78rem;
+      font-family: inherit; cursor: pointer; font-weight: 600;
+      transition: all 0.2s; border: 1px solid;
+    }
+    .act-btn--approve { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.4); color: #10b981; }
+    .act-btn--approve:hover { background: #10b981; color: white; }
+    .act-btn--reject  { background: rgba(239,68,68,0.1);  border-color: rgba(239,68,68,0.35);  color: #ef4444; }
+    .act-btn--reject:hover  { background: #ef4444;  color: white; }
+    .act-btn--detail  { background: rgba(124,90,240,0.1); border-color: rgba(124,90,240,0.35); color: var(--primary-light); }
+    .act-btn--detail:hover  { background: var(--primary); color: white; }
+
+    /* ── 페이지네이션 ── */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 20px 0; }
+    .page-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
+    .page-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+    .page-btn:hover:not(.active):not(:disabled) { border-color: var(--primary); color: var(--primary-light); }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── 상세 모달 ── */
+    .detail-row { margin-bottom: 14px; }
+    .detail-label { font-size: 0.78rem; color: var(--text3); font-weight: 600; margin-bottom: 4px; }
+    .detail-value { font-size: 0.9rem; color: var(--text); }
+    .detail-content {
+      padding: 12px 14px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.875rem; line-height: 1.6; color: var(--text2);
+    }
+    .genre-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .genre-tag {
+      padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;
+      background: rgba(124,90,240,0.12); color: var(--primary-light);
+      border: 1px solid rgba(124,90,240,0.3);
+    }
+    .reject-section {
+      padding: 14px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 8px; margin-top: 16px;
+    }
+    .reject-section__title { font-size: 0.85rem; font-weight: 700; margin-bottom: 10px; }
+
+    /* ── 거절 모달 ── */
+    #modal-reject .nc-modal__box { max-width: 460px; }
+
+    @media (max-width: 768px) {
+      .admin-sidebar { display: none; }
+      .admin-main { padding: 16px; }
+      .stat-cards { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="admin-layout">
+  <!-- 사이드바 -->
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar__logo">
+      <div class="admin-sidebar__logo-text">⚙ 관리자</div>
+      <div class="admin-sidebar__role" id="sidebar-role-label">ADMIN</div>
+    </div>
+    <div class="admin-sidebar__section">메뉴</div>
+    <a href="/admin.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">📊</span> 대시보드
+    </a>
+    <a href="/admin-reports.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🚨</span> 신고 관리
+    </a>
+    <a href="/admin-mentors.html" class="admin-nav-item active">
+      <span class="admin-nav-item__icon">🎓</span> 멘토 신청
+    </a>
+    <a href="/admin-exchanges.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">💸</span> 환전 관리
+    </a>
+    <div class="admin-sidebar__divider"></div>
+    <a href="/admin-users.html" class="admin-nav-item" id="super-nav-users" style="display:none">
+      <span class="admin-nav-item__icon">👥</span> 사용자 관리
+    </a>
+    <div class="admin-sidebar__divider"></div>
+    <a href="/index.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🏠</span> 메인으로
+    </a>
+  </aside>
+
+  <!-- 메인 -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div>
+        <div class="admin-title">🎓 멘토 신청 관리</div>
+        <div class="admin-subtitle">멘토 등록 신청을 검토하고 승인/거절하세요</div>
+      </div>
+      <button class="nc-btn nc-btn--outline nc-btn--sm" onclick="loadStats();loadMentors(0)">🔄 새로고침</button>
+    </div>
+
+    <!-- 통계 카드 -->
+    <div class="stat-cards">
+      <div class="stat-card stat-card--pending">
+        <div class="stat-card__icon">⏳</div>
+        <div>
+          <div class="stat-card__label">대기 중</div>
+          <div class="stat-card__value" id="stat-pending">-</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card--approved">
+        <div class="stat-card__icon">✅</div>
+        <div>
+          <div class="stat-card__label">승인됨</div>
+          <div class="stat-card__value" id="stat-approved">-</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card--rejected">
+        <div class="stat-card__icon">❌</div>
+        <div>
+          <div class="stat-card__label">거절됨</div>
+          <div class="stat-card__value" id="stat-rejected">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 안내 -->
+    <div style="padding:10px 16px;border-radius:8px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);
+                font-size:0.82rem;color:var(--text3);margin-bottom:16px">
+      ⚠️ 숙련(PROFICIENT) 등급 심사 대기 중인 멘토만 표시됩니다
+    </div>
+
+    <!-- 테이블 -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-header-title">멘토 신청 목록</div>
+        <span class="table-count" id="total-count">0건</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>신청자</th>
+            <th>경력</th>
+            <th>수상·출간 경력</th>
+            <th>상태</th>
+            <th>멘토 ID</th>
+            <th>처리</th>
+          </tr>
+        </thead>
+        <tbody id="mentors-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:40px">
+            <div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </main>
+</div>
+
+<!-- 상세 모달 -->
+<div class="nc-modal" id="modal-detail">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-detail')"></div>
+  <div class="nc-modal__box" style="max-width:580px">
+    <button class="nc-modal__close" onclick="Modal.close('modal-detail')">✕</button>
+    <div class="nc-modal__title">🎓 멘토 신청 상세</div>
+    <div id="detail-content">
+      <div class="nc-loading"><div class="nc-spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 거절 사유 입력 모달 -->
+<div class="nc-modal" id="modal-reject">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-reject')"></div>
+  <div class="nc-modal__box">
+    <button class="nc-modal__close" onclick="Modal.close('modal-reject')">✕</button>
+    <div class="nc-modal__title">❌ 멘토 신청 거절</div>
+    <input type="hidden" id="reject-mentor-id">
+    <div class="nc-form-group">
+      <label class="nc-label">거절 사유 <span style="color:var(--text3)">(선택)</span></label>
+      <textarea class="nc-textarea" id="reject-reason" placeholder="거절 사유를 입력하세요 (선택 사항)"
+                style="min-height:100px"></textarea>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="nc-btn nc-btn--outline nc-btn--full" onclick="Modal.close('modal-reject')">취소</button>
+      <button class="nc-btn nc-btn--danger nc-btn--full" id="reject-confirm-btn" onclick="confirmReject()">거절 확정</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentStatusFilter = 'PENDING';
+  let currentPage = 0;
+  let totalPages = 0;
+  let mentorListCache = [];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = Auth.getUser();
+    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
+      Toast.error('관리자 권한이 필요합니다');
+      setTimeout(() => window.location.href = '/index.html', 1000);
+      return;
+    }
+    const roleLabel = document.getElementById('sidebar-role-label');
+    if (roleLabel) roleLabel.textContent = user.role;
+    if (user.role === 'SUPER_ADMIN') {
+      document.getElementById('super-nav-users').style.display = 'flex';
+    }
+    loadStats();
+    loadMentors(0);
+  });
+
+  async function loadStats() {
+    try {
+      const list = await api.get('/admin/mentors/pending', true);
+      const count = Array.isArray(list) ? list.length : 0;
+      setStatCard('pending', count);
+      setStatCard('approved', '-');
+      setStatCard('rejected', '-');
+    } catch {
+      setStatCard('pending', '-');
+    }
+  }
+
+  function setStatCard(key, val) {
+    const el = document.getElementById(`stat-${key}`);
+    if (el) el.textContent = typeof val === 'number' ? val.toLocaleString() : val;
+  }
+
+  function setStatusFilter(status) {
+    currentStatusFilter = status;
+    document.querySelectorAll('.status-tab').forEach(t => t.classList.toggle('active', t.dataset.status === status));
+    loadMentors(0);
+  }
+
+  async function loadMentors(page) {
+    currentPage = page;
+    const tbody = document.getElementById('mentors-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px"><div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div></td></tr>';
+
+    try {
+      const res = await api.get('/admin/mentors/pending', true);
+      const list = Array.isArray(res) ? res : [];
+      mentorListCache = list;
+      document.getElementById('total-count').textContent = `${list.length}건`;
+
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="nc-empty">
+          <div class="nc-empty__icon">🎓</div>
+          <div class="nc-empty__text">심사 대기 중인 멘토 신청이 없습니다</div>
+        </div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(m => `
+        <tr>
+          <td>
+            <div style="font-weight:600">${escHtml(m.nickname || '-')}</div>
+            <div style="font-size:0.75rem;color:var(--text3)">${escHtml(m.email || '')}</div>
+          </td>
+          <td><span class="career-badge">${careerLabel(m.careerLevel)}</span></td>
+          <td style="font-size:0.78rem;color:var(--text2);max-width:200px">
+            <span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px"
+                  title="${escHtml(m.awardsCareer || '')}">
+              ${escHtml(m.awardsCareer ? m.awardsCareer.slice(0, 40) + (m.awardsCareer.length > 40 ? '…' : '') : '-')}
+            </span>
+          </td>
+          <td>${stBadge(m.status || 'PENDING')}</td>
+          <td style="color:var(--text3);font-size:0.78rem;white-space:nowrap">#${m.mentorId}</td>
+          <td>
+            <div class="action-btns">
+              <button class="act-btn act-btn--detail" onclick="openDetail(${m.mentorId})">상세</button>
+              <button class="act-btn act-btn--approve" onclick="approveMentor(${m.mentorId}, this)">승인</button>
+              <button class="act-btn act-btn--reject" onclick="openRejectModal(${m.mentorId})">거절</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--error)">
+        로드 실패: ${escHtml(e.message)}</td></tr>`;
+    }
+  }
+
+  async function approveMentor(mentorId, btn) {
+    if (!confirm('이 멘토 신청을 승인하시겠습니까?')) return;
+    const orig = btn.textContent; btn.disabled = true; btn.textContent = '처리 중...';
+    try {
+      await api.patch(`/admin/mentors/${mentorId}/approve`, {}, true);
+      Toast.success('멘토 신청이 승인되었습니다');
+      loadStats();
+      loadMentors(currentPage);
+    } catch (e) {
+      Toast.error(e.message || '승인 실패');
+      btn.disabled = false; btn.textContent = orig;
+    }
+  }
+
+  function openRejectModal(mentorId) {
+    document.getElementById('reject-mentor-id').value = mentorId;
+    document.getElementById('reject-reason').value = '';
+    Modal.open('modal-reject');
+    setTimeout(() => document.getElementById('reject-reason').focus(), 200);
+  }
+
+  async function confirmReject() {
+    const mentorId = document.getElementById('reject-mentor-id').value;
+    const reason = document.getElementById('reject-reason').value.trim();
+    const btn = document.getElementById('reject-confirm-btn');
+    btn.disabled = true; btn.textContent = '처리 중...';
+    try {
+      const body = reason ? { rejectReason: reason } : {};
+      await api.patch(`/admin/mentors/${mentorId}/reject`, body, true);
+      Toast.success('멘토 신청이 거절되었습니다');
+      Modal.close('modal-reject');
+      loadStats();
+      loadMentors(currentPage);
+    } catch (e) {
+      Toast.error(e.message || '거절 실패');
+    } finally {
+      btn.disabled = false; btn.textContent = '거절 확정';
+    }
+  }
+
+  function openDetail(mentorId) {
+    const m = mentorListCache.find(x => x.mentorId === mentorId);
+    if (!m) { Toast.error('데이터를 찾을 수 없습니다'); return; }
+    renderDetailContent(m);
+    Modal.open('modal-detail');
+  }
+
+  function renderDetailContent(m) {
+    document.getElementById('detail-content').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div class="detail-row">
+          <div class="detail-label">신청자</div>
+          <div class="detail-value" style="font-weight:600">${escHtml(m.nickname || '-')}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">상태</div>
+          <div class="detail-value">${stBadge(m.status || 'PENDING')}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">이메일</div>
+          <div class="detail-value" style="color:var(--text2)">${escHtml(m.email || '-')}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">경력 등급</div>
+          <div class="detail-value"><span class="career-badge">${careerLabel(m.careerLevel)}</span></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">멘토 ID</div>
+          <div class="detail-value" style="color:var(--text3)">#${m.mentorId}</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">유저 ID</div>
+          <div class="detail-value" style="color:var(--text3)">#${m.userId}</div>
+        </div>
+      </div>
+      ${m.awardsCareer ? `
+      <div class="detail-row">
+        <div class="detail-label">수상·출간 경력</div>
+        <div class="detail-content">${escHtml(m.awardsCareer)}</div>
+      </div>` : ''}
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="nc-btn nc-btn--full"
+                style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.4);color:#10b981"
+                onclick="approveMentorFromModal(${m.mentorId})">✅ 승인</button>
+        <button class="nc-btn nc-btn--full nc-btn--outline"
+                onclick="Modal.close('modal-detail');openRejectModal(${m.mentorId})">❌ 거절</button>
+      </div>
+    `;
+  }
+
+  async function approveMentorFromModal(mentorId) {
+    if (!confirm('이 멘토 신청을 승인하시겠습니까?')) return;
+    try {
+      await api.patch(`/admin/mentors/${mentorId}/approve`, {}, true);
+      Toast.success('멘토 신청이 승인되었습니다');
+      Modal.close('modal-detail');
+      loadStats();
+      loadMentors(currentPage);
+    } catch (e) {
+      Toast.error(e.message || '승인 실패');
+    }
+  }
+
+  function renderPagination() {
+    const el = document.getElementById('pagination');
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    let html = `<button class="page-btn" onclick="loadMentors(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>‹</button>`;
+    const start = Math.max(0, currentPage - 2);
+    const end = Math.min(totalPages, start + 5);
+    for (let i = start; i < end; i++) {
+      html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadMentors(${i})">${i + 1}</button>`;
+    }
+    html += `<button class="page-btn" onclick="loadMentors(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>›</button>`;
+    el.innerHTML = html;
+  }
+
+  /* ── 유틸 ── */
+  const CAREER_MAP = { INTRODUCTION: '입문', ELEMENTARY: '초보', INTERMEDIATE: '중급', PROFICIENT: '숙련' };
+  function careerLabel(l) { return CAREER_MAP[l] || l || '-'; }
+
+  const ST = {
+    PENDING:  { label: '대기',  cls: 'st-pending'  },
+    APPROVED: { label: '승인',  cls: 'st-approved' },
+    REJECTED: { label: '거절',  cls: 'st-rejected' },
+  };
+  function stBadge(status) {
+    const s = ST[status] || { label: status || '-', cls: 'st-closed' };
+    return `<span class="st-badge ${s.cls}">${s.label}</span>`;
+  }
+  function stLabel(status) { return ST[status]?.label || status; }
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

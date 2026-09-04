@@ -1,0 +1,49 @@
+
+  name: Deploy to AWS
+
+  # main 브랜치에 push될 때만 실행
+  on:
+    push:
+      branches: [main]
+
+  # OIDC 토큰 발급을 위해 반드시 필요한 권한
+  permissions:
+    id-token: write
+    contents: read
+
+  jobs:
+    build-and-deploy:
+      runs-on: ubuntu-latest
+      steps:
+        - name: 소스 체크아웃
+          uses: actions/checkout@v4
+
+        - name: Gradle Build
+          run: ./gradlew build -x test
+
+        # Access Key 없이 임시 자격 증명을 발급받는 핵심 단계
+        - name: Configure AWS Credentials via OIDC
+          uses: aws-actions/configure-aws-credentials@v4
+          with:
+            role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+            aws-region: ${{ secrets.AWS_REGION }}
+
+        - name: ECR 로그인
+          run: |
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+            docker login --username AWS --password-stdin 123865824090.dkr.ecr.ap-northeast-2.amazonaws.com
+
+        - name: Docker 이미지 빌드 & 푸시
+          env:
+            ECR_REGISTRY: 123865824090.dkr.ecr.ap-northeast-2.amazonaws.com
+          run: |
+            docker build -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest .
+            docker push $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest
+
+        # SSH 키 없이 SSM으로 EC2에 명령을 전달해 Pull & Run
+        - name: SSM으로 EC2 배포
+          run: |
+            aws ssm send-command \
+              --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+              --document-name "AWS-RunShellScript" \
+              --parameters 'commands=["cd /home/ubuntu && docker compose pull && docker compose up -d"]'

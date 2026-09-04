@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovelCraft - 관리자 회원가입</title>
+  <script src="/common.js"></script>
+  <style>
+    body { display: flex; align-items: flex-start; justify-content: center; min-height: 100vh; background: var(--bg); padding: 40px 20px; }
+    #nc-nav { display: none; }
+
+    .signup-wrap { width: 100%; max-width: 480px; animation: fadeUp 0.4s ease; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+
+    .signup-logo { text-align: center; margin-bottom: 32px; }
+    .signup-logo a {
+      font-family: 'Noto Serif KR', serif; font-size: 1.8rem; font-weight: 900;
+      color: var(--primary-light); text-decoration: none;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    .admin-badge {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 8px 18px; border-radius: 20px; margin: 0 auto 28px;
+      width: fit-content;
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+      color: #f59e0b; font-size: 0.82rem; font-weight: 700;
+    }
+
+    .signup-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 18px; padding: 36px; box-shadow: 0 8px 48px rgba(0,0,0,0.4);
+    }
+    .signup-title { font-family: 'Noto Serif KR', serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+    .signup-subtitle { color: var(--text3); font-size: 0.85rem; margin-bottom: 28px; }
+
+    .verify-group { display: flex; gap: 8px; }
+    .verify-group input { flex: 1; }
+    .verify-btn {
+      padding: 10px 16px; border-radius: var(--radius-sm);
+      border: 1px solid var(--primary); background: transparent; color: var(--primary-light);
+      font-size: .85rem; cursor: pointer; white-space: nowrap; font-family: inherit; transition: all .2s;
+    }
+    .verify-btn:hover { background: var(--primary); color: white; }
+    .verify-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .check-result { margin-top: 4px; font-size: .75rem; display: flex; align-items: center; gap: 4px; }
+    .check-ok  { color: var(--success); }
+    .check-err { color: var(--error); }
+
+    .info-box {
+      padding: 14px 16px; border-radius: 10px; margin-bottom: 24px;
+      background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);
+      font-size: 0.82rem; color: var(--text2); line-height: 1.7;
+    }
+    .info-box strong { color: #f59e0b; }
+
+    .signup-footer { text-align: center; margin-top: 20px; color: var(--text3); font-size: .85rem; }
+    .signup-footer a { color: var(--primary-light); text-decoration: none; }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="signup-wrap">
+  <div class="signup-logo">
+    <a href="/index.html"><span class="logo-icon" style="color:var(--accent)">✦</span> NovelCraft</a>
+  </div>
+
+  <div class="admin-badge">⚙ 관리자 계정 신청</div>
+
+  <div class="signup-card">
+    <div class="signup-title">관리자 회원가입</div>
+    <div class="signup-subtitle">신청 후 최고 관리자 승인이 완료되면 이용하실 수 있습니다</div>
+
+    <div class="info-box">
+      <strong>안내</strong><br>
+      관리자 계정은 가입 후 <strong>SUPER_ADMIN 승인</strong>이 필요합니다.<br>
+      승인 전까지 로그인은 가능하나 관리자 기능은 제한됩니다.
+    </div>
+
+    <!-- 이메일 -->
+    <div class="nc-form-group">
+      <label class="nc-label">이메일 <span style="color:var(--error)">*</span></label>
+      <div style="display:flex;gap:8px">
+        <input type="email" id="s-email" class="nc-input" placeholder="이메일 입력" autocomplete="email">
+        <button class="verify-btn" id="email-check-btn" onclick="checkEmail()">중복확인</button>
+      </div>
+      <div class="check-result" id="email-result"></div>
+    </div>
+
+    <!-- 비밀번호 -->
+    <div class="nc-form-group">
+      <label class="nc-label">비밀번호 <span style="color:var(--error)">*</span></label>
+      <input type="password" id="s-pw" class="nc-input" placeholder="영문+숫자 8자 이상" autocomplete="new-password">
+      <div class="nc-input-hint">영문, 숫자 조합 8자 이상</div>
+    </div>
+    <div class="nc-form-group">
+      <label class="nc-label">비밀번호 확인 <span style="color:var(--error)">*</span></label>
+      <input type="password" id="s-pw2" class="nc-input" placeholder="비밀번호 재입력" autocomplete="new-password">
+      <div class="check-result" id="pw-result"></div>
+    </div>
+
+    <!-- 휴대폰 인증 -->
+    <div class="nc-form-group">
+      <label class="nc-label">휴대폰 번호 <span style="color:var(--error)">*</span></label>
+      <div class="verify-group">
+        <input type="tel" id="s-phone" class="nc-input" placeholder="010-0000-0000">
+        <button class="verify-btn" id="sms-btn" onclick="sendSms()">인증번호 발송</button>
+      </div>
+    </div>
+    <div class="nc-form-group" id="verify-code-group" style="display:none">
+      <label class="nc-label">인증번호</label>
+      <div class="verify-group">
+        <input type="text" id="s-code" class="nc-input" placeholder="인증번호 6자리" maxlength="6">
+        <button class="verify-btn" onclick="verifyPhone()">확인</button>
+      </div>
+      <div class="check-result" id="phone-result"></div>
+    </div>
+
+    <button class="nc-btn nc-btn--primary nc-btn--full" id="submit-btn" onclick="submitAdminSignup()" style="margin-top:8px">
+      관리자 계정 신청
+    </button>
+  </div>
+
+  <div class="signup-footer">
+    이미 계정이 있으신가요? <a href="/login.html">로그인</a>
+  </div>
+</div>
+
+<script>
+  if (Auth.isLoggedIn()) window.location.href = '/index.html';
+
+  let emailOk       = false;
+  let phoneVerified = false;
+  let tempToken     = null;
+
+  /* ── 이메일 중복 확인 ── */
+  async function checkEmail() {
+    const email = document.getElementById('s-email').value.trim();
+    const res   = document.getElementById('email-result');
+    const btn   = document.getElementById('email-check-btn');
+    if (!email) { res.innerHTML = '<span class="check-err">이메일을 입력하세요</span>'; return; }
+    btn.disabled = true; btn.textContent = '확인 중...';
+    try {
+      await api.get(`/auth/email/check?email=${encodeURIComponent(email)}`);
+      res.innerHTML = '<span class="check-ok">✓ 사용 가능한 이메일입니다</span>';
+      emailOk = true;
+    } catch (e) {
+      res.innerHTML = `<span class="check-err">✕ ${e.message || '이미 사용 중인 이메일입니다'}</span>`;
+      emailOk = false;
+    } finally {
+      btn.disabled = false; btn.textContent = '중복확인';
+    }
+  }
+
+  /* ── SMS 인증 ── */
+  async function sendSms() {
+    const phone = document.getElementById('s-phone').value.replace(/-/g, '');
+    if (!/^010\d{7,8}$/.test(phone)) { Toast.error('올바른 휴대폰 번호를 입력하세요 (010으로 시작)'); return; }
+    const btn = document.getElementById('sms-btn');
+    btn.disabled = true; btn.textContent = '발송 중...';
+    try {
+      await api.post('/auth/phone/send', { phoneNo: phone });
+      document.getElementById('verify-code-group').style.display = 'block';
+      document.getElementById('s-code').focus();
+      Toast.success('인증번호가 발송되었습니다');
+      btn.textContent = '재발송';
+    } catch (e) {
+      Toast.error(e.message || '발송 실패');
+      btn.textContent = '인증번호 발송';
+    } finally { btn.disabled = false; }
+  }
+
+  async function verifyPhone() {
+    const phone = document.getElementById('s-phone').value.replace(/-/g, '');
+    const code  = document.getElementById('s-code').value.trim();
+    const res   = document.getElementById('phone-result');
+    if (!code || code.length !== 6) { res.innerHTML = '<span class="check-err">6자리 인증번호를 입력하세요</span>'; return; }
+    try {
+      const r  = await api.post('/auth/phone/verify', { phoneNo: phone, verificationCode: code });
+      tempToken = r;
+      res.innerHTML = '<span class="check-ok">✓ 인증 완료</span>';
+      phoneVerified = true;
+    } catch (e) {
+      res.innerHTML = `<span class="check-err">✕ ${e.message || '인증 실패'}</span>`;
+      phoneVerified = false;
+    }
+  }
+
+  /* ── 비밀번호 실시간 확인 ── */
+  document.getElementById('s-pw2').addEventListener('input', function () {
+    const pw  = document.getElementById('s-pw').value;
+    const res = document.getElementById('pw-result');
+    if (!this.value) { res.innerHTML = ''; return; }
+    res.innerHTML = pw === this.value
+      ? '<span class="check-ok">✓ 비밀번호가 일치합니다</span>'
+      : '<span class="check-err">✕ 비밀번호가 일치하지 않습니다</span>';
+  });
+
+  /* ── 관리자 가입 제출 ── */
+  async function submitAdminSignup() {
+    const email = document.getElementById('s-email').value.trim();
+    const pw    = document.getElementById('s-pw').value;
+    const pw2   = document.getElementById('s-pw2').value;
+    const phone = document.getElementById('s-phone').value.replace(/-/g, '');
+
+    if (!email || !pw || !phone) { Toast.error('필수 항목을 모두 입력하세요'); return; }
+    if (!emailOk)       { Toast.error('이메일 중복 확인을 해주세요'); return; }
+    if (pw !== pw2)     { Toast.error('비밀번호가 일치하지 않습니다'); return; }
+    if (pw.length < 8)  { Toast.error('비밀번호는 8자 이상이어야 합니다'); return; }
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(pw)) { Toast.error('비밀번호는 영문자와 숫자를 포함해야 합니다'); return; }
+    if (!phoneVerified) { Toast.error('휴대폰 인증을 완료해주세요'); return; }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = '신청 중...';
+    try {
+      await api.post('/auth/signup/admin', {
+        email,
+        password: pw,
+        phoneNo:  phone,
+        tempToken,
+      });
+      Toast.success('관리자 계정 신청이 완료되었습니다');
+      setTimeout(() => window.location.href = '/login.html', 1500);
+    } catch (e) {
+      Toast.error(e.message || '가입 실패');
+      btn.disabled = false; btn.textContent = '관리자 계정 신청';
+    }
+  }
+</script>
+</body>
+</html>

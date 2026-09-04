@@ -1,0 +1,58 @@
+startDelaySeconds: 0
+ssl: false
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+rules:
+  # 브로커 기본 메트릭
+  - pattern: "kafka.server<type=(.+), name=(.+)><>Value"
+    name: kafka_server_$1_$2
+    type: GAUGE
+
+  # 브로커 확장 메트릭 (topic/partition 등 추가 key property)
+  - pattern: "kafka.server<type=(.+), name=(.+), (.+)=(.+)><>Value"
+    name: kafka_server_$1_$2
+    labels:
+      "$3": "$4"
+    type: GAUGE
+
+  # 네트워크 메트릭
+  - pattern: "kafka.network<type=(.+), name=(.+)><>Value"
+    name: kafka_network_$1_$2
+    type: GAUGE
+
+  # 로그 메트릭
+  - pattern: "kafka.log<type=(.+), name=(.+)><>Value"
+    name: kafka_log_$1_$2
+    type: GAUGE
+
+  # 컨트롤러 메트릭
+  - pattern: "kafka.controller<type=(.+), name=(.+)><>Value"
+    name: kafka_controller_$1_$2
+    type: GAUGE
+
+  # 프로듀서/컨슈머 메트릭
+  - pattern: "kafka.producer<type=(.+), name=(.+)><>Value"
+    name: kafka_producer_$1_$2
+    type: GAUGE
+
+  - pattern: "kafka.consumer<type=(.+), name=(.+)><>Value"
+    name: kafka_consumer_$1_$2
+    type: GAUGE
+
+  # Count 타입 메트릭
+  - pattern: "kafka.server<type=(.+), name=(.+)><>Count"
+    name: kafka_server_$1_$2_count
+    type: COUNTER
+
+  - pattern: "kafka.network<type=(.+), name=(.+)><>Count"
+    name: kafka_network_$1_$2_count
+    type: COUNTER
+
+  # OneMinuteRate (초당 처리량)
+  - pattern: "kafka.server<type=(.+), name=(.+)><>OneMinuteRate"
+    name: kafka_server_$1_$2_one_minute_rate
+    type: GAUGE
+
+  - pattern: "kafka.network<type=(.+), name=(.+)><>OneMinuteRate"
+    name: kafka_network_$1_$2_one_minute_rate
+    type: GAUGE

@@ -1,7 +1,7 @@
 # .coderabbit.yaml
 language: "ko"              # 리뷰 언어 설정 (한국어)
 reviews:
-  profile: "assertive"      # chill | assertive (피드백 강도)
+  profile: "chill"      # chill | assertive (피드백 강도)
   request_changes_workflow: false
   high_level_summary: true  # PR 요약 활성화
   poem: false               # 리뷰 끝 시 비활성화
@@ -18,3 +18,9 @@ instructions: |
   - Spring Boot 코드 리뷰 시 트랜잭션 경계를 반드시 확인하세요
   - 결제 관련 코드에서는 멱등성 처리 여부를 최우선으로 검토하세요
   - @Transactional 어노테이션 남용 여부를 체크하세요
+  - BaseResponse와 PageResponse를 사용하여 응답처리를 하였는지 검토해주세요
+  - entity는 서로 간의 연관관계를 가지지 않는지 확인하세요
+  - pk키를 따로 컬럼으로 가져가서 QueryDSL Join으로 이용하였는지 확인해주세요
+  - 생성자 관련하여 정적 팩토리 패턴으로 진행이 되었는지 확인해주세요
+  - 모든 DTO클래스는 Record클래스로 진행되었는지 확인해주세요
+  - 우리의 아키텍쳐 3Layer 이고, Monolithic으로 구성되어 있습니다. 

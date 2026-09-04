@@ -1,0 +1,12 @@
+# 로컬 개발 환경 - standalone Redis (포트 6379)
+# 배포 환경(Sentinel)은 application-prod.yml 또는 환경변수로 관리
+spring:
+  data:
+    redis:
+      url: redis://localhost:6379   # url 설정이 sentinel/host 보다 우선 적용됨
+      sentinel:
+        master: ""
+        nodes: ""
+
+redisson:
+  mode: standalone

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>신고 관리 - NovelCraft Admin</title>
+  <script src="/common.js"></script>
+  <style>
+    .admin-layout { display: flex; min-height: calc(100vh - 60px); }
+
+    /* ── 사이드바 ── */
+    .admin-sidebar {
+      width: 220px; background: var(--bg2);
+      border-right: 1px solid var(--border); flex-shrink: 0;
+      padding: 24px 0; position: sticky; top: 60px;
+      height: calc(100vh - 60px); overflow-y: auto;
+    }
+    .admin-sidebar__logo { padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    .admin-sidebar__logo-text { font-weight: 700; font-size: 0.9rem; color: var(--warning); }
+    .admin-sidebar__role { font-size: 0.7rem; color: var(--text3); margin-top: 2px; }
+    .admin-nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; color: var(--text2); text-decoration: none;
+      font-size: 0.875rem; transition: all 0.2s; border-left: 3px solid transparent;
+    }
+    .admin-nav-item:hover { background: var(--surface); color: var(--text); }
+    .admin-nav-item.active { background: rgba(124,90,240,0.1); color: var(--primary-light); border-left-color: var(--primary); font-weight: 600; }
+    .admin-nav-item__icon { font-size: 1rem; width: 20px; text-align: center; }
+    .admin-sidebar__divider { height: 1px; background: var(--border); margin: 10px 20px; }
+    .admin-sidebar__section { padding: 8px 20px 4px; font-size: 0.68rem; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* ── 메인 ── */
+    .admin-main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
+    .admin-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+    .admin-title { font-family: 'Noto Serif KR', serif; font-size: 1.5rem; font-weight: 700; }
+    .admin-subtitle { color: var(--text3); font-size: 0.85rem; margin-top: 4px; }
+
+    /* ── 상태 탭 ── */
+    .status-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+    .status-tab {
+      padding: 7px 18px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text3); font-size: 0.82rem; cursor: pointer;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .status-tab:hover { border-color: var(--primary); color: var(--primary-light); }
+    .status-tab.active { background: var(--primary); border-color: var(--primary); color: white; font-weight: 600; }
+
+    /* ── 필터 바 ── */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      margin-bottom: 20px; padding: 16px 18px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    }
+    .filter-bar label { font-size: 0.8rem; color: var(--text3); font-weight: 600; }
+
+    /* ── 테이블 ── */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .table-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .table-header-title { font-size: 0.9rem; font-weight: 700; }
+    .table-count { font-size: 0.78rem; color: var(--text3); padding: 3px 10px; background: var(--bg2); border-radius: 20px; border: 1px solid var(--border); }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { padding: 10px 16px; font-size: 0.72rem; font-weight: 700; color: var(--text3); text-align: left; background: var(--bg2); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+    .data-table td { padding: 13px 16px; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.025); }
+
+    /* ── 상태 뱃지 ── */
+    .st-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+    .st-register   { background: rgba(245,158,11,0.15);  color: #f59e0b;  border: 1px solid rgba(245,158,11,0.3); }
+    .st-completion { background: rgba(16,185,129,0.15);  color: #10b981;  border: 1px solid rgba(16,185,129,0.3); }
+
+    /* ── 처리 버튼 ── */
+    .action-btns { display: flex; gap: 6px; }
+    .act-btn {
+      padding: 5px 12px; border-radius: 6px; font-size: 0.78rem;
+      font-family: inherit; cursor: pointer; font-weight: 600;
+      transition: all 0.2s; border: 1px solid;
+    }
+    .act-btn--process { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.4); color: #f59e0b; }
+    .act-btn--process:hover { background: #f59e0b; color: #000; }
+    .act-btn--detail  { background: rgba(124,90,240,0.1); border-color: rgba(124,90,240,0.35); color: var(--primary-light); }
+    .act-btn--detail:hover  { background: var(--primary); color: white; }
+
+    /* ── 페이지네이션 ── */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 20px 0; }
+    .page-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
+    .page-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+    .page-btn:hover:not(.active):not(:disabled) { border-color: var(--primary); color: var(--primary-light); }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── 모달 공통 ── */
+    .detail-row { margin-bottom: 14px; }
+    .detail-label { font-size: 0.78rem; color: var(--text3); font-weight: 600; margin-bottom: 4px; }
+    .detail-value { font-size: 0.9rem; color: var(--text); }
+    .detail-content-box {
+      padding: 12px 14px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.875rem; line-height: 1.6; color: var(--text2);
+      white-space: pre-wrap; word-break: break-all;
+    }
+
+    /* ── 처리 폼 ── */
+    .process-form { padding: 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-top: 16px; }
+    .process-form__title { font-size: 0.85rem; font-weight: 700; margin-bottom: 14px; color: var(--warning); }
+    .form-row { margin-bottom: 14px; }
+    .form-label { font-size: 0.78rem; color: var(--text3); font-weight: 600; margin-bottom: 6px; }
+    .result-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+    .result-option {
+      padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: transparent; color: var(--text2); font-family: inherit;
+      font-size: 0.82rem; cursor: pointer; transition: all 0.2s; text-align: left;
+    }
+    .result-option:hover { border-color: var(--primary); color: var(--primary-light); }
+    .result-option.selected { border-color: var(--warning); background: rgba(245,158,11,0.1); color: #f59e0b; font-weight: 600; }
+    .result-option__icon { font-size: 1.1rem; display: block; margin-bottom: 2px; }
+    .result-option__label { font-size: 0.82rem; }
+    .result-option__desc { font-size: 0.7rem; color: var(--text3); margin-top: 1px; }
+    .process-submit-btn {
+      width: 100%; padding: 11px; border-radius: 8px;
+      background: var(--warning); border: none; color: #000;
+      font-family: inherit; font-size: 0.9rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; margin-top: 4px;
+    }
+    .process-submit-btn:hover { opacity: 0.85; }
+    .process-submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    @media (max-width: 768px) {
+      .admin-sidebar { display: none; }
+      .admin-main { padding: 16px; }
+      .data-table th:nth-child(4), .data-table td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+<nav id="nc-nav"></nav>
+
+<div class="admin-layout">
+  <!-- 사이드바 -->
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar__logo">
+      <div class="admin-sidebar__logo-text">⚙ 관리자</div>
+      <div class="admin-sidebar__role" id="sidebar-role-label">ADMIN</div>
+    </div>
+    <div class="admin-sidebar__section">메뉴</div>
+    <a href="/admin.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">📊</span> 대시보드
+    </a>
+    <a href="/admin-reports.html" class="admin-nav-item active">
+      <span class="admin-nav-item__icon">🚨</span> 신고 관리
+    </a>
+    <a href="/admin-mentors.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🎓</span> 멘토 신청
+    </a>
+    <a href="/admin-exchanges.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">💸</span> 환전 관리
+    </a>
+    <div class="admin-sidebar__divider"></div>
+    <a href="/admin-users.html" class="admin-nav-item" id="super-nav-users" style="display:none">
+      <span class="admin-nav-item__icon">👥</span> 사용자 관리
+    </a>
+    <div class="admin-sidebar__divider"></div>
+    <a href="/index.html" class="admin-nav-item">
+      <span class="admin-nav-item__icon">🏠</span> 메인으로
+    </a>
+  </aside>
+
+  <!-- 메인 -->
+  <main class="admin-main">
+    <div class="admin-header">
+      <div>
+        <div class="admin-title">🚨 신고 관리</div>
+        <div class="admin-subtitle">신고된 콘텐츠를 검토하고 처리 결과를 부여하세요</div>
+      </div>
+    </div>
+
+    <!-- 상태 탭 -->
+    <div class="status-tabs">
+      <button class="status-tab active" data-status="" onclick="setStatusFilter('')">전체</button>
+      <button class="status-tab" data-status="REGISTER" onclick="setStatusFilter('REGISTER')">⏳ 접수중</button>
+      <button class="status-tab" data-status="COMPLETION" onclick="setStatusFilter('COMPLETION')">✅ 처리완료</button>
+    </div>
+
+    <!-- 필터 바 -->
+    <div class="filter-bar">
+      <label>신고 유형</label>
+      <select class="nc-select" id="filter-type" onchange="loadReports(0)" style="width:160px">
+        <option value="">전체</option>
+        <option value="COMMENTS">댓글</option>
+        <option value="USERS">유저</option>
+      </select>
+      <div style="flex:1"></div>
+      <button class="nc-btn nc-btn--outline nc-btn--sm" onclick="loadReports(0)">🔄 새로고침</button>
+    </div>
+
+    <!-- 테이블 -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div class="table-header-title">신고 목록</div>
+        <span class="table-count" id="total-count">0건</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>유형</th>
+            <th>신고 사유</th>
+            <th>신고자 → 대상</th>
+            <th>상태</th>
+            <th>신고일</th>
+            <th>처리</th>
+          </tr>
+        </thead>
+        <tbody id="reports-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:40px">
+            <div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </main>
+</div>
+
+<!-- 신고 상세 모달 -->
+<div class="nc-modal" id="modal-detail">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-detail')"></div>
+  <div class="nc-modal__box" style="max-width:560px">
+    <button class="nc-modal__close" onclick="Modal.close('modal-detail')">✕</button>
+    <div class="nc-modal__title">🚨 신고 상세</div>
+    <div id="detail-content">
+      <div class="nc-loading"><div class="nc-spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 신고 처리 모달 -->
+<div class="nc-modal" id="modal-process">
+  <div class="nc-modal__backdrop" onclick="Modal.close('modal-process')"></div>
+  <div class="nc-modal__box" style="max-width:480px">
+    <button class="nc-modal__close" onclick="Modal.close('modal-process')">✕</button>
+    <div class="nc-modal__title">⚖️ 신고 처리</div>
+    <div style="margin-bottom:14px">
+      <div class="detail-label">신고 ID</div>
+      <div class="detail-value" id="process-report-id" style="color:var(--text3)">-</div>
+    </div>
+
+    <div class="process-form">
+      <div class="process-form__title">처리 결과 선택</div>
+
+      <div class="form-row">
+        <div class="form-label">처리 결과 <span style="color:var(--error)">*</span></div>
+        <div class="result-options">
+          <button class="result-option" data-value="WARNING" onclick="selectResult(this)">
+            <span class="result-option__icon">⚠️</span>
+            <span class="result-option__label">경고</span>
+            <span class="result-option__desc">공식 경고 조치</span>
+          </button>
+          <button class="result-option" data-value="SUSPENDED" onclick="selectResult(this)">
+            <span class="result-option__icon">⏸️</span>
+            <span class="result-option__label">정지</span>
+            <span class="result-option__desc">일시적 이용 정지</span>
+          </button>
+          <button class="result-option" data-value="BANNED" onclick="selectResult(this)">
+            <span class="result-option__icon">🚫</span>
+            <span class="result-option__label">영구 밴</span>
+            <span class="result-option__desc">영구 이용 정지</span>
+          </button>
+          <button class="result-option" data-value="DISMISSED" onclick="selectResult(this)">
+            <span class="result-option__icon">✅</span>
+            <span class="result-option__label">무혐의</span>
+            <span class="result-option__desc">신고 사유 없음</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-label">처리 메모 <span style="color:var(--error)">*</span> <span style="color:var(--text3);font-weight:400">(최대 100자)</span></div>
+        <textarea id="process-memo" class="nc-textarea" rows="3" maxlength="100"
+                  placeholder="처리 사유나 메모를 입력하세요" style="width:100%;resize:vertical"></textarea>
+        <div style="text-align:right;font-size:0.72rem;color:var(--text3);margin-top:4px">
+          <span id="memo-len">0</span>/100
+        </div>
+      </div>
+
+      <button class="process-submit-btn" id="process-submit-btn" onclick="submitProcess()">처리 완료</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentStatusFilter = '';
+  let currentPage = 0;
+  let totalPages = 0;
+  let processTargetId = null;
+  let selectedResultStatus = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = Auth.getUser();
+    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
+      Toast.error('관리자 권한이 필요합니다');
+      setTimeout(() => window.location.href = '/index.html', 1000);
+      return;
+    }
+    const roleLabel = document.getElementById('sidebar-role-label');
+    if (roleLabel) roleLabel.textContent = user.role;
+    if (user.role === 'SUPER_ADMIN') {
+      document.getElementById('super-nav-users').style.display = 'flex';
+    }
+
+    document.getElementById('process-memo').addEventListener('input', function() {
+      document.getElementById('memo-len').textContent = this.value.length;
+    });
+
+    loadReports(0);
+  });
+
+  function setStatusFilter(status) {
+    currentStatusFilter = status;
+    document.querySelectorAll('.status-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.status === status)
+    );
+    loadReports(0);
+  }
+
+  async function loadReports(page) {
+    currentPage = page;
+    const tbody = document.getElementById('reports-tbody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px"><div class="nc-spinner" style="width:28px;height:28px;margin:auto"></div></td></tr>';
+
+    const targetType = document.getElementById('filter-type').value;
+    const params = new URLSearchParams({ page, size: 20 });
+    if (currentStatusFilter) params.append('status', currentStatusFilter);
+    if (targetType) params.append('targetType', targetType);
+
+    try {
+      const res = await api.get(`/admin/reports?${params}`, true);
+      const data = res?.data ?? res;
+      const list = data?.content || [];
+      totalPages = data?.totalPages ?? 1;
+      document.getElementById('total-count').textContent = `${data?.totalElements ?? list.length}건`;
+
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="nc-empty"><div class="nc-empty__icon">🔍</div><div class="nc-empty__text">신고 내역이 없습니다</div></div></td></tr>';
+        renderPagination();
+        return;
+      }
+
+      tbody.innerHTML = list.map((r, i) => `
+        <tr>
+          <td style="color:var(--text3);font-size:0.78rem">${r.reportId ?? (page * 20 + i + 1)}</td>
+          <td>${targetTypeLabel(r.targetType)}</td>
+          <td style="max-width:200px">
+            <span style="font-size:0.82rem;color:var(--text2);white-space:nowrap;overflow:hidden;
+                         text-overflow:ellipsis;display:block;max-width:180px"
+                  title="${escHtml(r.reason || '')}">
+              ${escHtml((r.reason || '-').slice(0, 40))}${(r.reason?.length ?? 0) > 40 ? '…' : ''}
+            </span>
+          </td>
+          <td style="font-size:0.82rem">
+            <span style="color:var(--text2)">${escHtml(r.reporterNickname || '-')}</span>
+            <span style="color:var(--text3)"> → </span>
+            <span style="color:var(--text2)">${escHtml(r.targetNickname || '-')}</span>
+          </td>
+          <td>${stBadge(r.status)}</td>
+          <td style="color:var(--text3);font-size:0.78rem;white-space:nowrap">${formatDate(r.createdAt)}</td>
+          <td>
+            <div class="action-btns">
+              <button class="act-btn act-btn--detail" onclick="openDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">상세</button>
+              ${r.status === 'REGISTER' ? `
+                <button class="act-btn act-btn--process" onclick="openProcess(${r.reportId})">처리</button>
+              ` : ''}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      renderPagination();
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--error)">
+        로드 실패: ${escHtml(e.message)}
+      </td></tr>`;
+    }
+  }
+
+  function openDetail(r) {
+    if (typeof r === 'string') r = JSON.parse(r);
+    document.getElementById('detail-content').innerHTML = `
+      <div class="detail-row">
+        <div class="detail-label">신고 ID</div>
+        <div class="detail-value">#${r.reportId}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">신고 유형</div>
+        <div class="detail-value">${targetTypeLabel(r.targetType)}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">신고자 → 대상</div>
+        <div class="detail-value">
+          ${escHtml(r.reporterNickname || '-')} <span style="color:var(--text3)">→</span> ${escHtml(r.targetNickname || '-')}
+        </div>
+      </div>
+      ${r.commentId ? `
+        <div class="detail-row">
+          <div class="detail-label">댓글 ID</div>
+          <div class="detail-value" style="color:var(--text3)">#${r.commentId}</div>
+        </div>
+      ` : ''}
+      <div class="detail-row">
+        <div class="detail-label">상태</div>
+        <div class="detail-value">${stBadge(r.status)}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">신고 사유</div>
+        <div class="detail-content-box">${escHtml(r.reason || '(사유 없음)')}</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">신고일시</div>
+        <div class="detail-value" style="color:var(--text3)">${r.createdAt ? new Date(r.createdAt).toLocaleString('ko-KR') : '-'}</div>
+      </div>
+      ${r.status === 'REGISTER' ? `
+        <div style="margin-top:16px">
+          <button class="nc-btn nc-btn--primary" style="width:100%" onclick="Modal.close('modal-detail'); openProcess(${r.reportId})">
+            ⚖️ 처리하기
+          </button>
+        </div>
+      ` : ''}
+    `;
+    Modal.open('modal-detail');
+  }
+
+  function openProcess(reportId) {
+    processTargetId = reportId;
+    selectedResultStatus = null;
+    document.getElementById('process-report-id').textContent = `#${reportId}`;
+    document.getElementById('process-memo').value = '';
+    document.getElementById('memo-len').textContent = '0';
+    document.querySelectorAll('.result-option').forEach(b => b.classList.remove('selected'));
+    Modal.open('modal-process');
+  }
+
+  function selectResult(btn) {
+    document.querySelectorAll('.result-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedResultStatus = btn.dataset.value;
+  }
+
+  async function submitProcess() {
+    if (!processTargetId) return;
+    if (!selectedResultStatus) {
+      Toast.error('처리 결과를 선택해주세요');
+      return;
+    }
+    const adminMemo = document.getElementById('process-memo').value.trim();
+    if (!adminMemo) {
+      document.getElementById('process-memo').focus();
+      Toast.error('처리 메모를 입력해주세요');
+      return;
+    }
+
+    const btn = document.getElementById('process-submit-btn');
+    btn.disabled = true;
+    btn.textContent = '처리 중...';
+
+    try {
+      await api.patch(`/admin/reports/${processTargetId}`, {
+        resultStatus: selectedResultStatus,
+        adminMemo,
+      }, true);
+      Toast.success('신고가 처리되었습니다');
+      Modal.close('modal-process');
+      loadReports(currentPage);
+    } catch (e) {
+      Toast.error(e.message || '처리 실패');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '처리 완료';
+    }
+  }
+
+  function renderPagination() {
+    const el = document.getElementById('pagination');
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    let html = `<button class="page-btn" onclick="loadReports(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>‹</button>`;
+    const start = Math.max(0, currentPage - 2);
+    const end = Math.min(totalPages, start + 5);
+    for (let i = start; i < end; i++) {
+      html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadReports(${i})">${i + 1}</button>`;
+    }
+    html += `<button class="page-btn" onclick="loadReports(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>›</button>`;
+    el.innerHTML = html;
+  }
+
+  /* ── 유틸 ── */
+  function targetTypeLabel(t) {
+    if (t === 'COMMENTS') return '<span class="st-badge" style="background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)">댓글</span>';
+    if (t === 'USERS')    return '<span class="st-badge" style="background:rgba(168,85,247,0.12);color:#c084fc;border:1px solid rgba(168,85,247,0.3)">유저</span>';
+    return `<span>${escHtml(t || '-')}</span>`;
+  }
+
+  function stBadge(status) {
+    if (status === 'REGISTER')   return '<span class="st-badge st-register">접수중</span>';
+    if (status === 'COMPLETION') return '<span class="st-badge st-completion">처리완료</span>';
+    return `<span class="st-badge" style="color:var(--text3)">${escHtml(status || '-')}</span>`;
+  }
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
