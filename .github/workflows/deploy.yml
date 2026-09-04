@@ -29,27 +29,25 @@ jobs:
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
           docker login --username AWS --password-stdin 123865824090.dkr.ecr.ap-northeast-2.amazonaws.com
 
-      - name: Docker 이미지 빌드 & 푸시
+      - name: Docker 이미지 빌드 & ECR 푸시
         env:
           ECR_REGISTRY: 123865824090.dkr.ecr.ap-northeast-2.amazonaws.com
         run: |
           docker build -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest .
           docker push $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest
 
-      - name: docker-compose.yml EC2로 전송
+      - name: docker-compose.yml S3 업로드
         run: |
-          CONTENT=$(base64 -w 0 docker-compose.yml)
-          aws ssm send-command \
-            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
-            --document-name "AWS-RunShellScript" \
-            --parameters commands=["echo $CONTENT | base64 -d > /home/ubuntu/docker-compose.yml"] \
-            --region ${{ secrets.AWS_REGION }} \
-            --wait
+          aws s3 cp docker-compose.yml s3://novelcraft-dev-media-123865824090/deploy/docker-compose.yml
 
       - name: SSM으로 EC2 배포
         run: |
           aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["cd /home/ubuntu && docker compose pull && docker compose up -d"]' \
+            --parameters 'commands=[
+              "aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 123865824090.dkr.ecr.ap-northeast-2.amazonaws.com",
+              "aws s3 cp s3://novelcraft-dev-media-123865824090/deploy/docker-compose.yml /home/ubuntu/docker-compose.yml",
+              "cd /home/ubuntu && docker compose pull && docker compose up -d"
+            ]' \
             --region ${{ secrets.AWS_REGION }}
