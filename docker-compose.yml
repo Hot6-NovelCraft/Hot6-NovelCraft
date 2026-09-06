@@ -11,7 +11,8 @@ services:
       - "6379:6379"
     command: redis-server --appendonly yes --protected-mode no
     networks:
-      - redis-net
+      redis-net:
+        ipv4_address: 172.20.0.10
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 3s
@@ -59,11 +60,14 @@ services:
     command: >
       sh -c "echo 'port 26379' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
-      echo 'sentinel announce-ip 127.0.0.1' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
+      echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
+      echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf &&
+      echo 'sentinel parallel-syncs mymaster 1' >> /tmp/sentinel.conf &&
       redis-sentinel /tmp/sentinel.conf"
     depends_on:
-      - redis-master
+      redis-master:
+        condition: service_healthy
     networks:
       - redis-net
 
@@ -78,11 +82,14 @@ services:
     command: >
       sh -c "echo 'port 26380' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
-      echo 'sentinel announce-ip 127.0.0.1' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
+      echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
+      echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf &&
+      echo 'sentinel parallel-syncs mymaster 1' >> /tmp/sentinel.conf &&
       redis-sentinel /tmp/sentinel.conf"
     depends_on:
-      - redis-master
+      redis-master:
+        condition: service_healthy
     networks:
       - redis-net
 
@@ -97,11 +104,14 @@ services:
     command: >
       sh -c "echo 'port 26381' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
-      echo 'sentinel announce-ip 127.0.0.1' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
+      echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
+      echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf &&
+      echo 'sentinel parallel-syncs mymaster 1' >> /tmp/sentinel.conf &&
       redis-sentinel /tmp/sentinel.conf"
     depends_on:
-      - redis-master
+      redis-master:
+        condition: service_healthy
     networks:
       - redis-net
 
@@ -117,24 +127,17 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-
-      # listeners
       KAFKA_LISTENERS: CONTROLLER://:9093,INTERNAL://:29092,EXTERNAL://:9092
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:29092,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-
-      # replication configs
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-      # [추가] JMX - Kafka 메트릭 수집용
       KAFKA_JMX_PORT: 9999
       KAFKA_JMX_HOSTNAME: kafka-1
-
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka1_data:/var/lib/kafka/data
@@ -153,23 +156,16 @@ services:
       KAFKA_NODE_ID: 2
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-
-      # listeners
       KAFKA_LISTENERS: CONTROLLER://:9093,INTERNAL://:29092,EXTERNAL://:9092
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-2:29092,EXTERNAL://localhost:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-
-      # replication configs
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
-
-      # [추가] JMX - Kafka 메트릭 수집용
       KAFKA_JMX_PORT: 9999
       KAFKA_JMX_HOSTNAME: kafka-2
-
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka2_data:/var/lib/kafka/data
@@ -188,23 +184,16 @@ services:
       KAFKA_NODE_ID: 3
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-
-      # listeners
       KAFKA_LISTENERS: CONTROLLER://:9093,INTERNAL://:29092,EXTERNAL://:9092
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-3:29092,EXTERNAL://localhost:9094
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-
-      # replication configs
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
-
-      # [추가] JMX - Kafka 메트릭 수집용
       KAFKA_JMX_PORT: 9999
       KAFKA_JMX_HOSTNAME: kafka-3
-
       KAFKA_LOG_DIRS: /var/lib/kafka/data
     volumes:
       - kafka3_data:/var/lib/kafka/data
@@ -232,7 +221,7 @@ services:
       - kafka-net
 
   # --------------------------
-  # [추가] Kafka JMX Exporter - kafka-1 (Port: 5556)
+  # Kafka JMX Exporter - kafka-1 (Port: 5556)
   # --------------------------
   kafka-1-jmx-exporter:
     image: bitnami/jmx-exporter:latest
@@ -251,7 +240,7 @@ services:
       - kafka-net
 
   # --------------------------
-  # [추가] Kafka JMX Exporter - kafka-2 (Port: 5557)
+  # Kafka JMX Exporter - kafka-2 (Port: 5557)
   # --------------------------
   kafka-2-jmx-exporter:
     image: bitnami/jmx-exporter:latest
@@ -270,7 +259,7 @@ services:
       - kafka-net
 
   # --------------------------
-  # [추가] Kafka JMX Exporter - kafka-3 (Port: 5558)
+  # Kafka JMX Exporter - kafka-3 (Port: 5558)
   # --------------------------
   kafka-3-jmx-exporter:
     image: bitnami/jmx-exporter:latest
@@ -330,17 +319,17 @@ services:
   # PostgreSQL + pgvector (AI 벡터 스토어용)
   # --------------------------
   postgres-vector:
-    image: pgvector/pgvector:pg16   # pgvector 익스텐션이 내장된 공식 이미지
+    image: pgvector/pgvector:pg16
     container_name: postgres-vector
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: novelcraft_vectors   # DB 자동 생성
+      POSTGRES_DB: novelcraft_vectors
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - pgvector_data:/var/lib/postgresql/data                              # 벡터 데이터 영속
-      - ./init/pgvector-init.sh:/docker-entrypoint-initdb.d/pgvector-init.sh  # 최초 기동 시 자동 실행
+      - pgvector_data:/var/lib/postgresql/data
+      - ./init/pgvector-init.sh:/docker-entrypoint-initdb.d/pgvector-init.sh
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres -d novelcraft_vectors" ]
       interval: 5s
@@ -350,7 +339,7 @@ services:
       - pgvector-net
 
   # --------------------------
-  # [신규 추가] Spring Boot App (ECR 이미지)
+  # Spring Boot App (ECR 이미지)
   # --------------------------
   app:
     image: 123865824090.dkr.ecr.ap-northeast-2.amazonaws.com/novelcraft-dev-app:latest
@@ -358,7 +347,66 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: dev
+      SPRING_PROFILES_ACTIVE: prod
+
+      # MySQL RDS
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
+
+      # Redis Sentinel
+      SPRING_DATA_REDIS_SENTINEL_MASTER: mymaster
+      SPRING_DATA_REDIS_SENTINEL_NODES: redis-sentinel-1:26379,redis-sentinel-2:26380,redis-sentinel-3:26381
+      REDISSON_MODE: sentinel
+
+      # Kafka
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka-1:29092,kafka-2:29092,kafka-3:29092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: novelcraft-group
+      NOTIFICATION_KAFKA_TOPIC: notification-topic
+      COVER_KAFKA_TOPIC: cover-topic
+      AI_REVIEW_KAFKA_TOPIC: ai-review-topic
+
+      # JWT
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+
+      # AWS S3 (IAM Role 자동감지, region만 필요)
+      SPRING_CLOUD_AWS_REGION_STATIC: ap-northeast-2
+      SPRING_CLOUD_AWS_S3_BUCKET: novelcraft-dev-media-123865824090
+
+      # PgVector
+      PGVECTOR_DATASOURCE_URL: jdbc:postgresql://postgres-vector:5432/novelcraft_vectors
+      PGVECTOR_DATASOURCE_USERNAME: postgres
+      PGVECTOR_DATASOURCE_PASSWORD: postgres
+
+      # OAuth2 / Frontend
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL}
+
+      # PortOne
+      PORTONE_API_SECRET: ${PORTONE_API_SECRET}
+      PORTONE_WEBHOOK_SECRET: ${PORTONE_WEBHOOK_SECRET}
+
+      # Gemini
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+
+      # AES 암호화
+      ENCRYPTION_AES_SECRET_KEY: ${ENCRYPTION_AES_SECRET_KEY}
+
+      # 국립도서관 API
+      NATIONALLIBRARY_API_KEY: ${NATIONALLIBRARY_API_KEY}
+      NATIONALLIBRARY_API_URL: https://data4library.kr/api
+
+      # CoolSMS
+      COOLSMS_API_KEY: ${COOLSMS_API_KEY}
+      COOLSMS_SECRET_KEY: ${COOLSMS_SECRET_KEY}
+      COOLSMS_SEND_NUMBER: ${COOLSMS_SEND_NUMBER}
+      COOLSMS_TEST_MODE: "true"
+
+      # Spring AI OpenAI
+      SPRING_AI_OPENAI_API_KEY: ${OPENAI_API_KEY}
+
     depends_on:
       redis-master:
         condition: service_healthy
@@ -376,12 +424,15 @@ volumes:
   kafka3_data:
   prometheus_data:
   grafana_data:
-  pgvector_data:    # PGVector 데이터 영속 볼륨
+  pgvector_data:
 
 networks:
   kafka-net:
     driver: bridge
   redis-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
   pgvector-net:
     driver: bridge
