@@ -36,6 +36,26 @@ jobs:
           docker build -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest .
           docker push $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest
 
+      - name: .env 파일 생성 및 S3 업로드
+        run: |
+          cat > .env << 'ENVEOF'
+          SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+          APP_FRONTEND_URL=${{ secrets.APP_FRONTEND_URL }}
+          PORTONE_API_SECRET=${{ secrets.PORTONE_API_SECRET }}
+          PORTONE_WEBHOOK_SECRET=${{ secrets.PORTONE_WEBHOOK_SECRET }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          ENCRYPTION_AES_SECRET_KEY=${{ secrets.ENCRYPTION_AES_SECRET_KEY }}
+          NATIONALLIBRARY_API_KEY=${{ secrets.NATIONALLIBRARY_API_KEY }}
+          COOLSMS_API_KEY=${{ secrets.COOLSMS_API_KEY }}
+          COOLSMS_SECRET_KEY=${{ secrets.COOLSMS_SECRET_KEY }}
+          COOLSMS_SEND_NUMBER=${{ secrets.COOLSMS_SEND_NUMBER }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          ENVEOF
+          aws s3 cp .env s3://novelcraft-dev-media-123865824090/deploy/.env
+
       - name: 배포 파일 S3 업로드
         run: |
           aws s3 cp docker-compose.yml s3://novelcraft-dev-media-123865824090/deploy/docker-compose.yml
@@ -48,14 +68,15 @@ jobs:
           aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
+            --parameters commands='[
               "aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 123865824090.dkr.ecr.ap-northeast-2.amazonaws.com",
               "mkdir -p /home/ubuntu/init /home/ubuntu/monitoring",
+              "aws s3 cp s3://novelcraft-dev-media-123865824090/deploy/.env /home/ubuntu/.env",
               "aws s3 cp s3://novelcraft-dev-media-123865824090/deploy/docker-compose.yml /home/ubuntu/docker-compose.yml",
               "aws s3 cp s3://novelcraft-dev-media-123865824090/deploy/init/pgvector-init.sh /home/ubuntu/init/pgvector-init.sh",
               "aws s3 cp s3://novelcraft-dev-media-123865824090/deploy/monitoring/kafka-jmx-config.yml /home/ubuntu/monitoring/kafka-jmx-config.yml",
               "aws s3 cp s3://novelcraft-dev-media-123865824090/deploy/monitoring/prometheus.yml /home/ubuntu/monitoring/prometheus.yml",
               "chmod +x /home/ubuntu/init/pgvector-init.sh",
-              "cd /home/ubuntu && docker compose pull && docker compose up -d"
+              "cd /home/ubuntu && docker compose --env-file .env pull && docker compose --env-file .env up -d"
             ]' \
             --region ${{ secrets.AWS_REGION }}
