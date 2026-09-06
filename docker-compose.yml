@@ -60,6 +60,8 @@ services:
     command: >
       sh -c "echo 'port 26379' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-ip redis-sentinel-1' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-port 26379' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
       echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
       echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf &&
@@ -82,6 +84,8 @@ services:
     command: >
       sh -c "echo 'port 26380' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-ip redis-sentinel-2' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-port 26380' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
       echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
       echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf &&
@@ -104,6 +108,8 @@ services:
     command: >
       sh -c "echo 'port 26381' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-ip redis-sentinel-3' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-port 26381' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
       echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
       echo 'sentinel failover-timeout mymaster 10000' >> /tmp/sentinel.conf &&
