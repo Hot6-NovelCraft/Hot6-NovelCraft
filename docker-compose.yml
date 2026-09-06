@@ -60,7 +60,7 @@ services:
     command: >
       sh -c "echo 'port 26379' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
-      echo 'sentinel announce-ip redis-sentinel-1' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-ip 172.20.0.11' >> /tmp/sentinel.conf &&
       echo 'sentinel announce-port 26379' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
       echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
@@ -71,7 +71,8 @@ services:
       redis-master:
         condition: service_healthy
     networks:
-      - redis-net
+      redis-net:
+        ipv4_address: 172.20.0.11
 
   # --------------------------
   # Redis Sentinel 2 (Port: 26380)
@@ -84,7 +85,7 @@ services:
     command: >
       sh -c "echo 'port 26380' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
-      echo 'sentinel announce-ip redis-sentinel-2' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-ip 172.20.0.12' >> /tmp/sentinel.conf &&
       echo 'sentinel announce-port 26380' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
       echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
@@ -95,7 +96,8 @@ services:
       redis-master:
         condition: service_healthy
     networks:
-      - redis-net
+      redis-net:
+        ipv4_address: 172.20.0.12
 
   # --------------------------
   # Redis Sentinel 3 (Port: 26381)
@@ -108,7 +110,7 @@ services:
     command: >
       sh -c "echo 'port 26381' > /tmp/sentinel.conf &&
       echo 'protected-mode no' >> /tmp/sentinel.conf &&
-      echo 'sentinel announce-ip redis-sentinel-3' >> /tmp/sentinel.conf &&
+      echo 'sentinel announce-ip 172.20.0.13' >> /tmp/sentinel.conf &&
       echo 'sentinel announce-port 26381' >> /tmp/sentinel.conf &&
       echo 'sentinel monitor mymaster 172.20.0.10 6379 2' >> /tmp/sentinel.conf &&
       echo 'sentinel down-after-milliseconds mymaster 5000' >> /tmp/sentinel.conf &&
@@ -119,7 +121,8 @@ services:
       redis-master:
         condition: service_healthy
     networks:
-      - redis-net
+      redis-net:
+        ipv4_address: 172.20.0.13
 
   # --------------------------
   # Broker 1 (Node ID: 1)
