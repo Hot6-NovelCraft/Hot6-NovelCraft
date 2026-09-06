@@ -53,6 +53,12 @@ jobs:
           COOLSMS_SECRET_KEY=${{ secrets.COOLSMS_SECRET_KEY }}
           COOLSMS_SEND_NUMBER=${{ secrets.COOLSMS_SEND_NUMBER }}
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+          NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
           ENVEOF
           aws s3 cp .env s3://novelcraft-dev-media-123865824090/deploy/.env
 
