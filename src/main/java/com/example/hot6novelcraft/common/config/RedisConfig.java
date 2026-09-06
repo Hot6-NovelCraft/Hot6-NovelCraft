@@ -67,11 +67,8 @@ public class RedisConfig {
      **/
     @Bean
     public RedisConnectionFactory redisConnectionFactory(ClientResources clientResources) {
-        RedisSentinelConfiguration sentinelConfig = new RedisSentinelConfiguration()
-                .master("mymaster")
-                .sentinel("127.0.0.1", 26379)
-                .sentinel("127.0.0.1", 26380)
-                .sentinel("127.0.0.1", 26381);
+        // 127.0.0.1 하드코딩 제거 → 환경변수(SPRING_DATA_REDIS_SENTINEL_NODES)에서 읽음
+        RedisSentinelConfiguration sentinelConfig = getSentinelConfig();
 
         LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
                 .clientResources(clientResources) // Lettuce 설정에 번역기 장착!
