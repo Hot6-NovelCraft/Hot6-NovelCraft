@@ -303,6 +303,7 @@ services:
       - kafka-1-jmx-exporter
       - kafka-2-jmx-exporter
       - kafka-3-jmx-exporter
+      - node-exporter
     networks:
       - kafka-net
 
@@ -323,7 +324,24 @@ services:
       - prometheus
     networks:
       - kafka-net
-
+  # --------------------------
+  # Node Exporter (EC2 시스템 메트릭)
+  # --------------------------
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - kafka-net
   # --------------------------
   # PostgreSQL + pgvector (AI 벡터 스토어용)
   # --------------------------
