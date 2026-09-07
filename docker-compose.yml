@@ -230,57 +230,54 @@ services:
       - kafka-net
 
   # --------------------------
-  # Kafka JMX Exporter - kafka-1 (Port: 5556)
+  # Kafka JMX Exporter - kafka-1
   # --------------------------
   kafka-1-jmx-exporter:
-    image: bitnami/jmx-exporter:latest
+    image: prom/jmx-exporter:1.0.1
     container_name: kafka-1-jmx-exporter
     ports:
       - "5556:5556"
-    environment:
-      JMX_HOST: kafka-1
-      JMX_PORT: 9999
-      EXPORTER_PORT: 5556
+    command:
+      - "5556"
+      - "/etc/jmx-exporter/config.yml"
     volumes:
-      - ./monitoring/kafka-jmx-config-1.yml:/opt/bitnami/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-1.yml:/etc/jmx-exporter/config.yml
     depends_on:
       - kafka-1
     networks:
       - kafka-net
 
   # --------------------------
-  # Kafka JMX Exporter - kafka-2 (Port: 5557)
+  # Kafka JMX Exporter - kafka-2
   # --------------------------
   kafka-2-jmx-exporter:
-    image: bitnami/jmx-exporter:latest
+    image: prom/jmx-exporter:1.0.1
     container_name: kafka-2-jmx-exporter
     ports:
       - "5557:5556"
-    environment:
-      JMX_HOST: kafka-2
-      JMX_PORT: 9999
-      EXPORTER_PORT: 5556
+    command:
+      - "5556"
+      - "/etc/jmx-exporter/config.yml"
     volumes:
-      - ./monitoring/kafka-jmx-config-2.yml:/opt/bitnami/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-2.yml:/etc/jmx-exporter/config.yml
     depends_on:
       - kafka-2
     networks:
       - kafka-net
 
   # --------------------------
-  # Kafka JMX Exporter - kafka-3 (Port: 5558)
+  # Kafka JMX Exporter - kafka-3
   # --------------------------
   kafka-3-jmx-exporter:
-    image: bitnami/jmx-exporter:latest
+    image: prom/jmx-exporter:1.0.1
     container_name: kafka-3-jmx-exporter
     ports:
       - "5558:5556"
-    environment:
-      JMX_HOST: kafka-3
-      JMX_PORT: 9999
-      EXPORTER_PORT: 5556
+    command:
+      - "5556"
+      - "/etc/jmx-exporter/config.yml"
     volumes:
-      - ./monitoring/kafka-jmx-config-3.yml:/opt/bitnami/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-3.yml:/etc/jmx-exporter/config.yml
     depends_on:
       - kafka-3
     networks:
@@ -375,8 +372,7 @@ services:
     ports:
       - "9121:9121"
     environment:
-      REDIS_ADDR: "redis-sentinel://redis-sentinel-1:26379,redis-sentinel-2:26380,redis-sentinel-3:26381"
-      REDIS_MASTER_NAME: "mymaster"
+      REDIS_ADDR: "redis://redis-master:6379"
     networks:
       - redis-net
       - kafka-net
