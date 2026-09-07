@@ -233,15 +233,15 @@ services:
   # Kafka JMX Exporter - kafka-1
   # --------------------------
   kafka-1-jmx-exporter:
-    image: prom/jmx-exporter:1.0.1
+    image: bitnami/jmx-exporter:latest
     container_name: kafka-1-jmx-exporter
     ports:
       - "5556:5556"
     command:
       - "5556"
-      - "/etc/jmx-exporter/config.yml"
+      - "/opt/bitnami/jmx-exporter/config.yml"
     volumes:
-      - ./monitoring/kafka-jmx-config-1.yml:/etc/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-1.yml:/opt/bitnami/jmx-exporter/config.yml
     depends_on:
       - kafka-1
     networks:
@@ -251,15 +251,15 @@ services:
   # Kafka JMX Exporter - kafka-2
   # --------------------------
   kafka-2-jmx-exporter:
-    image: prom/jmx-exporter:1.0.1
+    image: bitnami/jmx-exporter:latest
     container_name: kafka-2-jmx-exporter
     ports:
       - "5557:5556"
     command:
       - "5556"
-      - "/etc/jmx-exporter/config.yml"
+      - "/opt/bitnami/jmx-exporter/config.yml"
     volumes:
-      - ./monitoring/kafka-jmx-config-2.yml:/etc/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-2.yml:/opt/bitnami/jmx-exporter/config.yml
     depends_on:
       - kafka-2
     networks:
@@ -269,15 +269,15 @@ services:
   # Kafka JMX Exporter - kafka-3
   # --------------------------
   kafka-3-jmx-exporter:
-    image: prom/jmx-exporter:1.0.1
+    image: bitnami/jmx-exporter:latest
     container_name: kafka-3-jmx-exporter
     ports:
       - "5558:5556"
     command:
       - "5556"
-      - "/etc/jmx-exporter/config.yml"
+      - "/opt/bitnami/jmx-exporter/config.yml"
     volumes:
-      - ./monitoring/kafka-jmx-config-3.yml:/etc/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-3.yml:/opt/bitnami/jmx-exporter/config.yml
     depends_on:
       - kafka-3
     networks:
