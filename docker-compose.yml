@@ -242,7 +242,7 @@ services:
       JMX_PORT: 9999
       EXPORTER_PORT: 5556
     volumes:
-      - ./monitoring/kafka-jmx-config.yml:/opt/bitnami/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-1.yml:/opt/bitnami/jmx-exporter/config.yml
     depends_on:
       - kafka-1
     networks:
@@ -261,7 +261,7 @@ services:
       JMX_PORT: 9999
       EXPORTER_PORT: 5556
     volumes:
-      - ./monitoring/kafka-jmx-config.yml:/opt/bitnami/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-2.yml:/opt/bitnami/jmx-exporter/config.yml
     depends_on:
       - kafka-2
     networks:
@@ -280,7 +280,7 @@ services:
       JMX_PORT: 9999
       EXPORTER_PORT: 5556
     volumes:
-      - ./monitoring/kafka-jmx-config.yml:/opt/bitnami/jmx-exporter/config.yml
+      - ./monitoring/kafka-jmx-config-3.yml:/opt/bitnami/jmx-exporter/config.yml
     depends_on:
       - kafka-3
     networks:
@@ -305,6 +305,7 @@ services:
       - kafka-3-jmx-exporter
       - node-exporter
       - mysqld-exporter
+      - redis-exporter
     networks:
       - kafka-net
 
@@ -364,6 +365,24 @@ services:
       - "--collect.perf_schema.eventsstatementssum"
     networks:
       - kafka-net
+    restart: unless-stopped
+  # --------------------------
+  # Redis Exporter (Redis 메트릭 수집)
+  # --------------------------
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: "redis-sentinel://redis-sentinel-1:26379,redis-sentinel-2:26380,redis-sentinel-3:26381"
+      REDIS_MASTER_NAME: "mymaster"
+    networks:
+      - redis-net
+      - kafka-net
+    depends_on:
+      redis-master:
+        condition: service_healthy
     restart: unless-stopped
   # --------------------------
   # PostgreSQL + pgvector (AI 벡터 스토어용)
