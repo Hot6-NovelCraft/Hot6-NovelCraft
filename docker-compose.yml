@@ -304,6 +304,7 @@ services:
       - kafka-2-jmx-exporter
       - kafka-3-jmx-exporter
       - node-exporter
+      - mysqld-exporter
     networks:
       - kafka-net
 
@@ -342,6 +343,28 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
       - kafka-net
+  # --------------------------
+  # MySQL Exporter (RDS 메트릭 수집)
+  # --------------------------
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: mysqld-exporter
+    ports:
+      - "9104:9104"
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    command:
+      - "--mysqld.address=novelcraft-dev-mysql-primary.cdem4uq6uw21.ap-northeast-2.rds.amazonaws.com:3306"
+      - "--mysqld.username=novelcraft_admin"
+      - "--collect.global_status"
+      - "--collect.global_variables"
+      - "--collect.info_schema.innodb_metrics"
+      - "--collect.info_schema.processlist"
+      - "--collect.perf_schema.eventsstatements"
+      - "--collect.perf_schema.eventsstatementssum"
+    networks:
+      - kafka-net
+    restart: unless-stopped
   # --------------------------
   # PostgreSQL + pgvector (AI 벡터 스토어용)
   # --------------------------
