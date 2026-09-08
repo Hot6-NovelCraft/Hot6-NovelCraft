@@ -12,3 +12,11 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
+server:
+  tomcat:
+    threads:
+      max: 400
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 200
+    connection-timeout: 5000
