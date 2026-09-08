@@ -15,6 +15,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.nio.file.AccessDeniedException;
 
@@ -122,5 +123,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<BaseResponse<Void>> handleCriticalErrorException(Exception e) {
         log.error("서버 에러 발생", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(BaseResponse.fail(HttpStatus.INTERNAL_SERVER_ERROR.name(), "서버 오류로 인해 잠시 후 다시 시도하시기 바랍니다"));
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<BaseResponse<Void>> handleOptimisticLockingFailure(
+            ObjectOptimisticLockingFailureException e) {
+        log.warn("낙관적 락 충돌 발생: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(BaseResponse.fail("CONFLICT", "동시 요청 충돌이 발생했습니다. 다시 시도해주세요."));
     }
 }
