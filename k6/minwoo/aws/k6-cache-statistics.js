@@ -6,7 +6,7 @@ const cacheMissLatency = new Trend('cache_miss_latency');
 const cacheHitLatency = new Trend('cache_hit_latency');
 
 const BASE_URL = 'http://novelcraft-dev-alb-336387969.ap-northeast-2.elb.amazonaws.com';
-const EMAIL = 'author_loadtest@test.com';
+const EMAIL = 'loadtest1@test.com';
 const PASSWORD = 'test1234';
 
 export const options = {
@@ -20,68 +20,76 @@ export const options = {
     },
 };
 
-export function cacheTest() {
+export function setup() {
     const loginRes = http.post(
         `${BASE_URL}/api/auth/login`,
         JSON.stringify({ email: EMAIL, password: PASSWORD }),
         { headers: { 'Content-Type': 'application/json' } }
     );
-
     const token = JSON.parse(loginRes.body).data.accessToken;
+
+    console.log('\n[워밍업 시작 - 5회]');
+    for (let i = 0; i < 5; i++) {
+        http.get(
+            `${BASE_URL}/api/revenues/me/statistics?period=MONTHLY&year=2026`,
+            { headers: { 'Content-Type': 'application/json', 'Authorization': token } }
+        );
+        sleep(0.2);
+    }
+    console.log('[워밍업 완료 → SSM에서 FLUSHALL 실행하세요]');
+    sleep(10);
+
+    return { token };
+}
+
+export function cacheTest(data) {
     const headers = {
         'Content-Type': 'application/json',
-        'Authorization': token,
+        'Authorization': data.token,
     };
 
-    // ============================================
-    // 1. Cache Miss 측정 (월별 통계 - DB 집계 쿼리)
-    // ============================================
-    console.log('\n[Cache Miss 측정 시작]');
-    let missTimes = [];
+    console.log('\n[Cache Miss 측정]');
+    const missRes = http.get(
+        `${BASE_URL}/api/revenues/me/statistics?period=MONTHLY&year=2026`,
+        { headers: headers, tags: { name: 'cache-miss' } }
+    );
+    check(missRes, { 'Cache Miss 성공': (r) => r.status === 200 });
+    cacheMissLatency.add(missRes.timings.duration);
+    const missTime = missRes.timings.duration;
+    console.log(`Cache Miss 응답시간: ${missTime.toFixed(2)}ms`);
 
-    for (let i = 0; i < 5; i++) {
-        const res = http.get(
-            `${BASE_URL}/api/revenues/me/statistics?period=MONTHLY&year=2026`,
-            { headers: headers, tags: { name: 'cache-miss' } }
-        );
+    sleep(0.5);
 
-        check(res, { '통계 조회 성공': (r) => r.status === 200 });
-        cacheMissLatency.add(res.timings.duration);
-        missTimes.push(res.timings.duration);
-        console.log(`Cache Miss ${i+1}회: ${res.timings.duration.toFixed(2)}ms`);
-        sleep(0.1);
-    }
-
-    const missAvg = missTimes.reduce((a, b) => a + b, 0) / missTimes.length;
-    console.log(`Cache Miss 평균: ${missAvg.toFixed(2)}ms`);
-
-    // ============================================
-    // 2. Cache Hit 측정 (Redis 반환)
-    // ============================================
-    console.log('\n[Cache Hit 측정 시작]');
+    console.log('\n[Cache Hit 측정 - 10회 반복]');
     let hitTimes = [];
-
-    for (let i = 0; i < 5; i++) {
-        const res = http.get(
+    for (let i = 0; i < 10; i++) {
+        const hitRes = http.get(
             `${BASE_URL}/api/revenues/me/statistics?period=MONTHLY&year=2026`,
             { headers: headers, tags: { name: 'cache-hit' } }
         );
-
-        check(res, { '통계 조회 성공': (r) => r.status === 200 });
-        cacheHitLatency.add(res.timings.duration);
-        hitTimes.push(res.timings.duration);
-        console.log(`Cache Hit ${i+1}회: ${res.timings.duration.toFixed(2)}ms`);
+        check(hitRes, { 'Cache Hit 성공': (r) => r.status === 200 });
+        cacheHitLatency.add(hitRes.timings.duration);
+        hitTimes.push(hitRes.timings.duration);
+        console.log(`Cache Hit ${i+1}회: ${hitRes.timings.duration.toFixed(2)}ms`);
         sleep(0.1);
     }
 
     const hitAvg = hitTimes.reduce((a, b) => a + b, 0) / hitTimes.length;
-    console.log(`Cache Hit 평균: ${hitAvg.toFixed(2)}ms`);
+    const hitMin = Math.min(...hitTimes);
+    const hitMax = Math.max(...hitTimes);
+    const improvement = (missTime / hitAvg).toFixed(1);
+    const improvementPct = ((missTime - hitAvg) / missTime * 100).toFixed(1);
 
     console.log('\n========================================');
     console.log('  수익 통계 조회 캐시 성능 비교');
     console.log('========================================');
-    console.log(`  Cache Miss 평균: ${missAvg.toFixed(2)}ms (DB 집계 쿼리)`);
-    console.log(`  Cache Hit  평균: ${hitAvg.toFixed(2)}ms (Redis 반환)`);
-    console.log(`  개선율: ${((missAvg - hitAvg) / missAvg * 100).toFixed(1)}% 빠름`);
-    console.log('========================================\n');
+    console.log('  [측정 방식]');
+    console.log('  - 워밍업: 5회 후 FLUSHALL (JVM 안정화 + 캐시 제거)');
+    console.log('  - Cache Miss: 1회 (진짜 DB 집계 쿼리)');
+    console.log('  - Cache Hit: 10회 반복 평균');
+    console.log('  [결과]');
+    console.log(`  Cache Miss:  ${missTime.toFixed(2)}ms (DB 집계 1회 - 936만건 GROUP BY)`);
+    console.log(`  Cache Hit:   ${hitAvg.toFixed(2)}ms (평균) / min: ${hitMin.toFixed(2)}ms / max: ${hitMax.toFixed(2)}ms`);
+    console.log(`  개선율:      ${improvement}배 빠름 (${improvementPct}% 응답시간 단축)`);
+    console.log('========================================');
 }
