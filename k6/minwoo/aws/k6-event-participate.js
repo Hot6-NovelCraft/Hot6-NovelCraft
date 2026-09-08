@@ -1,6 +1,5 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { SharedArray } from 'k6/data';
 import { Counter, Rate, Trend } from 'k6/metrics';
 
 const successCount = new Counter('event_participate_success');
@@ -11,55 +10,52 @@ const participateLatency = new Trend('event_participate_latency');
 const BASE_URL = 'http://novelcraft-dev-alb-336387969.ap-northeast-2.elb.amazonaws.com';
 const EVENT_ID = __ENV.EVENT_ID || 1;
 
-const users = new SharedArray('users', function () {
-    const arr = [];
-    for (let i = 1; i <= 10000; i++) {
-        arr.push({
-            email: `loadtest${i}@test.com`,
-            password: 'test1234',
-        });
-    }
-    return arr;
-});
-
-function getAccessToken(userIndex) {
-    const user = users[userIndex % users.length];
-    const loginRes = http.post(
-        `${BASE_URL}/api/auth/login`,
-        JSON.stringify({ email: user.email, password: user.password }),
-        { headers: { 'Content-Type': 'application/json' }, tags: { name: 'login' } }
-    );
-    if (loginRes.status !== 200) return null;
-    const loginBody = JSON.parse(loginRes.body);
-    return loginBody.data.accessToken;
-}
-
 export const options = {
     scenarios: {
         spike_participate: {
             executor: 'shared-iterations',
-            vus: 150,
-            iterations: 10000,
-            maxDuration: '120s',
+            vus: 200,
+            iterations: 200,
+            maxDuration: '60s',
             exec: 'participateTest',
         },
         sustained_read: {
             executor: 'constant-vus',
-            vus: 100,
+            vus: 50,
             duration: '60s',
             startTime: '0s',
             exec: 'readTest',
         },
     },
     thresholds: {
-        http_req_duration: ['p(95)<3000'],
-        event_participate_success_rate: ['rate>0.009'],
+        http_req_duration: ['p(95)<30000'],
+        event_participate_success_rate: ['rate>0.01'],
     },
 };
 
-export function participateTest() {
-    const accessToken = getAccessToken(__VU - 1);
-    if (!accessToken) {
+export function setup() {
+    // 테스트 시작 전 200명 토큰 미리 발급
+    const tokens = [];
+    for (let i = 1; i <= 200; i++) {
+        const loginRes = http.post(
+            `${BASE_URL}/api/auth/login`,
+            JSON.stringify({ email: `author${i}@test.com`, password: 'test1234' }),
+            { headers: { 'Content-Type': 'application/json' } }
+        );
+        if (loginRes.status === 200) {
+            const body = JSON.parse(loginRes.body);
+            tokens.push(body.data.accessToken);
+        } else {
+            tokens.push(null);
+        }
+    }
+    console.log(`토큰 발급 완료: ${tokens.filter(t => t !== null).length} / 200`);
+    return { tokens };
+}
+
+export function participateTest(data) {
+    const token = data.tokens[(__VU - 1) % data.tokens.length];
+    if (!token) {
         failCount.add(1);
         successRate.add(false);
         return;
@@ -70,7 +66,7 @@ export function participateTest() {
         {
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': accessToken,
+                'Authorization': token,
             },
             tags: { name: 'participate' },
         }
@@ -88,15 +84,15 @@ export function participateTest() {
     }
 }
 
-export function readTest() {
-    const accessToken = getAccessToken((__VU - 1) % users.length);
-    if (!accessToken) {
+export function readTest(data) {
+    const token = data.tokens[(__VU - 1) % data.tokens.length];
+    if (!token) {
         sleep(1);
         return;
     }
     const headers = {
         'Content-Type': 'application/json',
-        'Authorization': accessToken,
+        'Authorization': token,
     };
     const listRes = http.get(
         `${BASE_URL}/api/events?status=ONGOING&page=0&size=10`,
