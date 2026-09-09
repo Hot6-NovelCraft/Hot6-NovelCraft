@@ -46,3 +46,35 @@ export default function () {
     const resUserRole = http.get(`${BASE_URL}/admin/dashboard/v1?role=READER`, params);
     check(resUserRole, { 'v1 status 200 (FILTER)': (r) => r.status === 200 });
 }
+
+// ============================================
+// [결과 요약] 실행 종료 시 콘솔에 한국어로 보기 쉽게 출력
+// ============================================
+export function handleSummary(data) {
+    // http_req_duration의 백분위 값은 'p(95)', 'p(99)' 키로 접근 (k6 handleSummary 규칙)
+    const p95 = data.metrics.http_req_duration.values['p(95)'];
+    const p99 = data.metrics.http_req_duration.values['p(99)'];
+
+    // http_req_failed: k6가 자동 집계하는 요청 실패율 (네트워크/타임아웃 포함)
+    const errorRate = data.metrics.http_req_failed ? data.metrics.http_req_failed.values.rate * 100 : 0;
+
+    // checks: 스크립트 안의 모든 check() 호출을 통합 집계한 통과율
+    const checkPassRate = data.metrics.checks ? data.metrics.checks.values.rate * 100 : 0;
+
+    const totalReqs = data.metrics.http_reqs ? data.metrics.http_reqs.values.count : 0;
+
+    console.log('\n========================================');
+    console.log('  V1 (인덱스 미적용 + 쿼리 분할) 결과');
+    console.log('========================================');
+    console.log(`  총 요청 수      : ${totalReqs}`);
+    console.log(`  요청 실패율     : ${errorRate.toFixed(2)}%`);
+    console.log(`  체크 통과율     : ${checkPassRate.toFixed(2)}%  (status 200 체크 기준)`);
+    console.log(`  응답시간 p95    : ${p95.toFixed(0)}ms  (SLO 목표: 300ms 미만)`);
+    console.log(`  응답시간 p99    : ${p99.toFixed(0)}ms  (SLO 목표: 800ms 미만)`);
+    console.log('  ※ V1은 "개선 전 baseline" 목적이라 SLO 초과가 예상된 정상 결과입니다.');
+    console.log('     V2/V3 결과와 비교해서 개선폭을 확인하세요.');
+    console.log('========================================\n');
+
+    // stdout에 원본 JSON도 함께 남겨서, 나중에 Grafana/포트폴리오 문서용 원자료로 재활용 가능
+    return { stdout: JSON.stringify(data, null, 2) };
+}

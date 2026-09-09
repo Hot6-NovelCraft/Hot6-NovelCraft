@@ -42,3 +42,31 @@ export default function () {
     const resUserRole = http.get(`${BASE_URL}/admin/dashboard/v2?role=READER`, params);
     check(resUserRole, { 'v2 status 200 (FILTER)': (r) => r.status === 200 });
 }
+
+// ============================================
+// [결과 요약] 실행 종료 시 콘솔에 한국어로 보기 쉽게 출력
+// ============================================
+export function handleSummary(data) {
+    const p95 = data.metrics.http_req_duration.values['p(95)'];
+    const p99 = data.metrics.http_req_duration.values['p(99)'];
+    const errorRate = data.metrics.http_req_failed ? data.metrics.http_req_failed.values.rate * 100 : 0;
+    const checkPassRate = data.metrics.checks ? data.metrics.checks.values.rate * 100 : 0;
+    const totalReqs = data.metrics.http_reqs ? data.metrics.http_reqs.values.count : 0;
+
+    // SLO 목표치 대비 통과 여부를 boolean으로 미리 계산해서 이모지로 표시
+    const p95Pass = p95 < 300;
+    const p99Pass = p99 < 800;
+
+    console.log('\n========================================');
+    console.log('  V2 (인덱스 적용 + 쿼리 병합) 결과');
+    console.log('========================================');
+    console.log(`  총 요청 수      : ${totalReqs}`);
+    console.log(`  요청 실패율     : ${errorRate.toFixed(2)}%`);
+    console.log(`  체크 통과율     : ${checkPassRate.toFixed(2)}%  (status 200 체크 기준)`);
+    console.log(`  응답시간 p95    : ${p95.toFixed(0)}ms  (SLO 목표 300ms 미만) ${p95Pass ? '✅ 충족' : '❌ 초과'}`);
+    console.log(`  응답시간 p99    : ${p99.toFixed(0)}ms  (SLO 목표 800ms 미만) ${p99Pass ? '✅ 충족' : '❌ 초과'}`);
+    console.log('  ※ V1 대비 개선폭을 비교해보세요 (인덱스 + 쿼리 병합 효과).');
+    console.log('========================================\n');
+
+    return { stdout: JSON.stringify(data, null, 2) };
+}
