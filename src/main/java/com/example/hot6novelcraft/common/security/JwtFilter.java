@@ -178,27 +178,32 @@ public class JwtFilter extends OncePerRequestFilter {
                     sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "토큰이 유효하지 않습니다.");
                     return;
                 }
-            } catch (org.springframework.data.redis.RedisConnectionFailureException e) {
-                // Redis 장애 상황 발생 (선택적 차단 로직 동작)
-                log.error("[Redis 장애] 블랙리스트 확인 불가, URL: {}", requestURL);
+            } catch (Exception e) {
+                // Redis 장애 상황(RedisConnectionFailureException, RedisSystemException 등
+                // Lettuce/Redisson이 던지는 구체 타입에 상관없이) — 블랙리스트 확인 자체가 불가능한 상태로 통일 처리.
+                // 예외 타입별로 분기를 나누지 않는 이유: Fail-Open/Fail-Closed는 "예외 종류"가 아니라
+                // "API 위험도(isSafeApi)"로 결정하는 게 이 필터의 설계 의도이기 때문.
+                log.error("[Redis 장애] 블랙리스트 확인 불가, URL: {}", requestURL, e);
 
-                // 중요 보안 API (결제, 수정, 삭제 등) : Fail-Closed 무조건 차단
                 if (isSafeApi(request)) {
-                    log.warn("[Redis 장애] 가용성을 위해 읽기 전용 API 접근을 허용합니다. URL: {}", requestURL);
-                    sendErrorResponse(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "서버 불안정으로 해당 기능을 사용할 수 없습니다.");
+                    // 읽기 전용 화이트리스트 API: 가용성 우선(Fail-Open).
+                    // 여기서 응답을 보내지 않고 return도 하지 않는다.
+                    // -> 이 catch 블록을 그냥 빠져나가서 아래 setAuthentication -> filterChain.doFilter로
+                    //    이어지고, 컨트롤러 -> 서비스 계층의 DB Fallback 로직이 실제로 200을 만들어낸다.
+                    log.warn("[Redis 장애] 가용성을 위해 읽기 전용 API 접근을 허용합니다(블랙리스트 미확인). URL: {}", requestURL);
                 } else {
+                    // 상태 변경/민감 API: 보안 우선(Fail-Closed). 블랙리스트를 확인 못 한 채로
+                    // 인증을 통과시키는 건 탈취된 토큰이 재사용될 위험이 있으므로 무조건 차단.
                     log.error("[Redis 장애] 데이터 보호를 위해 해당 API 접근을 기본 차단합니다. URL: {}", requestURL);
                     sendErrorResponse(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "현재 서버 불안정으로 해당 기능을 사용할 수 없습니다.");
                     return;
                 }
-
-            } catch (Exception e) {
-                log.error("Redis 검증 중 알 수 없는 에러 발생", e);
-                sendErrorResponse(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, "서버 오류가 발생했습니다.");
-                return;
             }
 
             // 인증 실패 시 return
+            // 주의: 위에서 isSafeApi=true로 흘러온 경우, 블랙리스트가 미확인 상태임에도
+            // 여기서 정상적으로 인증(SecurityContext 세팅)을 진행함 -> 이건 의도된 트레이드오프.
+            // (조회 전용 API에 한해 "블랙리스트 미확인 상태의 유효한 토큰"을 신뢰하는 것 = Fail-Open 정책 그 자체)
             if (!setAuthentication(response, accessToken, requestURL)) {
                 return;
             }
