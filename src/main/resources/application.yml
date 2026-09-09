@@ -1,3 +1,13 @@
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 10000
+      idle-timeout: 60000
+      max-lifetime: 1800000
+      leak-detection-threshold: 30000
+
 management:
   endpoints:
     web:
