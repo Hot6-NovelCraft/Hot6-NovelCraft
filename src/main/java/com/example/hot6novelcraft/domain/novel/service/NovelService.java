@@ -47,6 +47,8 @@ public class NovelService {
     private static final String NOVEL_LIST_CACHE_KEY = "novel_list::";
     private static final Duration NOVEL_LIST_CACHE_TTL = Duration.ofMinutes(30);
     private final AdminCacheService adminCacheService;
+    private static final String NOVEL_DETAIL_CACHE_KEY = "novel_detail::";
+    private static final Duration NOVEL_DETAIL_CACHE_TTL = Duration.ofMinutes(10);
 
     // 소설 등록
     @Transactional
@@ -102,6 +104,7 @@ public class NovelService {
 
         // 캐시 무효화
         evictNovelListCache();
+        evictNovelDetailCache(novelId);
 
         return NovelUpdateResponse.from(novel.getId());
     }
@@ -112,6 +115,7 @@ public class NovelService {
         Novel novel = findNovelById(novelId, userDetails.getUser().getId());
         novel.updateCoverImage(coverImageUrl);
         evictNovelListCache();
+        evictNovelDetailCache(novelId);
     }
 
     // 소설 삭제
@@ -133,6 +137,7 @@ public class NovelService {
 
         // 캐시 무효화
         evictNovelListCache();
+        evictNovelDetailCache(novelId);
 
         return NovelDeleteResponse.from(novel.getId());
     }
@@ -266,20 +271,58 @@ public class NovelService {
         return response;
     }
 
-    // 소설 상세 조회 (QueryDSL + 인덱싱)
+    // 소설 상세 조회 (QueryDSL + 인덱싱 + Redis 캐싱)
     @Transactional(readOnly = true)
     public NovelDetailResponse getNovelDetail(Long novelId) {
+        String cacheKey = NOVEL_DETAIL_CACHE_KEY + novelId;
 
+        Object cached = null;
+        try {
+            cached = redisTemplate.opsForValue().get(cacheKey);
+        } catch (RuntimeException e) {
+            log.warn("Novel detail cache read failed. key={}", cacheKey, e);
+        }
+
+        NovelDetailResponse response;
+        if (cached != null) {
+            log.debug("===== [상세 캐시 HIT] key={} =====", cacheKey);
+            try {
+                response = objectMapper.convertValue(cached, NovelDetailResponse.class);
+            } catch (IllegalArgumentException e) {
+                log.warn("소설 상세 캐시 역직렬화 실패. key={}", cacheKey, e);
+                try { redisTemplate.delete(cacheKey); } catch (RuntimeException ignored) {}
+                response = fetchNovelDetailFromDb(novelId);
+            }
+        } else {
+            log.debug("===== [상세 캐시 MISS] key={} DB 조회 =====", cacheKey);
+            response = fetchNovelDetailFromDb(novelId);
+            try {
+                redisTemplate.opsForValue().set(cacheKey, response, NOVEL_DETAIL_CACHE_TTL);
+                log.debug("===== [상세 캐시 저장] key={} TTL=10분 =====", cacheKey);
+            } catch (RuntimeException e) {
+                log.warn("Novel detail cache write failed. key={}", cacheKey, e);
+            }
+        }
+
+        // 조회수는 캐시와 무관하게 항상 실시간 합산
+        long redisViewCount = episodeCacheService.getViewCount(novelId);
+        return response.withViewCount(response.viewCount() + redisViewCount);
+    }
+
+    private NovelDetailResponse fetchNovelDetailFromDb(Long novelId) {
         NovelDetailResponse response = novelRepository.findNovelDetailByNovelId(novelId);
-
         if (response == null) {
             throw new ServiceErrorException(NovelExceptionEnum.NOVEL_NOT_FOUND);
         }
-
-        // DB 조회수 + Redis 조회수 합산
-        long redisViewCount = episodeCacheService.getViewCount(novelId);
-        return response.withViewCount(response.viewCount() + redisViewCount);
-
+        return response;
+    }
+    private void evictNovelDetailCache(Long novelId) {
+        try {
+            redisTemplate.delete(NOVEL_DETAIL_CACHE_KEY + novelId);
+            log.debug("Novel detail cache evicted. novelId={}", novelId);
+        } catch (RuntimeException e) {
+            log.warn("Novel detail cache eviction failed. novelId={}", novelId, e);
+        }
     }
 
     // 작가용 소설 목록 조회 (에디터용)

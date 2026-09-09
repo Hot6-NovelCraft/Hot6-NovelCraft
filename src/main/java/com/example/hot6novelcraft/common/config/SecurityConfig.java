@@ -114,7 +114,7 @@ public class SecurityConfig {
                                 , "/api/novels/*/episodes"
                                 , "/api/novels/*/episodes/*"
                                 , "/api/episodes/*/comments"
-                                , "/api/v2/episodes/*"
+                               // , "/api/v2/episodes/*"
                                 , "/api/search/v2/novels"
                                 , "/api/search/v2/tags"
                                 , "/api/search/v2/authors"
