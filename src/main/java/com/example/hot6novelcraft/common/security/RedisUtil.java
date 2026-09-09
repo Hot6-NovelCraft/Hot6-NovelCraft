@@ -4,10 +4,8 @@ import com.example.hot6novelcraft.domain.user.entity.BlacklistToken;
 import com.example.hot6novelcraft.domain.user.repository.BlacklistTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.QueryTimeoutException;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.connection.ReturnType;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,13 +26,21 @@ public class RedisUtil {
     private final RedissonClient redissonClient;
     private final BlacklistTokenRepository blacklistTokenRepository;
 
+    // NOTE: 이 클래스의 모든 Redis 호출은 catch(Exception)으로 통일한다.
+    // 이유: Lettuce/Redisson 혼용 환경에서 실제 장애 시 RedisConnectionFailureException뿐 아니라
+    // RedisSystemException(형제 클래스, 상속 관계 아님) 등 다양한 타입이 던져지는 것이 실측으로 확인됨
+    // (fail-policy 테스트 중 RedisSystemException으로 인해 좁은 catch가 무력화되어
+    //  Sentinel failover 구간(최대 16초) 동안 요청이 그대로 hang되는 문제 발견).
+    // 이 필드들의 관심사는 "예외 종류 구분"이 아니라 "Redis 가용 여부에 따른 Fallback 실행"이므로
+    // 넓게 잡아도 안전하다.
+
     /**
      * === 블랙리스트 등록 - Failover 중 쓰기 실패 시 로그만 남김 ===
      **/
     public void setBlackList(String accessToken, Object object, Duration duration) {
         try {
             redisTemplate.opsForValue().set(accessToken, object, duration);
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis Blacklist] 등록 실패, accessToken: {}, reason: {}", accessToken, e.getMessage(), e);
 
             try {    // DB fallback : Redis 장애 중에도 로그아웃 토큰 차단 유지
@@ -54,10 +60,8 @@ public class RedisUtil {
     public boolean isBlackList(String accessToken) {
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(accessToken));
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis Blacklist] 조회 실패, DB fallback 실행, accessToken: {}, reason: {}", accessToken, e.getMessage());
-
-            // DB fallback : Redis 없어도 블랙리스트 토큰 차단
             return blacklistTokenRepository.existsByToken(accessToken);
         }
     }
@@ -68,7 +72,7 @@ public class RedisUtil {
     public Object getAndDelete(String signupKey) {
         try {
             return redisTemplate.opsForValue().getAndDelete(signupKey);
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis-Signup] getAndDelete 실패, key: {}, reason: {}", signupKey, e.getMessage());
             return null; // 호출부에서 null 체크 후 인증 만료 처리
         }
@@ -92,7 +96,7 @@ public class RedisUtil {
             Long result = redisTemplate.execute(redisScript, Collections.singletonList(key), expectedValue);
 
             return result != null && result == 1L;
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis-SMS] Lua 검증 실패, key: {}, reason: {}", key, e.getMessage());
             return false; // 인증 실패 -> 사용자에게 재시도 안내
         }
@@ -102,7 +106,7 @@ public class RedisUtil {
     public Object get(String key) {
         try {
             return redisTemplate.opsForValue().get(key);
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.warn("[Redis] 조회 실패, key: {}, reason: {} ,fallback 실행", key, e.getMessage());
             return null;
         }
@@ -112,7 +116,7 @@ public class RedisUtil {
     public boolean delete(String key) {
         try {
             return Boolean.TRUE.equals(redisTemplate.delete(key));
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis Delete] 삭제 실패, key: {}, reason: {}", key, e.getMessage());
             return false;
         }
@@ -122,7 +126,7 @@ public class RedisUtil {
     public void set(String key, Object value, long duration) {
         try {
             redisTemplate.opsForValue().set(key, value, Duration.ofMinutes(duration));
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis set] 저장 실패, key: {}, reason: {}", key, e.getMessage());
         }
     }
@@ -142,7 +146,7 @@ public class RedisUtil {
 
             // durationMinutes * 60을 통해 초 단위로 변환해 넘겨줌
             return redisTemplate.execute(redisScript, Collections.singletonList(key), durationMinutes * 60);
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis INCR] incrementAndExpire 실패, key: {}, reason: {}", key, e.getMessage());
             return 0L;
         }
@@ -204,7 +208,7 @@ public class RedisUtil {
                 connection.setEx(rawKey, seconds, rawValue);
                 return null;
             });
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis SetEx] setWithSeconds 실패, key: {}, reason: {}", key, e.getMessage());
         }
     }
@@ -215,7 +219,7 @@ public class RedisUtil {
         try {
             Object value = redisTemplate.opsForValue().get(key);
             return value != null ? value.toString() : null;
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.warn("[Redis GetStr] 조회 실패, key: {}, reason: {}", key, e.getMessage());
             return null;
         }
@@ -247,7 +251,7 @@ public class RedisUtil {
                 );
             });
             return result != null ? result : 0L;
-        } catch (RedisConnectionFailureException | QueryTimeoutException e) {
+        } catch (Exception e) {
             log.error("[Redis IncrEx] incrementWithSeconds 실패, key: {}, reason: {}", key, e.getMessage());
             return 0L;
         }
