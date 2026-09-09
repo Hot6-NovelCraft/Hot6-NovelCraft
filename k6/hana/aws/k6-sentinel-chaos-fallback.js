@@ -62,12 +62,13 @@ export function setup() {
 // ---------- 메인 시나리오 ----------
 export default function (data) {
     // JWT 블랙리스트 검증(Redis 의존성)이 포함된 마이페이지 API 타겟
-    const url = `${BASE_URL}/api/auth/users/me`;
+    // 실제 존재하는 소설 상세조회 등, 로그인 필요한 조회 API로 교체
+    const url = `${BASE_URL}/api/novels/1`;
 
     const params = {
         headers: {
             // 이 스크립트는 원본과 동일하게 Bearer 접두사를 붙임 (원본 관례 유지)
-            'Authorization': `Bearer ${data.accessToken}`,
+            'Authorization': data.accessToken,
             'Content-Type': 'application/json',
         },
     };
