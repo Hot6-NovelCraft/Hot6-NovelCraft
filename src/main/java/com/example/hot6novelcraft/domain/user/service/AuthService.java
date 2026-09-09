@@ -72,8 +72,6 @@ public class AuthService {
         User user = userDetails.getUser();
 
         if (user.isDeleted()) {
-
-            // 계정 복구 및 초기 파기 요청 임시 토큰
             String recoveryToken = jwtUtil.createRecoveryToken(user.getEmail());
             throw new WithdrawalPendingException(UserExceptionEnum.ERR_USER_WITHDRAWAL_PENDING_CONFLICT, recoveryToken);
         }
@@ -83,7 +81,19 @@ public class AuthService {
         String refreshToken = jwtUtil.createRefreshToken(user.getEmail());
 
         long refreshExpiration = jwtUtil.getRefreshExpiration();
-        userCacheService.saveRefreshToken(user.getEmail(), refreshToken, refreshExpiration);
+
+        // Redis 장애 시에도 로그인 자체는 가용성 우선(Fail-Open)으로 계속 진행한다.
+        // RefreshToken 캐시 저장에 실패해도 로그인 응답(AccessToken 발급)은 정상 반환해야 함.
+        // 영향 범위: 이 유저가 이후 AccessToken 만료 시점에 Silent Refresh를 시도하면
+        // JwtFilter.getRefreshToken()이 null을 반환해 재로그인이 필요해질 수 있음
+        // (JwtFilter의 블랙리스트 Fail-Open/Closed 정책과는 별개의, 로그인 단계 열화 시나리오).
+        // User.refreshToken(DB 컬럼)은 UserRepository 어디서도 조회되지 않는 감사성 필드라
+        // Redis 저장 성공 여부와 무관하게 그대로 저장해도 인증 로직에 영향 없음.
+        try {
+            userCacheService.saveRefreshToken(user.getEmail(), refreshToken, refreshExpiration);
+        } catch (Exception e) {
+            log.error("[Redis 장애] RefreshToken 캐시 저장 실패, email: {}", user.getEmail(), e);
+        }
 
         String pureNewRefresh = jwtUtil.substringToken(refreshToken);
         user.updateRefreshToken(pureNewRefresh);
