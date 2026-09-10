@@ -7,10 +7,12 @@ import com.example.hot6novelcraft.domain.search.dto.NovelSearchResponse;
 import com.example.hot6novelcraft.domain.search.dto.TagGroupSearchResponse;
 import com.example.hot6novelcraft.domain.search.repository.CustomSearchRepository;
 import com.example.hot6novelcraft.domain.user.entity.UserDetailsImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.springframework.data.domain.PageImpl;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -37,6 +42,12 @@ public class SearchService {
     private static final String NOVEL_SEARCH_RANK_KEY = "ranking:search:novel";
     private static final String TAG_SEARCH_RANK_KEY = "ranking:search:tag";
     private static final String HISTORY_KEY_PREFIX = "search:history:";
+
+    private final RedisTemplate<String, Object> objectRedisTemplate;
+    private final ObjectMapper objectMapper;
+
+    private static final String SEARCH_CACHE_PREFIX = "search:novel:";
+    private static final Duration SEARCH_CACHE_TTL  = Duration.ofMinutes(5);
 
     /** ============ V1 ============
      1. 제목(소설) 검색
@@ -63,11 +74,34 @@ public class SearchService {
         - 로그인 시 검색어 저장
      =================================== */
     public Page<NovelSearchResponse> searchNovels(String keyword, Pageable pageable, UserDetailsImpl userDetails) {
-        // 성인 여부 판단
         boolean isAdult = userDetails != null && userDetails.getUser().isAdultVerificationValid();
-
         saveSearchHistoryIfLoggedIn(keyword, userDetails, NOVEL_SEARCH_RANK_KEY);
-        return customSearchRepository.searchNovelsByTitle(keyword, pageable, isAdult);
+
+        String cacheKey = SEARCH_CACHE_PREFIX + keyword + ":" + pageable.getPageNumber() + ":" + pageable.getPageSize() + ":" + isAdult;
+
+        try {
+            Object cached = objectRedisTemplate.opsForValue().get(cacheKey);
+            if (cached != null) {
+                List<NovelSearchResponse> content = objectMapper.convertValue(
+                        cached, new TypeReference<List<NovelSearchResponse>>() {}
+                );
+                log.debug("[SearchCache] HIT key={}", cacheKey);
+                return new PageImpl<>(content, pageable, content.size());
+            }
+        } catch (Exception e) {
+            log.warn("[SearchCache] 캐시 조회 실패, DB fallback: {}", e.getMessage());
+        }
+
+        Page<NovelSearchResponse> result = customSearchRepository.searchNovelsByTitle(keyword, pageable, isAdult);
+
+        try {
+            objectRedisTemplate.opsForValue().set(cacheKey, result.getContent(), SEARCH_CACHE_TTL);
+            log.debug("[SearchCache] MISS → 캐시 저장 key={}", cacheKey);
+        } catch (Exception e) {
+            log.warn("[SearchCache] 캐시 저장 실패: {}", e.getMessage());
+        }
+
+        return result;
     }
 
     public List<TagGroupSearchResponse> searchByTags(List<String> tags, UserDetailsImpl userDetails) {
