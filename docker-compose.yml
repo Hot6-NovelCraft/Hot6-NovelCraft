@@ -367,7 +367,7 @@ services:
   # Redis Exporter (Redis 메트릭 수집)
   # --------------------------
   redis-exporter:
-    image: oliver006/redis_exporter:v1.62.0
+    image: oliver006/redis_exporter:latest
     container_name: redis-exporter
     ports:
       - "9121:9121"
